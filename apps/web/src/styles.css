@@ -97,6 +97,12 @@ h1 {
   padding: 32px 0;
 }
 
+.job-section {
+  border-top: 1px solid #d8d0c3;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
 .editor-panel,
 .library-panel,
 .experience-card {
@@ -307,6 +313,34 @@ button:disabled {
 .experience-card p {
   color: #526165;
   line-height: 1.6;
+}
+
+.analysis-box {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 10px;
+  align-items: center;
+  border: 1px solid #cfe0dc;
+  border-radius: 8px;
+  margin-top: 14px;
+  padding: 12px;
+  background: #f2f8f7;
+}
+
+.analysis-box strong {
+  color: #0f5d66;
+  font-size: 20px;
+}
+
+.analysis-box span {
+  color: #173c42;
+  font-weight: 700;
+}
+
+.analysis-box small {
+  grid-column: 1 / -1;
+  color: #526165;
+  line-height: 1.5;
 }
 
 .experience-meta {

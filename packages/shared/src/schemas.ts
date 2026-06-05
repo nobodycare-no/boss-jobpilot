@@ -60,6 +60,19 @@ export const JobPostingSchema = z.object({
   capturedAt: z.string().datetime()
 });
 
+export const JobPostingCreateSchema = JobPostingSchema.omit({
+  id: true,
+  capturedAt: true
+}).extend({
+  id: z.string().min(1).optional(),
+  capturedAt: z.string().datetime().optional()
+});
+
+export const JobPostingUpdateSchema = JobPostingCreateSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  "At least one field is required"
+);
+
 export const JobAnalysisSchema = z.object({
   jobId: z.string().min(1),
   matchScore: z.number().min(0).max(100),

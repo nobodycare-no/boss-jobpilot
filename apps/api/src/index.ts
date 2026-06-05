@@ -3,12 +3,18 @@ import type { DatabaseSync } from "node:sqlite";
 
 import Fastify from "fastify";
 
-import { createExperienceRepository, openJobpilotDatabase } from "@boss-jobpilot/db";
+import {
+  createExperienceRepository,
+  createJobRepository,
+  openJobpilotDatabase
+} from "@boss-jobpilot/db";
 import { computeJobMatchScore } from "@boss-jobpilot/scoring";
 import {
   ExperienceItemCreateSchema,
   ExperienceItemUpdateSchema,
-  JobPostingSchema
+  JobPostingCreateSchema,
+  JobPostingSchema,
+  JobPostingUpdateSchema
 } from "@boss-jobpilot/shared";
 
 type BuildServerOptions = {
@@ -19,6 +25,7 @@ type BuildServerOptions = {
 export function buildServer(options: BuildServerOptions = {}) {
   const database = options.database ?? openJobpilotDatabase(options.databasePath);
   const experiences = createExperienceRepository(database);
+  const jobs = createJobRepository(database);
   const server = Fastify({
     logger: true
   });
@@ -107,6 +114,96 @@ export function buildServer(options: BuildServerOptions = {}) {
     }
 
     return reply.status(204).send();
+  });
+
+  server.get("/jobs", async () => ({
+    items: jobs.list()
+  }));
+
+  server.get<{ Params: { id: string } }>("/jobs/:id", async (request, reply) => {
+    const item = jobs.get(request.params.id);
+
+    if (!item) {
+      return reply.status(404).send({
+        error: "JOB_NOT_FOUND"
+      });
+    }
+
+    return {
+      item
+    };
+  });
+
+  server.post("/jobs", async (request, reply) => {
+    const parsedJob = JobPostingCreateSchema.safeParse(request.body);
+
+    if (!parsedJob.success) {
+      return reply.status(400).send({
+        error: "INVALID_JOB_POSTING",
+        details: parsedJob.error.flatten()
+      });
+    }
+
+    const item = jobs.create(parsedJob.data);
+
+    return reply.status(201).send({
+      item
+    });
+  });
+
+  server.put<{ Params: { id: string } }>("/jobs/:id", async (request, reply) => {
+    const parsedJob = JobPostingUpdateSchema.safeParse(request.body);
+
+    if (!parsedJob.success) {
+      return reply.status(400).send({
+        error: "INVALID_JOB_POSTING",
+        details: parsedJob.error.flatten()
+      });
+    }
+
+    const item = jobs.update(request.params.id, parsedJob.data);
+
+    if (!item) {
+      return reply.status(404).send({
+        error: "JOB_NOT_FOUND"
+      });
+    }
+
+    return {
+      item
+    };
+  });
+
+  server.delete<{ Params: { id: string } }>("/jobs/:id", async (request, reply) => {
+    const deleted = jobs.delete(request.params.id);
+
+    if (!deleted) {
+      return reply.status(404).send({
+        error: "JOB_NOT_FOUND"
+      });
+    }
+
+    return reply.status(204).send();
+  });
+
+  server.post<{ Params: { id: string } }>("/jobs/:id/analyze", async (request, reply) => {
+    const job = jobs.get(request.params.id);
+
+    if (!job) {
+      return reply.status(404).send({
+        error: "JOB_NOT_FOUND"
+      });
+    }
+
+    return {
+      jobId: job.id,
+      score: computeJobMatchScore(job, {
+        targetRoles: ["AI 应用开发", "前端开发", "全栈开发"],
+        targetCities: [],
+        preferredKeywords: ["React", "TypeScript", "AI", "Node.js"],
+        blockedKeywords: ["外包", "驻场", "培训"]
+      })
+    };
   });
 
   server.post("/jobs/analyze", async (request, reply) => {

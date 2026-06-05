@@ -5,7 +5,9 @@ import type {
   ExperienceItemSchema,
   ExperienceItemUpdateSchema,
   JobAnalysisSchema,
-  JobPostingSchema
+  JobPostingCreateSchema,
+  JobPostingSchema,
+  JobPostingUpdateSchema
 } from "./schemas";
 
 export type ExperienceItem = z.infer<typeof ExperienceItemSchema>;
@@ -13,6 +15,8 @@ export type ExperienceItemCreateInput = z.input<typeof ExperienceItemCreateSchem
 export type ExperienceItemUpdateInput = z.input<typeof ExperienceItemUpdateSchema>;
 export type JobPostingInput = z.input<typeof JobPostingSchema>;
 export type JobPosting = z.infer<typeof JobPostingSchema>;
+export type JobPostingCreateInput = z.input<typeof JobPostingCreateSchema>;
+export type JobPostingUpdateInput = z.input<typeof JobPostingUpdateSchema>;
 export type JobAnalysis = z.infer<typeof JobAnalysisSchema>;
 
 export type CandidatePreference = {

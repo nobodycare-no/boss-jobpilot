@@ -5,6 +5,7 @@ import { Edit3, LibraryBig, Plus, Radar, RefreshCw, Save, Trash2, X } from "luci
 import type { ExperienceItem, ExperienceItemCreateInput } from "@boss-jobpilot/shared";
 
 import { createExperience, deleteExperience, listExperiences, updateExperience } from "./api";
+import { JobPool } from "./JobPool";
 
 type ExperienceFormState = {
   type: ExperienceItem["type"];
@@ -452,6 +453,8 @@ export function App() {
           </div>
         </section>
       </section>
+
+      <JobPool />
     </main>
   );
 }

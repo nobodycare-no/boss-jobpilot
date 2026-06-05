@@ -58,6 +58,22 @@ export function openJobpilotDatabase(path = "data/jobpilot.sqlite") {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS job_postings (
+      id TEXT PRIMARY KEY,
+      platform TEXT NOT NULL,
+      url TEXT,
+      title TEXT NOT NULL,
+      salary_text TEXT,
+      city TEXT,
+      experience_requirement TEXT,
+      education_requirement TEXT,
+      jd_raw TEXT NOT NULL DEFAULT '',
+      company_name TEXT,
+      captured_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
 
   return db;

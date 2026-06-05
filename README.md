@@ -69,3 +69,5 @@ corepack pnpm build
 - `packages/ai`：AI Provider 和 Prompt 版本骨架。
 - `packages/resume`：简历 Markdown 生成逻辑。
 - `packages/scoring`：岗位匹配评分逻辑。
+
+插件采集需要先启动本地 API；popup 会把当前 Boss 页面岗位保存到 `http://127.0.0.1:4000/jobs`。
