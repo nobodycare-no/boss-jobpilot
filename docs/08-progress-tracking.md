@@ -118,3 +118,25 @@ Accepted / Proposed / Rejected
 - 将经历库素材纳入岗位分析，输出 `matchedExperienceIds`。
 - 在 AI 包中接入真实模型调用，替换或增强当前规则分析器。
 - 基于岗位分析结果生成个性化打招呼语和定制简历草稿。
+
+## 2026-06-05 更新 2
+
+### Done
+
+- 岗位分析已接入经历库素材，规则分析器会按技能、关键词、职责/成果文本、证据等级和负责程度筛选最相关经历。
+- `matchedExperienceIds` 不再固定为空，API 分析和临时分析都会读取当前经历库。
+- Web 岗位分析卡新增“匹配经历”展示，为后续定制简历生成提供可追踪素材入口。
+
+### Verification
+
+- `npm run typecheck`
+- `npm run test`
+- `npm run format`
+- `npm run lint`
+- `npm run build`
+
+### Next
+
+- 将 `matchedExperienceIds` 从 ID 展示升级为经历标题/摘要展示。
+- 基于匹配经历生成第一版 Markdown 定制简历。
+- 接入真实 AI 模型前，先定义简历生成输入/输出 schema 和版本记录。

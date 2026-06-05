@@ -1,5 +1,6 @@
 import type {
   CandidatePreference,
+  ExperienceItem,
   JobAnalysisCreateInput,
   JobPosting
 } from "@boss-jobpilot/shared";
@@ -83,12 +84,19 @@ export function computeJobMatchScore(
 
 export function analyzeJobPosting(
   job: JobPosting,
-  preference: CandidatePreference
+  preference: CandidatePreference,
+  experiences: ExperienceItem[] = []
 ): JobAnalysisCreateInput {
   const source = [job.title, job.jdRaw, job.companyName, job.city].filter(Boolean).join("\n");
   const score = computeJobMatchScore(job, preference);
   const requiredSkills = includesAny(source, skillKeywords);
   const bonusSkills = extractBonusSkills(job.jdRaw, requiredSkills);
+  const matchedExperienceIds = matchExperiencesForJob(
+    experiences,
+    requiredSkills,
+    score.matchedKeywords,
+    source
+  );
 
   return {
     jobId: job.id,
@@ -97,9 +105,9 @@ export function analyzeJobPosting(
     matchedKeywords: score.matchedKeywords,
     requiredSkills,
     bonusSkills,
-    matchedExperienceIds: [],
+    matchedExperienceIds,
     riskFlags: score.riskFlags,
-    resumeStrategy: buildResumeStrategy(job, score, requiredSkills),
+    resumeStrategy: buildResumeStrategy(job, score, requiredSkills, matchedExperienceIds.length),
     modelName: "rule-based",
     promptVersion: "rule-based-job-analysis@0.1.0"
   };
@@ -120,7 +128,77 @@ function extractBonusSkills(jdRaw: string, requiredSkills: string[]) {
   return includesAny(bonusSource, requiredSkills);
 }
 
-function buildResumeStrategy(job: JobPosting, score: JobMatchScore, requiredSkills: string[]) {
+function matchExperiencesForJob(
+  experiences: ExperienceItem[],
+  requiredSkills: string[],
+  matchedKeywords: string[],
+  jobSource: string
+) {
+  const jobTokens = tokenize(jobSource);
+  const keywords = Array.from(new Set([...requiredSkills, ...matchedKeywords]));
+
+  return experiences
+    .filter((experience) => experience.evidenceLevel !== "do_not_use")
+    .map((experience) => ({
+      id: experience.id,
+      score: scoreExperienceMatch(experience, keywords, jobTokens)
+    }))
+    .filter((match) => match.score >= 12)
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 3)
+    .map((match) => match.id);
+}
+
+function scoreExperienceMatch(
+  experience: ExperienceItem,
+  keywords: string[],
+  jobTokens: Set<string>
+) {
+  const source = [
+    experience.title,
+    experience.organization,
+    experience.role,
+    experience.summary,
+    experience.techStack.join(" "),
+    experience.responsibilities.join(" "),
+    experience.achievements.join(" "),
+    experience.metrics.join(" "),
+    experience.tags.join(" ")
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const matchedKeywordCount = includesAny(source, keywords).length;
+  const sharedTokenCount = [...tokenize(source)].filter((token) => jobTokens.has(token)).length;
+  const evidenceBoost =
+    experience.evidenceLevel === "deep_interview_ready"
+      ? 6
+      : experience.evidenceLevel === "can_explain_briefly"
+        ? 3
+        : 0;
+  const ownershipBoost =
+    experience.ownershipLevel === "led" || experience.ownershipLevel === "owned" ? 4 : 0;
+
+  return (
+    matchedKeywordCount * 12 + Math.min(sharedTokenCount * 2, 12) + evidenceBoost + ownershipBoost
+  );
+}
+
+function tokenize(source: string) {
+  return new Set(
+    source
+      .toLowerCase()
+      .split(/[^a-z0-9\u4e00-\u9fa5+#.]+/)
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 2)
+  );
+}
+
+function buildResumeStrategy(
+  job: JobPosting,
+  score: JobMatchScore,
+  requiredSkills: string[],
+  matchedExperienceCount: number
+) {
   const titlePart = job.companyName ? `${job.companyName} ${job.title}` : job.title;
   const skillPart =
     requiredSkills.length > 0
@@ -130,6 +208,10 @@ function buildResumeStrategy(job: JobPosting, score: JobMatchScore, requiredSkil
     score.riskFlags.length > 0
       ? `投递前核对风险信号：${score.riskFlags.join("、")}。`
       : "当前未命中明显风险词，可进入简历定制。";
+  const experiencePart =
+    matchedExperienceCount > 0
+      ? `已匹配 ${matchedExperienceCount} 段经历素材，可优先用于简历改写。`
+      : "暂无可直接匹配的经历素材，建议先补充相关项目或实习证据。";
 
-  return `针对 ${titlePart}，${skillPart}${riskPart}`;
+  return `针对 ${titlePart}，${skillPart}${riskPart}${experiencePart}`;
 }

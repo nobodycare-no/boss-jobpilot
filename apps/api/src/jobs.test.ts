@@ -14,6 +14,25 @@ describe("job routes", () => {
   });
 
   it("creates, lists, analyzes and persists jobs", async () => {
+    const experienceResponse = await server.inject({
+      method: "POST",
+      url: "/experiences",
+      payload: {
+        id: "exp-ai-frontend",
+        type: "project",
+        title: "AI resume tailoring workspace",
+        role: "Frontend Engineer",
+        summary: "Built React and TypeScript UI with Node.js APIs and AI integrations.",
+        techStack: ["React", "TypeScript", "Node.js", "AI"],
+        responsibilities: ["Implemented job analysis workflow"],
+        achievements: ["Reduced manual resume tailoring time"],
+        evidenceLevel: "deep_interview_ready",
+        ownershipLevel: "owned"
+      }
+    });
+
+    expect(experienceResponse.statusCode).toBe(201);
+
     const createResponse = await server.inject({
       method: "POST",
       url: "/jobs",
@@ -46,6 +65,7 @@ describe("job routes", () => {
     expect(analysisResponse.statusCode).toBe(200);
     expect(analysisResponse.json().analysis.recommendation).toBe("prioritize");
     expect(analysisResponse.json().analysis.requiredSkills).toContain("React");
+    expect(analysisResponse.json().analysis.matchedExperienceIds).toEqual(["exp-ai-frontend"]);
 
     const latestResponse = await server.inject({
       method: "GET",

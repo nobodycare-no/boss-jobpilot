@@ -358,6 +358,7 @@ function AnalysisPanel({ analysis }: { analysis: JobAnalysis }) {
         <AnalysisList label="匹配关键词" values={analysis.matchedKeywords} />
         <AnalysisList label="必需技能" values={analysis.requiredSkills} />
         <AnalysisList label="加分技能" values={analysis.bonusSkills} />
+        <AnalysisList label="匹配经历" values={analysis.matchedExperienceIds} />
         <AnalysisList label="风险信号" values={analysis.riskFlags} />
       </div>
       <p className="analysis-strategy">{analysis.resumeStrategy}</p>

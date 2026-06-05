@@ -205,7 +205,9 @@ export function buildServer(options: BuildServerOptions = {}) {
       });
     }
 
-    const analysis = jobAnalyses.create(analyzeJobPosting(job, defaultCandidatePreference));
+    const analysis = jobAnalyses.create(
+      analyzeJobPosting(job, defaultCandidatePreference, experiences.list())
+    );
 
     return {
       jobId: job.id,
@@ -253,7 +255,11 @@ export function buildServer(options: BuildServerOptions = {}) {
     }
 
     const score = computeJobMatchScore(parsedJob.data, defaultCandidatePreference);
-    const analysis = analyzeJobPosting(parsedJob.data, defaultCandidatePreference);
+    const analysis = analyzeJobPosting(
+      parsedJob.data,
+      defaultCandidatePreference,
+      experiences.list()
+    );
 
     return {
       jobId: parsedJob.data.id,
