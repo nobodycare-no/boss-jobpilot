@@ -1,10 +1,12 @@
 {
   "name": "@boss-jobpilot/extension",
+  "displayName": "Boss Jobpilot",
+  "description": "Capture Boss job postings into the local Boss Jobpilot workspace.",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "plasmo build",
     "build:plasmo": "plasmo build",
     "dev": "plasmo dev",
     "test": "vitest run --passWithNoTests",

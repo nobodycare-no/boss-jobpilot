@@ -5,5 +5,5 @@
     "outDir": "dist",
     "types": ["chrome", "node"]
   },
-  "include": [".plasmo/index.d.ts", "contents/**/*.ts", "popup.tsx", "src/**/*.ts"]
+  "include": [".plasmo/index.d.ts", "src/**/*.ts", "src/**/*.tsx"]
 }

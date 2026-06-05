@@ -1,6 +1,6 @@
 import type { PlasmoCSConfig } from "plasmo";
 
-import { extractBossJobPosting } from "../src/extractors/boss";
+import { extractBossJobPosting } from "../extractors/boss";
 
 export const config: PlasmoCSConfig = {
   matches: ["https://www.zhipin.com/*"],

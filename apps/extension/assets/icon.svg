@@ -1,0 +1,18 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="128"
+  height="128"
+  viewBox="0 0 128 128"
+  role="img"
+  aria-label="boss-jobpilot icon"
+>
+  <rect width="128" height="128" rx="24" fill="#0f5d66" />
+  <path
+    d="M31 83V39h37c15 0 26 9 26 23S83 83 68 83H51v18H31Zm20-17h16c4 0 7-1 9-3 2-2 3-5 3-8s-1-6-3-8c-2-2-5-3-9-3H51v22Z"
+    fill="#f7fbf8"
+  />
+  <path
+    d="M84 90c7-4 12-10 15-18 2-6 3-13 1-20l-10 3c1 5 0 9-1 13-2 6-6 10-11 13l6 9Z"
+    fill="#f0b84f"
+  />
+</svg>
