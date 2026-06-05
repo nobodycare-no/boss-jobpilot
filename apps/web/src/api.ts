@@ -3,7 +3,8 @@ import type {
   ExperienceItemCreateInput,
   JobAnalysis,
   JobPosting,
-  JobPostingCreateInput
+  JobPostingCreateInput,
+  ResumeVersion
 } from "@boss-jobpilot/shared";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:4000";
@@ -24,6 +25,10 @@ type JobResponse = {
   item: JobPosting;
 };
 
+type ResumeVersionResponse = {
+  item: ResumeVersion;
+};
+
 export type JobAnalysisResponse = {
   jobId: string;
   analysis: JobAnalysis;
@@ -37,6 +42,10 @@ export type JobAnalysisResponse = {
 
 export type LatestJobAnalysisResponse = {
   item: JobAnalysis | null;
+};
+
+export type LatestResumeVersionResponse = {
+  item: ResumeVersion | null;
 };
 
 export async function listExperiences() {
@@ -147,4 +156,30 @@ export async function getLatestJobAnalysis(id: string) {
   }
 
   return (await response.json()) as LatestJobAnalysisResponse;
+}
+
+export async function generateResume(id: string) {
+  const response = await fetch(`${apiBaseUrl}/jobs/${id}/resumes`, {
+    method: "POST"
+  });
+
+  if (!response.ok) {
+    if (response.status === 409) {
+      throw new Error("请先分析岗位，再生成定制简历");
+    }
+
+    throw new Error("无法生成定制简历");
+  }
+
+  return (await response.json()) as ResumeVersionResponse;
+}
+
+export async function getLatestResume(id: string) {
+  const response = await fetch(`${apiBaseUrl}/jobs/${id}/resume/latest`);
+
+  if (!response.ok) {
+    throw new Error("无法加载定制简历");
+  }
+
+  return (await response.json()) as LatestResumeVersionResponse;
 }

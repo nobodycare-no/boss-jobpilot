@@ -7,8 +7,10 @@ import {
   createExperienceRepository,
   createJobAnalysisRepository,
   createJobRepository,
+  createResumeVersionRepository,
   openJobpilotDatabase
 } from "@boss-jobpilot/db";
+import { generateTailoredResumeDraft, renderResumeMarkdown } from "@boss-jobpilot/resume";
 import { analyzeJobPosting, computeJobMatchScore } from "@boss-jobpilot/scoring";
 import {
   ExperienceItemCreateSchema,
@@ -36,6 +38,7 @@ export function buildServer(options: BuildServerOptions = {}) {
   const experiences = createExperienceRepository(database);
   const jobs = createJobRepository(database);
   const jobAnalyses = createJobAnalysisRepository(database);
+  const resumeVersions = createResumeVersionRepository(database);
   const server = Fastify({
     logger: true
   });
@@ -265,6 +268,69 @@ export function buildServer(options: BuildServerOptions = {}) {
       jobId: parsedJob.data.id,
       analysis,
       score
+    };
+  });
+
+  server.post<{ Params: { id: string } }>("/jobs/:id/resumes", async (request, reply) => {
+    const job = jobs.get(request.params.id);
+
+    if (!job) {
+      return reply.status(404).send({
+        error: "JOB_NOT_FOUND"
+      });
+    }
+
+    const analysis = jobAnalyses.getLatestByJobId(job.id);
+
+    if (!analysis) {
+      return reply.status(409).send({
+        error: "ANALYSIS_REQUIRED"
+      });
+    }
+
+    const draft = generateTailoredResumeDraft({
+      job,
+      analysis,
+      experiences: experiences.list()
+    });
+    const item = resumeVersions.create({
+      jobId: job.id,
+      variant: "tailored",
+      markdownContent: renderResumeMarkdown(draft),
+      selectedExperienceIds: draft.experiences.map((experience) => experience.id),
+      changeSummary: draft.changeSummary
+    });
+
+    return reply.status(201).send({
+      item
+    });
+  });
+
+  server.get<{ Params: { id: string } }>("/jobs/:id/resumes", async (request, reply) => {
+    const job = jobs.get(request.params.id);
+
+    if (!job) {
+      return reply.status(404).send({
+        error: "JOB_NOT_FOUND"
+      });
+    }
+
+    return {
+      items: resumeVersions.listByJobId(job.id)
+    };
+  });
+
+  server.get<{ Params: { id: string } }>("/jobs/:id/resume/latest", async (request, reply) => {
+    const job = jobs.get(request.params.id);
+
+    if (!job) {
+      return reply.status(404).send({
+        error: "JOB_NOT_FOUND"
+      });
+    }
+
+    return {
+      item: resumeVersions.getLatestByJobId(job.id) ?? null
     };
   });
 

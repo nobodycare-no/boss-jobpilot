@@ -33,6 +33,7 @@
 - [进度追踪计划](docs/08-progress-tracking.md)
 - [Git 工作流](docs/09-git-workflow.md)
 - [Codex 开发说明](docs/10-dev-notes-for-codex.md)
+- [当前软件使用手册](docs/11-user-guide.md)
 
 ## Target MVP
 

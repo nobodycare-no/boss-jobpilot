@@ -82,5 +82,30 @@ describe("job routes", () => {
 
     expect(analysesResponse.statusCode).toBe(200);
     expect(analysesResponse.json().items).toHaveLength(1);
+
+    const resumeResponse = await server.inject({
+      method: "POST",
+      url: `/jobs/${created.id}/resumes`
+    });
+
+    expect(resumeResponse.statusCode).toBe(201);
+    expect(resumeResponse.json().item.markdownContent).toContain("AI Frontend Engineer");
+    expect(resumeResponse.json().item.selectedExperienceIds).toEqual(["exp-ai-frontend"]);
+
+    const latestResumeResponse = await server.inject({
+      method: "GET",
+      url: `/jobs/${created.id}/resume/latest`
+    });
+
+    expect(latestResumeResponse.statusCode).toBe(200);
+    expect(latestResumeResponse.json().item.id).toBe(resumeResponse.json().item.id);
+
+    const resumeListResponse = await server.inject({
+      method: "GET",
+      url: `/jobs/${created.id}/resumes`
+    });
+
+    expect(resumeListResponse.statusCode).toBe(200);
+    expect(resumeListResponse.json().items).toHaveLength(1);
   });
 });

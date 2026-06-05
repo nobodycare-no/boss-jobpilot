@@ -336,6 +336,62 @@ button:disabled {
   background: #f2f8f7;
 }
 
+.resume-box {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #e1d2aa;
+  border-radius: 8px;
+  margin-top: 14px;
+  padding: 12px;
+  background: #fffaf0;
+}
+
+.resume-box__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.resume-box__header strong {
+  color: #5b431d;
+}
+
+.resume-box__header span {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 9px;
+  color: #6d542f;
+  background: #f4ead8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.resume-box p {
+  margin: 0;
+  color: #5d5548;
+  line-height: 1.5;
+}
+
+.resume-box pre {
+  max-height: 320px;
+  min-width: 0;
+  overflow: auto;
+  margin: 0;
+  border: 1px solid #eadfca;
+  border-radius: 6px;
+  padding: 12px;
+  color: #263033;
+  background: #fffdfa;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .analysis-score {
   display: flex;
   flex-wrap: wrap;

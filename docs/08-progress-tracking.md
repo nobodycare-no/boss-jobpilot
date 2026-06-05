@@ -32,7 +32,7 @@
 | 代码脚手架    | Done | 已初始化 pnpm workspace、Web/API/Extension 和共享包              |
 | 经历库        | Done | 已支持 SQLite 持久化、API CRUD 和 Web 端录入管理                 |
 | 岗位采集      | Done | 已支持岗位池 SQLite 持久化、API CRUD、Web 手动录入和插件一键保存 |
-| 简历生成      | Todo | 待开发                                                           |
+| 简历生成      | Done | 已支持基于岗位分析和匹配经历生成 Markdown 定制简历草稿           |
 | 投递管理      | Todo | 待开发                                                           |
 
 ## 每日开发记录模板
@@ -140,3 +140,26 @@ Accepted / Proposed / Rejected
 - 将 `matchedExperienceIds` 从 ID 展示升级为经历标题/摘要展示。
 - 基于匹配经历生成第一版 Markdown 定制简历。
 - 接入真实 AI 模型前，先定义简历生成输入/输出 schema 和版本记录。
+
+## 2026-06-05 更新 3
+
+### Done
+
+- 新增 `docs/11-user-guide.md`，作为当前软件的持续维护使用手册。
+- 新增 `ResumeVersion` 共享 schema 和 SQLite `resume_versions` 持久化仓库。
+- `POST /jobs/:id/resumes` 支持基于最新岗位分析和匹配经历生成 Markdown 定制简历草稿。
+- 新增 `GET /jobs/:id/resumes` 与 `GET /jobs/:id/resume/latest`。
+- Web 岗位卡支持一键生成定制简历，并展示变更摘要和 Markdown 预览。
+
+### Verification
+
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+
+### Next
+
+- 将定制简历从只读预览升级为可编辑版本管理。
+- 生成个性化打招呼语，并与简历版本组成投递包。
+- 用真实 AI 模型增强规则版简历生成器。

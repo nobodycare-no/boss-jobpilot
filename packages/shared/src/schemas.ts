@@ -96,3 +96,21 @@ export const JobAnalysisCreateSchema = JobAnalysisSchema.omit({
   id: z.string().min(1).optional(),
   createdAt: z.string().datetime().optional()
 });
+
+export const ResumeVersionSchema = z.object({
+  id: z.string().min(1),
+  jobId: z.string().min(1),
+  variant: z.string().min(1),
+  markdownContent: z.string().min(1),
+  selectedExperienceIds: z.array(z.string()).default([]),
+  changeSummary: z.string().default(""),
+  createdAt: z.string().datetime()
+});
+
+export const ResumeVersionCreateSchema = ResumeVersionSchema.omit({
+  id: true,
+  createdAt: true
+}).extend({
+  id: z.string().min(1).optional(),
+  createdAt: z.string().datetime().optional()
+});

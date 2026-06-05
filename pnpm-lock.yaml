@@ -37,6 +37,9 @@ importers:
       "@boss-jobpilot/db":
         specifier: workspace:*
         version: link:../../packages/db
+      "@boss-jobpilot/resume":
+        specifier: workspace:*
+        version: link:../../packages/resume
       "@boss-jobpilot/scoring":
         specifier: workspace:*
         version: link:../../packages/scoring
