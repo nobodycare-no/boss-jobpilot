@@ -139,6 +139,14 @@ export const ApplicationSchema = z.object({
   updatedAt: z.string().datetime()
 });
 
+export const ApplicationEventSchema = z.object({
+  id: z.string().min(1),
+  applicationId: z.string().min(1),
+  type: z.string().min(1),
+  content: z.string().optional(),
+  occurredAt: z.string().datetime()
+});
+
 export const ApplicationCreateSchema = ApplicationSchema.omit({
   id: true,
   createdAt: true,
@@ -148,3 +156,14 @@ export const ApplicationCreateSchema = ApplicationSchema.omit({
   createdAt: z.string().datetime().optional(),
   updatedAt: z.string().datetime().optional()
 });
+
+export const ApplicationUpdateSchema = ApplicationSchema.pick({
+  resumeVersionId: true,
+  status: true,
+  greetingMessage: true,
+  appliedAt: true,
+  nextFollowUpAt: true,
+  outcome: true
+})
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, "At least one field is required");

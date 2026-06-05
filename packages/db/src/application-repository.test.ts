@@ -35,6 +35,23 @@ describe("application repository", () => {
     expect(applications.listByJobId(job.id)).toHaveLength(2);
     expect(applications.getLatestByJobId(job.id)?.id).toBe(second.id);
 
+    const greeted = applications.update(second.id, {
+      status: "greeted"
+    });
+
+    expect(greeted?.status).toBe("greeted");
+    expect(greeted?.appliedAt).toBeUndefined();
+
+    const applied = applications.update(second.id, {
+      status: "applied"
+    });
+    const events = applications.listEventsByApplicationId(second.id);
+
+    expect(applied?.status).toBe("applied");
+    expect(applied?.appliedAt).toBeTruthy();
+    expect(events).toHaveLength(2);
+    expect(events.at(-1)?.type).toBe("status_changed");
+
     db.close();
   });
 });

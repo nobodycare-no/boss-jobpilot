@@ -33,7 +33,7 @@
 | 经历库        | Done        | 已支持 SQLite 持久化、API CRUD 和 Web 端录入管理                    |
 | 岗位采集      | Done        | 已支持岗位池 SQLite 持久化、API CRUD、Web 手动录入和插件一键保存    |
 | 简历生成      | Done        | 已支持基于岗位分析和匹配经历生成 Markdown 定制简历草稿              |
-| 投递管理      | In Progress | 已支持打招呼语草稿生成和 application draft 持久化，尚未支持状态流转 |
+| 投递管理      | In Progress | 已支持打招呼语草稿、application draft 持久化和基础状态流转          |
 
 ## 每日开发记录模板
 
@@ -187,3 +187,29 @@ Accepted / Proposed / Rejected
 - 将简历草稿和打招呼语组合成统一“投递包”视图。
 - 支持复制打招呼语、复制 Markdown 简历、标记投递状态。
 - 将匹配经历 ID 展示升级为经历标题和摘要。
+
+## 2026-06-05 更新 5
+
+### Done
+
+- `.codegraph/` 已加入 git 忽略，避免本地索引文件进入仓库。
+- `docs/10-dev-notes-for-codex.md` 已补充 codegraph 维护规则：修改代码后、提交前执行 `codegraph sync .`。
+- 新增 `ApplicationUpdateSchema` 和 `ApplicationEvent` 共享类型。
+- application repository 支持更新投递状态、自动维护 `updatedAt`，并在状态变化时写入 `application_events`。
+- 新增 `PATCH /applications/:id` 和 `GET /applications/:id/events`。
+- Web 打招呼语草稿面板新增状态按钮，可标记已打招呼、已投递、已回复、面试和关闭。
+
+### Verification
+
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `codegraph sync .`
+- API 前台启动验证：`API_PORT=4302` 可监听 `http://127.0.0.1:4302`
+
+### Next
+
+- 增加投递看板视图，按状态聚合岗位。
+- 支持复制打招呼语和 Markdown 简历。
+- 将应用事件时间线展示到 Web。

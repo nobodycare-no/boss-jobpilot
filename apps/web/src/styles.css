@@ -421,6 +421,28 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.application-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.status-button {
+  min-height: 32px;
+  border-color: #8c9bc2;
+  padding: 0 10px;
+  color: #26395e;
+  background: #ffffff;
+  font-size: 13px;
+}
+
+.status-button:disabled {
+  cursor: default;
+  color: #ffffff;
+  background: #334a75;
+  opacity: 1;
+}
+
 .resume-box pre {
   max-height: 320px;
   min-width: 0;

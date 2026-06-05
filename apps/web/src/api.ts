@@ -1,5 +1,6 @@
 import type {
   Application,
+  ApplicationUpdateInput,
   ExperienceItem,
   ExperienceItemCreateInput,
   JobAnalysis,
@@ -217,4 +218,20 @@ export async function getLatestApplication(id: string) {
   }
 
   return (await response.json()) as LatestApplicationResponse;
+}
+
+export async function updateApplication(id: string, input: ApplicationUpdateInput) {
+  const response = await fetch(`${apiBaseUrl}/applications/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(input)
+  });
+
+  if (!response.ok) {
+    throw new Error("无法更新投递状态");
+  }
+
+  return (await response.json()) as ApplicationResponse;
 }

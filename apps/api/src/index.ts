@@ -17,6 +17,7 @@ import { analyzeJobPosting, computeJobMatchScore } from "@boss-jobpilot/scoring"
 import {
   ExperienceItemCreateSchema,
   ExperienceItemUpdateSchema,
+  ApplicationUpdateSchema,
   JobPostingCreateSchema,
   JobPostingSchema,
   JobPostingUpdateSchema,
@@ -48,7 +49,7 @@ export function buildServer(options: BuildServerOptions = {}) {
 
   server.addHook("onRequest", async (request, reply) => {
     reply.header("Access-Control-Allow-Origin", "*");
-    reply.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+    reply.header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
     reply.header("Access-Control-Allow-Headers", "Content-Type");
 
     if (request.method === "OPTIONS") {
@@ -398,6 +399,43 @@ export function buildServer(options: BuildServerOptions = {}) {
 
     return {
       item: applications.getLatestByJobId(job.id) ?? null
+    };
+  });
+
+  server.patch<{ Params: { id: string } }>("/applications/:id", async (request, reply) => {
+    const parsedApplication = ApplicationUpdateSchema.safeParse(request.body);
+
+    if (!parsedApplication.success) {
+      return reply.status(400).send({
+        error: "INVALID_APPLICATION_UPDATE",
+        details: parsedApplication.error.flatten()
+      });
+    }
+
+    const item = applications.update(request.params.id, parsedApplication.data);
+
+    if (!item) {
+      return reply.status(404).send({
+        error: "APPLICATION_NOT_FOUND"
+      });
+    }
+
+    return {
+      item
+    };
+  });
+
+  server.get<{ Params: { id: string } }>("/applications/:id/events", async (request, reply) => {
+    const item = applications.get(request.params.id);
+
+    if (!item) {
+      return reply.status(404).send({
+        error: "APPLICATION_NOT_FOUND"
+      });
+    }
+
+    return {
+      items: applications.listEventsByApplicationId(item.id)
     };
   });
 

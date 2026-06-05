@@ -133,5 +133,25 @@ describe("job routes", () => {
 
     expect(applicationListResponse.statusCode).toBe(200);
     expect(applicationListResponse.json().items).toHaveLength(1);
+
+    const updateApplicationResponse = await server.inject({
+      method: "PATCH",
+      url: `/applications/${greetingResponse.json().item.id}`,
+      payload: {
+        status: "greeted"
+      }
+    });
+
+    expect(updateApplicationResponse.statusCode).toBe(200);
+    expect(updateApplicationResponse.json().item.status).toBe("greeted");
+
+    const applicationEventsResponse = await server.inject({
+      method: "GET",
+      url: `/applications/${greetingResponse.json().item.id}/events`
+    });
+
+    expect(applicationEventsResponse.statusCode).toBe(200);
+    expect(applicationEventsResponse.json().items).toHaveLength(1);
+    expect(applicationEventsResponse.json().items[0].type).toBe("status_changed");
   });
 });

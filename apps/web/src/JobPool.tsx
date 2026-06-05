@@ -3,10 +3,13 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
   BriefcaseBusiness,
+  CalendarCheck,
+  CheckCircle2,
   FileText,
   MessageSquareText,
   Plus,
   RefreshCw,
+  Send,
   Trash2
 } from "lucide-react";
 
@@ -27,7 +30,8 @@ import {
   getLatestApplication,
   getLatestJobAnalysis,
   getLatestResume,
-  listJobs
+  listJobs,
+  updateApplication
 } from "./api";
 
 type JobFormState = {
@@ -60,6 +64,29 @@ const recommendationLabels: Record<JobAnalysis["recommendation"], string> = {
   cautious: "谨慎投递",
   skip: "建议跳过"
 };
+
+const applicationStatusLabels: Record<Application["status"], string> = {
+  draft: "草稿",
+  greeted: "已打招呼",
+  applied: "已投递",
+  replied: "已回复",
+  interview: "面试中",
+  rejected: "已拒绝",
+  offer: "Offer",
+  closed: "已关闭"
+};
+
+const applicationStatusActions = [
+  { status: "greeted", label: "已打招呼", Icon: CheckCircle2 },
+  { status: "applied", label: "已投递", Icon: Send },
+  { status: "replied", label: "已回复", Icon: MessageSquareText },
+  { status: "interview", label: "面试", Icon: CalendarCheck },
+  { status: "closed", label: "关闭", Icon: Trash2 }
+] satisfies Array<{
+  status: Application["status"];
+  label: string;
+  Icon: typeof CheckCircle2;
+}>;
 
 export function JobPool() {
   const [jobs, setJobs] = useState<JobPosting[]>([]);
@@ -227,6 +254,25 @@ export function JobPool() {
     }
   }
 
+  async function handleUpdateApplicationStatus(
+    applicationId: string,
+    status: Application["status"]
+  ) {
+    setError(null);
+
+    try {
+      const response = await updateApplication(applicationId, {
+        status
+      });
+      setApplicationByJobId((current) => ({
+        ...current,
+        [response.item.jobId]: response.item
+      }));
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "投递状态更新失败");
+    }
+  }
+
   return (
     <section className="job-section" aria-label="岗位池">
       {error ? <div className="notice">{error}</div> : null}
@@ -386,6 +432,7 @@ export function JobPool() {
                 onDelete={handleDelete}
                 onGenerateGreeting={handleGenerateGreeting}
                 onGenerateResume={handleGenerateResume}
+                onUpdateApplicationStatus={handleUpdateApplicationStatus}
                 resume={resumeByJobId[job.id]}
               />
             ))}
@@ -404,6 +451,10 @@ type JobCardProps = {
   onDelete: (id: string) => Promise<void>;
   onGenerateGreeting: (id: string) => Promise<void>;
   onGenerateResume: (id: string) => Promise<void>;
+  onUpdateApplicationStatus: (
+    applicationId: string,
+    status: Application["status"]
+  ) => Promise<void>;
   resume?: ResumeVersion;
 };
 
@@ -415,6 +466,7 @@ function JobCard({
   onDelete,
   onGenerateGreeting,
   onGenerateResume,
+  onUpdateApplicationStatus,
   resume
 }: JobCardProps) {
   return (
@@ -467,22 +519,48 @@ function JobCard({
       <p>{job.jdRaw}</p>
       {analysis ? <AnalysisPanel analysis={analysis} /> : null}
       {resume ? <ResumePanel resume={resume} /> : null}
-      {application ? <ApplicationPanel application={application} /> : null}
+      {application ? (
+        <ApplicationPanel
+          application={application}
+          onUpdateStatus={onUpdateApplicationStatus}
+        />
+      ) : null}
     </article>
   );
 }
 
-function ApplicationPanel({ application }: { application: Application }) {
+function ApplicationPanel({
+  application,
+  onUpdateStatus
+}: {
+  application: Application;
+  onUpdateStatus: (applicationId: string, status: Application["status"]) => Promise<void>;
+}) {
   return (
     <div className="application-box">
       <div className="application-box__header">
         <strong>打招呼语草稿</strong>
-        <span>{application.status}</span>
+        <span>{applicationStatusLabels[application.status]}</span>
       </div>
       <p>{application.greetingMessage}</p>
+      <div className="application-actions">
+        {applicationStatusActions.map(({ status, label, Icon }) => (
+          <button
+            key={status}
+            type="button"
+            className="status-button"
+            disabled={application.status === status}
+            onClick={() => void onUpdateStatus(application.id, status)}
+          >
+            <Icon size={15} />
+            {label}
+          </button>
+        ))}
+      </div>
       {application.resumeVersionId ? (
         <small>已关联简历版本：{application.resumeVersionId}</small>
       ) : null}
+      {application.appliedAt ? <small>投递时间：{formatDateTime(application.appliedAt)}</small> : null}
     </div>
   );
 }
@@ -550,4 +628,11 @@ function optionalText(value: string) {
   const trimmed = value.trim();
 
   return trimmed ? trimmed : undefined;
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(new Date(value));
 }
