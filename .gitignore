@@ -5,6 +5,8 @@ node_modules/
 dist/
 build/
 .turbo/
+**/.plasmo/
+artifacts/
 
 # Environment
 .env
@@ -26,4 +28,3 @@ pnpm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
-

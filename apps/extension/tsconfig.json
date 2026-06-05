@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "outDir": "dist",
+    "types": ["chrome", "node"]
+  },
+  "include": [".plasmo/index.d.ts", "contents/**/*.ts", "popup.tsx", "src/**/*.ts"]
+}

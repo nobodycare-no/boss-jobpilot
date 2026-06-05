@@ -145,4 +145,3 @@ interview-coach@0.1.0
 - input_hash
 - output_hash
 - created_at
-

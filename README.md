@@ -43,3 +43,27 @@
 3. AI 分析 JD、公司要求和岗位风险。
 4. 根据经历库生成岗位定制简历和打招呼语。
 5. 管理投递状态、跟进记录和面试准备材料。
+
+## Development
+
+本项目使用 pnpm workspace。若本机没有直接安装 pnpm，可通过 Corepack 调用：
+
+```powershell
+corepack pnpm install
+corepack pnpm dev
+corepack pnpm typecheck
+corepack pnpm test
+corepack pnpm lint
+corepack pnpm build
+```
+
+当前 workspace：
+
+- `apps/web`：本地求职工作台。
+- `apps/api`：本地 Fastify API。
+- `apps/extension`：Chrome 插件骨架。
+- `packages/shared`：共享 Zod schema 和类型。
+- `packages/db`：Drizzle SQLite schema。
+- `packages/ai`：AI Provider 和 Prompt 版本骨架。
+- `packages/resume`：简历 Markdown 生成逻辑。
+- `packages/scoring`：岗位匹配评分逻辑。

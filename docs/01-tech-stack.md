@@ -10,23 +10,23 @@
 
 ## 推荐栈
 
-| 层级 | 技术 | 用途 |
-| --- | --- | --- |
-| Monorepo | pnpm workspace + Turborepo | 多应用和共享包管理 |
-| Web App | React + Vite + TypeScript | 本地求职工作台 |
-| UI | Tailwind CSS + shadcn/ui + lucide-react | 快速构建一致的操作界面 |
-| Browser Extension | Chrome Manifest V3 + Plasmo | Boss 页面采集、侧边栏、辅助填充 |
-| Local API | Node.js + Fastify | 本地服务、AI 编排、文件生成 |
-| Database | SQLite | 本地结构化数据 |
-| ORM | Drizzle ORM | 类型安全数据库访问 |
-| Search | SQLite FTS5 | 经历库和岗位文本检索 |
-| Vector Search | sqlite-vec 或后续独立向量库 | 语义匹配经历和 JD |
-| AI Layer | Provider Adapter | 接入 OpenAI-compatible、本地模型或其他云模型 |
-| Document Output | Markdown + DOCX/PDF renderer | 生成简历源文件和投递版文件 |
-| Automation | Playwright | 受控浏览器自动化测试和后续辅助操作 |
-| Validation | Zod | AI 输出、表单和接口校验 |
-| Testing | Vitest + Playwright | 单元测试和端到端测试 |
-| Lint/Format | ESLint + Prettier | 代码质量 |
+| 层级              | 技术                                    | 用途                                         |
+| ----------------- | --------------------------------------- | -------------------------------------------- |
+| Monorepo          | pnpm workspace + Turborepo              | 多应用和共享包管理                           |
+| Web App           | React + Vite + TypeScript               | 本地求职工作台                               |
+| UI                | Tailwind CSS + shadcn/ui + lucide-react | 快速构建一致的操作界面                       |
+| Browser Extension | Chrome Manifest V3 + Plasmo             | Boss 页面采集、侧边栏、辅助填充              |
+| Local API         | Node.js + Fastify                       | 本地服务、AI 编排、文件生成                  |
+| Database          | SQLite                                  | 本地结构化数据                               |
+| ORM               | Drizzle ORM                             | 类型安全数据库访问                           |
+| Search            | SQLite FTS5                             | 经历库和岗位文本检索                         |
+| Vector Search     | sqlite-vec 或后续独立向量库             | 语义匹配经历和 JD                            |
+| AI Layer          | Provider Adapter                        | 接入 OpenAI-compatible、本地模型或其他云模型 |
+| Document Output   | Markdown + DOCX/PDF renderer            | 生成简历源文件和投递版文件                   |
+| Automation        | Playwright                              | 受控浏览器自动化测试和后续辅助操作           |
+| Validation        | Zod                                     | AI 输出、表单和接口校验                      |
+| Testing           | Vitest + Playwright                     | 单元测试和端到端测试                         |
+| Lint/Format       | ESLint + Prettier                       | 代码质量                                     |
 
 ## 项目结构建议
 
