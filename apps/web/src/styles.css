@@ -1,6 +1,5 @@
 :root {
   color: #172126;
-  background: #f6f3ee;
   font-family:
     Inter,
     ui-sans-serif,
@@ -14,8 +13,7 @@
 }
 
 html {
-  min-height: 100%;
-  background: #f6f3ee;
+  height: 100%;
 }
 
 * {
@@ -25,14 +23,15 @@ html {
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  height: 100%;
   background: #f6f3ee;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 #root {
-  min-height: 100vh;
-  background: #f6f3ee;
+  height: 100vh;
+  overflow-y: auto;
+  background: transparent;
 }
 
 button,
@@ -43,9 +42,6 @@ textarea {
 }
 
 .app-shell {
-  position: relative;
-  z-index: 0;
-  isolation: isolate;
   width: min(1120px, calc(100% - 32px));
   margin: 0 auto;
   padding: 48px 0;
