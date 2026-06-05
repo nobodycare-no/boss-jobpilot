@@ -1,13 +1,36 @@
 import { pathToFileURL } from "node:url";
+import type { DatabaseSync } from "node:sqlite";
 
 import Fastify from "fastify";
 
+import { createExperienceRepository, openJobpilotDatabase } from "@boss-jobpilot/db";
 import { computeJobMatchScore } from "@boss-jobpilot/scoring";
-import { JobPostingSchema } from "@boss-jobpilot/shared";
+import {
+  ExperienceItemCreateSchema,
+  ExperienceItemUpdateSchema,
+  JobPostingSchema
+} from "@boss-jobpilot/shared";
 
-export function buildServer() {
+type BuildServerOptions = {
+  database?: DatabaseSync;
+  databasePath?: string;
+};
+
+export function buildServer(options: BuildServerOptions = {}) {
+  const database = options.database ?? openJobpilotDatabase(options.databasePath);
+  const experiences = createExperienceRepository(database);
   const server = Fastify({
     logger: true
+  });
+
+  server.addHook("onRequest", async (request, reply) => {
+    reply.header("Access-Control-Allow-Origin", "*");
+    reply.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+    reply.header("Access-Control-Allow-Headers", "Content-Type");
+
+    if (request.method === "OPTIONS") {
+      return reply.status(204).send();
+    }
   });
 
   server.get("/health", async () => ({
@@ -15,6 +38,76 @@ export function buildServer() {
     service: "boss-jobpilot-api",
     version: "0.1.0"
   }));
+
+  server.get("/experiences", async () => ({
+    items: experiences.list()
+  }));
+
+  server.get<{ Params: { id: string } }>("/experiences/:id", async (request, reply) => {
+    const item = experiences.get(request.params.id);
+
+    if (!item) {
+      return reply.status(404).send({
+        error: "EXPERIENCE_NOT_FOUND"
+      });
+    }
+
+    return {
+      item
+    };
+  });
+
+  server.post("/experiences", async (request, reply) => {
+    const parsedExperience = ExperienceItemCreateSchema.safeParse(request.body);
+
+    if (!parsedExperience.success) {
+      return reply.status(400).send({
+        error: "INVALID_EXPERIENCE",
+        details: parsedExperience.error.flatten()
+      });
+    }
+
+    const item = experiences.create(parsedExperience.data);
+
+    return reply.status(201).send({
+      item
+    });
+  });
+
+  server.put<{ Params: { id: string } }>("/experiences/:id", async (request, reply) => {
+    const parsedExperience = ExperienceItemUpdateSchema.safeParse(request.body);
+
+    if (!parsedExperience.success) {
+      return reply.status(400).send({
+        error: "INVALID_EXPERIENCE",
+        details: parsedExperience.error.flatten()
+      });
+    }
+
+    const item = experiences.update(request.params.id, parsedExperience.data);
+
+    if (!item) {
+      return reply.status(404).send({
+        error: "EXPERIENCE_NOT_FOUND"
+      });
+    }
+
+    return {
+      item
+    };
+  });
+
+  server.delete<{ Params: { id: string } }>("/experiences/:id", async (request, reply) => {
+    const deleted = experiences.delete(request.params.id);
+
+    if (!deleted) {
+      return reply.status(404).send({
+        error: "EXPERIENCE_NOT_FOUND"
+      });
+    }
+
+    return reply.status(204).send();
+  });
 
   server.post("/jobs/analyze", async (request, reply) => {
     const parsedJob = JobPostingSchema.safeParse(request.body);
@@ -45,7 +138,9 @@ export function buildServer() {
 async function main() {
   const host = process.env.API_HOST ?? "127.0.0.1";
   const port = Number(process.env.API_PORT ?? 4000);
-  const server = buildServer();
+  const server = buildServer({
+    databasePath: process.env.DATABASE_PATH
+  });
 
   await server.listen({ host, port });
 }

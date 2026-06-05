@@ -34,6 +34,9 @@ importers:
 
   apps/api:
     dependencies:
+      "@boss-jobpilot/db":
+        specifier: workspace:*
+        version: link:../../packages/db
       "@boss-jobpilot/scoring":
         specifier: workspace:*
         version: link:../../packages/scoring
@@ -128,6 +131,9 @@ importers:
 
   packages/db:
     dependencies:
+      "@boss-jobpilot/shared":
+        specifier: workspace:*
+        version: link:../shared
       drizzle-orm:
         specifier: ^0.44.2
         version: 0.44.7

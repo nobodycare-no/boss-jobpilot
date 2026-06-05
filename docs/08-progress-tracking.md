@@ -30,7 +30,7 @@
 | AI Agent 设计 | Done | 已形成初版文档                                      |
 | 安全与合规    | Done | 已形成初版文档                                      |
 | 代码脚手架    | Done | 已初始化 pnpm workspace、Web/API/Extension 和共享包 |
-| 经历库        | Todo | 待开发                                              |
+| 经历库        | Done | 已支持 SQLite 持久化、API CRUD 和 Web 端录入管理    |
 | 岗位采集      | Todo | 待开发                                              |
 | 简历生成      | Todo | 待开发                                              |
 | 投递管理      | Todo | 待开发                                              |

@@ -57,6 +57,8 @@ corepack pnpm lint
 corepack pnpm build
 ```
 
+本地 API 默认使用 `data/jobpilot.sqlite` 保存经历库数据，可通过 `DATABASE_PATH` 覆盖。
+
 当前 workspace：
 
 - `apps/web`：本地求职工作台。

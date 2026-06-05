@@ -25,6 +25,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -89,56 +90,228 @@ h1 {
   font-size: 22px;
 }
 
-.module-grid {
+.workspace-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: minmax(360px, 0.85fr) minmax(0, 1.15fr);
+  gap: 20px;
   padding: 32px 0;
 }
 
-.module-card {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  gap: 14px;
-  padding: 20px;
+.editor-panel,
+.library-panel,
+.experience-card {
   border: 1px solid #d8d0c3;
   border-radius: 8px;
   background: #ffffff;
 }
 
-.module-card__icon {
-  display: grid;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  border-radius: 8px;
-  color: #0f5d66;
-  background: #e7f0ef;
+.editor-panel,
+.library-panel {
+  padding: 20px;
 }
 
-.module-card__header {
+.section-heading {
   display: flex;
-  gap: 12px;
-  align-items: center;
+  gap: 16px;
+  align-items: flex-start;
   justify-content: space-between;
+  margin-bottom: 18px;
 }
 
-.module-card h2 {
+.section-heading h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 24px;
 }
 
-.module-card span {
-  flex: 0 0 auto;
-  color: #875c20;
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+label {
+  display: grid;
+  gap: 7px;
+  color: #425155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #cfc6b9;
+  border-radius: 6px;
+  color: #172126;
+  background: #fffdfa;
+}
+
+input,
+select {
+  height: 40px;
+  padding: 0 11px;
+}
+
+textarea {
+  min-height: 86px;
+  resize: vertical;
+  padding: 10px 11px;
+  line-height: 1.5;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid #8bbfc0;
+  outline-offset: 1px;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #0f5d66;
+  border-radius: 6px;
+  padding: 0 14px;
+  color: #ffffff;
+  background: #0f5d66;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.secondary-button {
+  color: #0f5d66;
+  background: #ffffff;
+}
+
+.icon-button {
+  width: 38px;
+  min-height: 38px;
+  padding: 0;
+  color: #0f5d66;
+  background: #ffffff;
+}
+
+.icon-button.danger {
+  border-color: #a94b35;
+  color: #a94b35;
+}
+
+.count-pill,
+.type-pill,
+.tag-row span,
+.truth-row span,
+.skill-strip span {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 9px;
   font-size: 12px;
   font-weight: 700;
 }
 
-.module-card p {
-  margin: 8px 0 0;
+.count-pill,
+.type-pill {
+  color: #0f5d66;
+  background: #e7f0ef;
+}
+
+.notice {
+  margin-top: 18px;
+  border: 1px solid #d9a08f;
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: #7a2f20;
+  background: #fff4ef;
+}
+
+.skill-strip,
+.tag-row,
+.truth-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.skill-strip {
+  margin-bottom: 16px;
+}
+
+.skill-strip span,
+.tag-row span {
+  color: #3e5558;
+  background: #edf3f2;
+}
+
+.truth-row {
+  margin-top: 12px;
+}
+
+.truth-row span {
+  color: #6d542f;
+  background: #f4ead8;
+}
+
+.empty-state {
+  margin: 16px 0 0;
+  color: #607073;
+}
+
+.experience-list {
+  display: grid;
+  gap: 12px;
+}
+
+.experience-card {
+  padding: 20px;
+}
+
+.experience-card__header {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.experience-card h3 {
+  margin: 10px 0 0;
+  font-size: 20px;
+}
+
+.experience-card p {
   color: #526165;
   line-height: 1.6;
+}
+
+.experience-meta {
+  margin: 8px 0;
+  font-size: 14px;
 }
 
 @media (max-width: 760px) {
@@ -148,11 +321,20 @@ h1 {
   }
 
   .hero,
-  .module-grid {
+  .workspace-grid,
+  .form-grid {
     grid-template-columns: 1fr;
   }
 
   h1 {
     font-size: 40px;
+  }
+  .experience-card__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .card-actions {
+    justify-content: flex-end;
   }
 }

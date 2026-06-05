@@ -35,6 +35,17 @@ export const ExperienceItemSchema = z.object({
   tags: z.array(z.string()).default([])
 });
 
+export const ExperienceItemCreateSchema = ExperienceItemSchema.omit({
+  id: true
+}).extend({
+  id: z.string().min(1).optional()
+});
+
+export const ExperienceItemUpdateSchema = ExperienceItemCreateSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  "At least one field is required"
+);
+
 export const JobPostingSchema = z.object({
   id: z.string().min(1),
   platform: z.string().min(1),
