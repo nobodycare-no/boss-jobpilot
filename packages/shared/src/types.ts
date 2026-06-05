@@ -4,6 +4,7 @@ import type {
   ExperienceItemCreateSchema,
   ExperienceItemSchema,
   ExperienceItemUpdateSchema,
+  JobAnalysisCreateSchema,
   JobAnalysisSchema,
   JobPostingCreateSchema,
   JobPostingSchema,
@@ -18,6 +19,7 @@ export type JobPosting = z.infer<typeof JobPostingSchema>;
 export type JobPostingCreateInput = z.input<typeof JobPostingCreateSchema>;
 export type JobPostingUpdateInput = z.input<typeof JobPostingUpdateSchema>;
 export type JobAnalysis = z.infer<typeof JobAnalysisSchema>;
+export type JobAnalysisCreateInput = z.input<typeof JobAnalysisCreateSchema>;
 
 export type CandidatePreference = {
   targetRoles: string[];

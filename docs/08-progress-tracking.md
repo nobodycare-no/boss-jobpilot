@@ -94,3 +94,27 @@ Accepted / Proposed / Rejected
 - 有必要的单元测试或手动验证记录。
 - 不破坏已有数据。
 - 文档同步更新。
+
+## 2026-06-05 更新
+
+### Done
+
+- 岗位分析结果已从临时评分扩展为结构化分析对象。
+- 新增 `job_analyses` SQLite 持久化表和仓库，支持按岗位查询历史分析与最新分析。
+- `POST /jobs/:id/analyze` 会生成并保存分析结果，同时保留旧版 `score` 字段以兼容旧调用。
+- 新增 `GET /jobs/:id/analyses` 与 `GET /jobs/:id/analysis/latest`。
+- Web 岗位池支持展示分数、推荐动作、匹配关键词、必需技能、加分技能、风险信号和简历策略。
+
+### Verification
+
+- `npm run typecheck`
+- `npm run test`
+- `npm run format`
+- `npm run lint`
+- `npm run build`
+
+### Next
+
+- 将经历库素材纳入岗位分析，输出 `matchedExperienceIds`。
+- 在 AI 包中接入真实模型调用，替换或增强当前规则分析器。
+- 基于岗位分析结果生成个性化打招呼语和定制简历草稿。

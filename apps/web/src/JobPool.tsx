@@ -2,9 +2,9 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 import { BarChart3, BriefcaseBusiness, Plus, RefreshCw, Trash2 } from "lucide-react";
 
-import type { JobPosting, JobPostingCreateInput } from "@boss-jobpilot/shared";
+import type { JobAnalysis, JobPosting, JobPostingCreateInput } from "@boss-jobpilot/shared";
 
-import { analyzeJob, createJob, deleteJob, listJobs, type JobAnalysisResponse } from "./api";
+import { analyzeJob, createJob, deleteJob, getLatestJobAnalysis, listJobs } from "./api";
 
 type JobFormState = {
   platform: string;
@@ -30,17 +30,17 @@ const emptyJobForm: JobFormState = {
   jdRaw: ""
 };
 
-const recommendationLabels: Record<JobAnalysisResponse["score"]["recommendation"], string> = {
+const recommendationLabels: Record<JobAnalysis["recommendation"], string> = {
   prioritize: "优先投递",
   apply: "可以投递",
-  cautious: "谨慎沟通",
+  cautious: "谨慎投递",
   skip: "建议跳过"
 };
 
 export function JobPool() {
   const [jobs, setJobs] = useState<JobPosting[]>([]);
   const [form, setForm] = useState<JobFormState>(emptyJobForm);
-  const [analysisByJobId, setAnalysisByJobId] = useState<Record<string, JobAnalysisResponse>>({});
+  const [analysisByJobId, setAnalysisByJobId] = useState<Record<string, JobAnalysis>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +66,20 @@ export function JobPool() {
     try {
       const response = await listJobs();
       setJobs(response.items);
+      const latestAnalyses = await Promise.all(
+        response.items.map(async (job) => {
+          const latest = await getLatestJobAnalysis(job.id);
+          return [job.id, latest.item] as const;
+        })
+      );
+
+      setAnalysisByJobId(
+        Object.fromEntries(
+          latestAnalyses.filter((entry): entry is readonly [string, JobAnalysis] =>
+            Boolean(entry[1])
+          )
+        )
+      );
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "岗位池加载失败");
     } finally {
@@ -113,10 +127,10 @@ export function JobPool() {
     setError(null);
 
     try {
-      const analysis = await analyzeJob(id);
+      const response = await analyzeJob(id);
       setAnalysisByJobId((current) => ({
         ...current,
-        [id]: analysis
+        [id]: response.analysis
       }));
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "岗位分析失败");
@@ -272,60 +286,95 @@ export function JobPool() {
           ) : null}
 
           <div className="experience-list">
-            {jobs.map((job) => {
-              const analysis = analysisByJobId[job.id];
-
-              return (
-                <article className="experience-card" key={job.id}>
-                  <div className="experience-card__header">
-                    <div>
-                      <span className="type-pill">{job.platform}</span>
-                      <h3>{job.title}</h3>
-                    </div>
-                    <div className="card-actions">
-                      <button
-                        type="button"
-                        className="icon-button"
-                        onClick={() => void handleAnalyze(job.id)}
-                        title="分析"
-                      >
-                        <BarChart3 size={17} />
-                      </button>
-                      <button
-                        type="button"
-                        className="icon-button danger"
-                        onClick={() => void handleDelete(job.id)}
-                        title="删除"
-                      >
-                        <Trash2 size={17} />
-                      </button>
-                    </div>
-                  </div>
-                  <p className="experience-meta">
-                    {[job.companyName, job.city, job.salaryText, job.experienceRequirement]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                  <p>{job.jdRaw}</p>
-                  {analysis ? (
-                    <div className="analysis-box">
-                      <strong>{analysis.score.total}/100</strong>
-                      <span>{recommendationLabels[analysis.score.recommendation]}</span>
-                      {analysis.score.matchedKeywords.length > 0 ? (
-                        <small>匹配：{analysis.score.matchedKeywords.join("、")}</small>
-                      ) : null}
-                      {analysis.score.riskFlags.length > 0 ? (
-                        <small>风险：{analysis.score.riskFlags.join("、")}</small>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </article>
-              );
-            })}
+            {jobs.map((job) => (
+              <JobCard
+                analysis={analysisByJobId[job.id]}
+                job={job}
+                key={job.id}
+                onAnalyze={handleAnalyze}
+                onDelete={handleDelete}
+              />
+            ))}
           </div>
         </section>
       </div>
     </section>
+  );
+}
+
+type JobCardProps = {
+  analysis?: JobAnalysis;
+  job: JobPosting;
+  onAnalyze: (id: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+};
+
+function JobCard({ analysis, job, onAnalyze, onDelete }: JobCardProps) {
+  return (
+    <article className="experience-card">
+      <div className="experience-card__header">
+        <div>
+          <span className="type-pill">{job.platform}</span>
+          <h3>{job.title}</h3>
+        </div>
+        <div className="card-actions">
+          <button
+            type="button"
+            className="icon-button"
+            onClick={() => void onAnalyze(job.id)}
+            title="分析"
+          >
+            <BarChart3 size={17} />
+          </button>
+          <button
+            type="button"
+            className="icon-button danger"
+            onClick={() => void onDelete(job.id)}
+            title="删除"
+          >
+            <Trash2 size={17} />
+          </button>
+        </div>
+      </div>
+      <p className="experience-meta">
+        {[job.companyName, job.city, job.salaryText, job.experienceRequirement]
+          .filter(Boolean)
+          .join(" / ")}
+      </p>
+      <p>{job.jdRaw}</p>
+      {analysis ? <AnalysisPanel analysis={analysis} /> : null}
+    </article>
+  );
+}
+
+function AnalysisPanel({ analysis }: { analysis: JobAnalysis }) {
+  return (
+    <div className="analysis-box">
+      <div className="analysis-score">
+        <strong>{analysis.matchScore}/100</strong>
+        <span>{recommendationLabels[analysis.recommendation]}</span>
+      </div>
+      <div className="analysis-grid">
+        <AnalysisList label="匹配关键词" values={analysis.matchedKeywords} />
+        <AnalysisList label="必需技能" values={analysis.requiredSkills} />
+        <AnalysisList label="加分技能" values={analysis.bonusSkills} />
+        <AnalysisList label="风险信号" values={analysis.riskFlags} />
+      </div>
+      <p className="analysis-strategy">{analysis.resumeStrategy}</p>
+    </div>
+  );
+}
+
+function AnalysisList({ label, values }: { label: string; values: string[] }) {
+  if (values.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="analysis-list">
+      <span>{label}</span>
+      <small>{values.join("、")}</small>
+    </div>
   );
 }
 

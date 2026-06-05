@@ -13,17 +13,17 @@ describe("job routes", () => {
     db.close();
   });
 
-  it("creates, lists and analyzes jobs", async () => {
+  it("creates, lists, analyzes and persists jobs", async () => {
     const createResponse = await server.inject({
       method: "POST",
       url: "/jobs",
       payload: {
         platform: "boss",
-        title: "AI 前端开发工程师",
+        title: "AI Frontend Engineer",
         salaryText: "20-35K",
-        city: "上海",
-        jdRaw: "负责 React、TypeScript、Node.js 和 AI API 接入。",
-        companyName: "示例科技"
+        city: "Shanghai",
+        jdRaw: "Build React, TypeScript, Node.js and AI API integrations.",
+        companyName: "Example Tech"
       }
     });
 
@@ -44,6 +44,23 @@ describe("job routes", () => {
     });
 
     expect(analysisResponse.statusCode).toBe(200);
-    expect(analysisResponse.json().score.recommendation).toBe("prioritize");
+    expect(analysisResponse.json().analysis.recommendation).toBe("prioritize");
+    expect(analysisResponse.json().analysis.requiredSkills).toContain("React");
+
+    const latestResponse = await server.inject({
+      method: "GET",
+      url: `/jobs/${created.id}/analysis/latest`
+    });
+
+    expect(latestResponse.statusCode).toBe(200);
+    expect(latestResponse.json().item.id).toBe(analysisResponse.json().analysis.id);
+
+    const analysesResponse = await server.inject({
+      method: "GET",
+      url: `/jobs/${created.id}/analyses`
+    });
+
+    expect(analysesResponse.statusCode).toBe(200);
+    expect(analysesResponse.json().items).toHaveLength(1);
   });
 });

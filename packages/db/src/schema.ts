@@ -92,6 +92,7 @@ export const jobAnalyses = sqliteTable("job_analyses", {
     .references(() => jobPostings.id),
   matchScore: integer("match_score").notNull(),
   recommendation: text("recommendation").notNull(),
+  matchedKeywordsJson: text("matched_keywords_json").notNull().default("[]"),
   requiredSkillsJson: text("required_skills_json").notNull().default("[]"),
   bonusSkillsJson: text("bonus_skills_json").notNull().default("[]"),
   matchedExperienceIdsJson: text("matched_experience_ids_json").notNull().default("[]"),

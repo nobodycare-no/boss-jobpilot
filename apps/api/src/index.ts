@@ -1,20 +1,22 @@
-import { pathToFileURL } from "node:url";
 import type { DatabaseSync } from "node:sqlite";
+import { pathToFileURL } from "node:url";
 
 import Fastify from "fastify";
 
 import {
   createExperienceRepository,
+  createJobAnalysisRepository,
   createJobRepository,
   openJobpilotDatabase
 } from "@boss-jobpilot/db";
-import { computeJobMatchScore } from "@boss-jobpilot/scoring";
+import { analyzeJobPosting, computeJobMatchScore } from "@boss-jobpilot/scoring";
 import {
   ExperienceItemCreateSchema,
   ExperienceItemUpdateSchema,
   JobPostingCreateSchema,
   JobPostingSchema,
-  JobPostingUpdateSchema
+  JobPostingUpdateSchema,
+  type CandidatePreference
 } from "@boss-jobpilot/shared";
 
 type BuildServerOptions = {
@@ -22,10 +24,18 @@ type BuildServerOptions = {
   databasePath?: string;
 };
 
+const defaultCandidatePreference: CandidatePreference = {
+  targetRoles: ["AI 应用开发", "前端开发", "全栈开发"],
+  targetCities: [],
+  preferredKeywords: ["React", "TypeScript", "AI", "Node.js"],
+  blockedKeywords: ["外包", "驻场", "培训"]
+};
+
 export function buildServer(options: BuildServerOptions = {}) {
   const database = options.database ?? openJobpilotDatabase(options.databasePath);
   const experiences = createExperienceRepository(database);
   const jobs = createJobRepository(database);
+  const jobAnalyses = createJobAnalysisRepository(database);
   const server = Fastify({
     logger: true
   });
@@ -195,14 +205,40 @@ export function buildServer(options: BuildServerOptions = {}) {
       });
     }
 
+    const analysis = jobAnalyses.create(analyzeJobPosting(job, defaultCandidatePreference));
+
     return {
       jobId: job.id,
-      score: computeJobMatchScore(job, {
-        targetRoles: ["AI 应用开发", "前端开发", "全栈开发"],
-        targetCities: [],
-        preferredKeywords: ["React", "TypeScript", "AI", "Node.js"],
-        blockedKeywords: ["外包", "驻场", "培训"]
-      })
+      analysis,
+      score: analysisToLegacyScore(analysis)
+    };
+  });
+
+  server.get<{ Params: { id: string } }>("/jobs/:id/analyses", async (request, reply) => {
+    const job = jobs.get(request.params.id);
+
+    if (!job) {
+      return reply.status(404).send({
+        error: "JOB_NOT_FOUND"
+      });
+    }
+
+    return {
+      items: jobAnalyses.listByJobId(job.id)
+    };
+  });
+
+  server.get<{ Params: { id: string } }>("/jobs/:id/analysis/latest", async (request, reply) => {
+    const job = jobs.get(request.params.id);
+
+    if (!job) {
+      return reply.status(404).send({
+        error: "JOB_NOT_FOUND"
+      });
+    }
+
+    return {
+      item: jobAnalyses.getLatestByJobId(job.id) ?? null
     };
   });
 
@@ -216,20 +252,31 @@ export function buildServer(options: BuildServerOptions = {}) {
       });
     }
 
-    const score = computeJobMatchScore(parsedJob.data, {
-      targetRoles: ["AI 应用开发", "前端开发", "全栈开发"],
-      targetCities: [],
-      preferredKeywords: ["React", "TypeScript", "AI", "Node.js"],
-      blockedKeywords: ["外包", "驻场", "培训"]
-    });
+    const score = computeJobMatchScore(parsedJob.data, defaultCandidatePreference);
+    const analysis = analyzeJobPosting(parsedJob.data, defaultCandidatePreference);
 
     return {
       jobId: parsedJob.data.id,
+      analysis,
       score
     };
   });
 
   return server;
+}
+
+function analysisToLegacyScore(analysis: {
+  matchScore: number;
+  recommendation: "prioritize" | "apply" | "cautious" | "skip";
+  matchedKeywords: string[];
+  riskFlags: string[];
+}) {
+  return {
+    total: analysis.matchScore,
+    recommendation: analysis.recommendation,
+    matchedKeywords: analysis.matchedKeywords,
+    riskFlags: analysis.riskFlags
+  };
 }
 
 async function main() {

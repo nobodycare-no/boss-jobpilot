@@ -74,12 +74,25 @@ export const JobPostingUpdateSchema = JobPostingCreateSchema.partial().refine(
 );
 
 export const JobAnalysisSchema = z.object({
+  id: z.string().min(1),
   jobId: z.string().min(1),
   matchScore: z.number().min(0).max(100),
   recommendation: z.enum(["prioritize", "apply", "cautious", "skip"]),
+  matchedKeywords: z.array(z.string()).default([]),
   requiredSkills: z.array(z.string()).default([]),
   bonusSkills: z.array(z.string()).default([]),
   matchedExperienceIds: z.array(z.string()).default([]),
   riskFlags: z.array(z.string()).default([]),
-  resumeStrategy: z.string().default("")
+  resumeStrategy: z.string().default(""),
+  modelName: z.string().default("rule-based"),
+  promptVersion: z.string().default("rule-based-job-analysis@0.1.0"),
+  createdAt: z.string().datetime()
+});
+
+export const JobAnalysisCreateSchema = JobAnalysisSchema.omit({
+  id: true,
+  createdAt: true
+}).extend({
+  id: z.string().min(1).optional(),
+  createdAt: z.string().datetime().optional()
 });

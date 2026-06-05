@@ -328,9 +328,7 @@ button:disabled {
 
 .analysis-box {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 6px 10px;
-  align-items: center;
+  gap: 12px;
   border: 1px solid #cfe0dc;
   border-radius: 8px;
   margin-top: 14px;
@@ -338,20 +336,49 @@ button:disabled {
   background: #f2f8f7;
 }
 
-.analysis-box strong {
+.analysis-score {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  align-items: center;
+}
+
+.analysis-score strong {
   color: #0f5d66;
   font-size: 20px;
 }
 
-.analysis-box span {
+.analysis-score span,
+.analysis-list span {
   color: #173c42;
   font-weight: 700;
 }
 
-.analysis-box small {
-  grid-column: 1 / -1;
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+}
+
+.analysis-list {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.analysis-list span {
+  font-size: 12px;
+}
+
+.analysis-list small,
+.analysis-strategy {
   color: #526165;
   line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.analysis-strategy {
+  margin: 0;
 }
 
 .experience-meta {
@@ -367,7 +394,8 @@ button:disabled {
 
   .hero,
   .workspace-grid,
-  .form-grid {
+  .form-grid,
+  .analysis-grid {
     grid-template-columns: 1fr;
   }
 

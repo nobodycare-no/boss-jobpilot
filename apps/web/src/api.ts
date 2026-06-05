@@ -1,6 +1,7 @@
 import type {
   ExperienceItem,
   ExperienceItemCreateInput,
+  JobAnalysis,
   JobPosting,
   JobPostingCreateInput
 } from "@boss-jobpilot/shared";
@@ -25,12 +26,17 @@ type JobResponse = {
 
 export type JobAnalysisResponse = {
   jobId: string;
+  analysis: JobAnalysis;
   score: {
     total: number;
     recommendation: "prioritize" | "apply" | "cautious" | "skip";
     matchedKeywords: string[];
     riskFlags: string[];
   };
+};
+
+export type LatestJobAnalysisResponse = {
+  item: JobAnalysis | null;
 };
 
 export async function listExperiences() {
@@ -131,4 +137,14 @@ export async function analyzeJob(id: string) {
   }
 
   return (await response.json()) as JobAnalysisResponse;
+}
+
+export async function getLatestJobAnalysis(id: string) {
+  const response = await fetch(`${apiBaseUrl}/jobs/${id}/analysis/latest`);
+
+  if (!response.ok) {
+    throw new Error("无法加载岗位分析");
+  }
+
+  return (await response.json()) as LatestJobAnalysisResponse;
 }
