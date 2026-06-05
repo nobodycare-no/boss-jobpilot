@@ -36,6 +36,14 @@
 12. 实现插件辅助填入
 ```
 
+## 启动约定
+
+- 新手入口：根目录 `start.bat`。
+- 程序员入口：根目录 `npm run dev`。
+- `npm run dev` 默认只启动 API 和 Web，不启动插件。
+- 插件开发使用 `npm run dev:extension`。
+- 全 workspace 并行 dev 使用 `npm run dev:workspace`，仅在需要同时跑全部应用时使用。
+
 ## Definition of Done
 
 每个任务完成时必须说明：

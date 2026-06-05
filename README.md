@@ -46,11 +46,54 @@
 
 ## Development
 
-本项目使用 pnpm workspace。若本机没有直接安装 pnpm，可通过 Corepack 调用：
+### 新手启动
+
+Windows 用户可以直接双击根目录的：
+
+```text
+start.bat
+```
+
+它会自动检查 Node/Corepack、在缺少依赖时执行安装、分别启动本地 API 和 Web，并打开浏览器。
+
+启动后访问：
+
+```text
+http://127.0.0.1:5173
+```
+
+关闭项目时，关闭 `boss-jobpilot API` 和 `boss-jobpilot Web` 两个命令行窗口即可。
+
+### 程序员启动
+
+本项目使用 pnpm workspace。推荐在根目录运行：
+
+```powershell
+npm run dev
+```
+
+这会同时启动：
+
+- API：`http://127.0.0.1:4000`
+- Web：`http://127.0.0.1:5173`
+
+也可以分别启动：
+
+```powershell
+npm run dev:api
+npm run dev:web
+```
+
+插件开发单独启动：
+
+```powershell
+npm run dev:extension
+```
+
+若本机没有直接安装 pnpm，也可以通过 Corepack 调用：
 
 ```powershell
 corepack pnpm install
-corepack pnpm dev
 corepack pnpm typecheck
 corepack pnpm test
 corepack pnpm lint
