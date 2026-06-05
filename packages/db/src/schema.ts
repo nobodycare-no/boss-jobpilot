@@ -56,6 +56,7 @@ export const applications = sqliteTable("applications", {
   jobId: text("job_id")
     .notNull()
     .references(() => jobPostings.id),
+  resumeVersionId: text("resume_version_id").references(() => resumeVersions.id),
   status: text("status").notNull(),
   greetingMessage: text("greeting_message"),
   appliedAt: text("applied_at"),

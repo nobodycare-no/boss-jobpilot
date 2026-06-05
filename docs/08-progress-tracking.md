@@ -21,19 +21,19 @@
 
 ## 当前进度
 
-| 模块          | 状态 | 说明                                                             |
-| ------------- | ---- | ---------------------------------------------------------------- |
-| 项目命名      | Done | 使用 `boss-jobpilot`                                             |
-| 技术栈设计    | Done | 已形成初版文档                                                   |
-| 系统架构      | Done | 已形成初版文档                                                   |
-| 数据模型      | Done | 已形成初版文档                                                   |
-| AI Agent 设计 | Done | 已形成初版文档                                                   |
-| 安全与合规    | Done | 已形成初版文档                                                   |
-| 代码脚手架    | Done | 已初始化 pnpm workspace、Web/API/Extension 和共享包              |
-| 经历库        | Done | 已支持 SQLite 持久化、API CRUD 和 Web 端录入管理                 |
-| 岗位采集      | Done | 已支持岗位池 SQLite 持久化、API CRUD、Web 手动录入和插件一键保存 |
-| 简历生成      | Done | 已支持基于岗位分析和匹配经历生成 Markdown 定制简历草稿           |
-| 投递管理      | Todo | 待开发                                                           |
+| 模块          | 状态        | 说明                                                                |
+| ------------- | ----------- | ------------------------------------------------------------------- |
+| 项目命名      | Done        | 使用 `boss-jobpilot`                                                |
+| 技术栈设计    | Done        | 已形成初版文档                                                      |
+| 系统架构      | Done        | 已形成初版文档                                                      |
+| 数据模型      | Done        | 已形成初版文档                                                      |
+| AI Agent 设计 | Done        | 已形成初版文档                                                      |
+| 安全与合规    | Done        | 已形成初版文档                                                      |
+| 代码脚手架    | Done        | 已初始化 pnpm workspace、Web/API/Extension 和共享包                 |
+| 经历库        | Done        | 已支持 SQLite 持久化、API CRUD 和 Web 端录入管理                    |
+| 岗位采集      | Done        | 已支持岗位池 SQLite 持久化、API CRUD、Web 手动录入和插件一键保存    |
+| 简历生成      | Done        | 已支持基于岗位分析和匹配经历生成 Markdown 定制简历草稿              |
+| 投递管理      | In Progress | 已支持打招呼语草稿生成和 application draft 持久化，尚未支持状态流转 |
 
 ## 每日开发记录模板
 
@@ -163,3 +163,27 @@ Accepted / Proposed / Rejected
 - 将定制简历从只读预览升级为可编辑版本管理。
 - 生成个性化打招呼语，并与简历版本组成投递包。
 - 用真实 AI 模型增强规则版简历生成器。
+
+## 2026-06-05 更新 4
+
+### Done
+
+- 新增 `Application` 共享 schema 和 SQLite `applications` / `application_events` 初始化表。
+- 新增 application repository，支持按岗位查询历史草稿和最新草稿。
+- `POST /jobs/:id/greetings` 支持基于最新岗位分析、匹配经历和最新简历版本生成打招呼语草稿。
+- 新增 `GET /jobs/:id/applications` 与 `GET /jobs/:id/application/latest`。
+- Web 岗位卡新增“生成打招呼语”按钮，并展示打招呼语草稿和关联简历版本。
+- `packages/ai` 新增规则版 greeting writer，后续可替换为真实 AI provider。
+
+### Verification
+
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+
+### Next
+
+- 将简历草稿和打招呼语组合成统一“投递包”视图。
+- 支持复制打招呼语、复制 Markdown 简历、标记投递状态。
+- 将匹配经历 ID 展示升级为经历标题和摘要。

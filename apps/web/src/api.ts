@@ -1,4 +1,5 @@
 import type {
+  Application,
   ExperienceItem,
   ExperienceItemCreateInput,
   JobAnalysis,
@@ -29,6 +30,10 @@ type ResumeVersionResponse = {
   item: ResumeVersion;
 };
 
+type ApplicationResponse = {
+  item: Application;
+};
+
 export type JobAnalysisResponse = {
   jobId: string;
   analysis: JobAnalysis;
@@ -46,6 +51,10 @@ export type LatestJobAnalysisResponse = {
 
 export type LatestResumeVersionResponse = {
   item: ResumeVersion | null;
+};
+
+export type LatestApplicationResponse = {
+  item: Application | null;
 };
 
 export async function listExperiences() {
@@ -182,4 +191,30 @@ export async function getLatestResume(id: string) {
   }
 
   return (await response.json()) as LatestResumeVersionResponse;
+}
+
+export async function generateGreeting(id: string) {
+  const response = await fetch(`${apiBaseUrl}/jobs/${id}/greetings`, {
+    method: "POST"
+  });
+
+  if (!response.ok) {
+    if (response.status === 409) {
+      throw new Error("请先分析岗位，再生成打招呼语");
+    }
+
+    throw new Error("无法生成打招呼语");
+  }
+
+  return (await response.json()) as ApplicationResponse;
+}
+
+export async function getLatestApplication(id: string) {
+  const response = await fetch(`${apiBaseUrl}/jobs/${id}/application/latest`);
+
+  if (!response.ok) {
+    throw new Error("无法加载投递草稿");
+  }
+
+  return (await response.json()) as LatestApplicationResponse;
 }

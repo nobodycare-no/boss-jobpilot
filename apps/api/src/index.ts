@@ -3,7 +3,9 @@ import { pathToFileURL } from "node:url";
 
 import Fastify from "fastify";
 
+import { generateGreetingDraft } from "@boss-jobpilot/ai";
 import {
+  createApplicationRepository,
   createExperienceRepository,
   createJobAnalysisRepository,
   createJobRepository,
@@ -39,6 +41,7 @@ export function buildServer(options: BuildServerOptions = {}) {
   const jobs = createJobRepository(database);
   const jobAnalyses = createJobAnalysisRepository(database);
   const resumeVersions = createResumeVersionRepository(database);
+  const applications = createApplicationRepository(database);
   const server = Fastify({
     logger: true
   });
@@ -331,6 +334,70 @@ export function buildServer(options: BuildServerOptions = {}) {
 
     return {
       item: resumeVersions.getLatestByJobId(job.id) ?? null
+    };
+  });
+
+  server.post<{ Params: { id: string } }>("/jobs/:id/greetings", async (request, reply) => {
+    const job = jobs.get(request.params.id);
+
+    if (!job) {
+      return reply.status(404).send({
+        error: "JOB_NOT_FOUND"
+      });
+    }
+
+    const analysis = jobAnalyses.getLatestByJobId(job.id);
+
+    if (!analysis) {
+      return reply.status(409).send({
+        error: "ANALYSIS_REQUIRED"
+      });
+    }
+
+    const greeting = generateGreetingDraft({
+      job,
+      analysis,
+      experiences: experiences.list()
+    });
+    const latestResume = resumeVersions.getLatestByJobId(job.id);
+    const item = applications.create({
+      jobId: job.id,
+      resumeVersionId: latestResume?.id,
+      status: "draft",
+      greetingMessage: greeting.message
+    });
+
+    return reply.status(201).send({
+      item,
+      greeting
+    });
+  });
+
+  server.get<{ Params: { id: string } }>("/jobs/:id/applications", async (request, reply) => {
+    const job = jobs.get(request.params.id);
+
+    if (!job) {
+      return reply.status(404).send({
+        error: "JOB_NOT_FOUND"
+      });
+    }
+
+    return {
+      items: applications.listByJobId(job.id)
+    };
+  });
+
+  server.get<{ Params: { id: string } }>("/jobs/:id/application/latest", async (request, reply) => {
+    const job = jobs.get(request.params.id);
+
+    if (!job) {
+      return reply.status(404).send({
+        error: "JOB_NOT_FOUND"
+      });
+    }
+
+    return {
+      item: applications.getLatestByJobId(job.id) ?? null
     };
   });
 

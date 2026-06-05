@@ -34,6 +34,9 @@ importers:
 
   apps/api:
     dependencies:
+      "@boss-jobpilot/ai":
+        specifier: workspace:*
+        version: link:../../packages/ai
       "@boss-jobpilot/db":
         specifier: workspace:*
         version: link:../../packages/db

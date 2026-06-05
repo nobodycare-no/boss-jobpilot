@@ -102,6 +102,30 @@ export function openJobpilotDatabase(path = "data/jobpilot.sqlite") {
       created_at TEXT NOT NULL,
       FOREIGN KEY (job_id) REFERENCES job_postings(id)
     );
+
+    CREATE TABLE IF NOT EXISTS applications (
+      id TEXT PRIMARY KEY,
+      job_id TEXT NOT NULL,
+      resume_version_id TEXT,
+      status TEXT NOT NULL,
+      greeting_message TEXT,
+      applied_at TEXT,
+      next_follow_up_at TEXT,
+      outcome TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (job_id) REFERENCES job_postings(id),
+      FOREIGN KEY (resume_version_id) REFERENCES resume_versions(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS application_events (
+      id TEXT PRIMARY KEY,
+      application_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      content TEXT,
+      occurred_at TEXT NOT NULL,
+      FOREIGN KEY (application_id) REFERENCES applications(id)
+    );
   `);
 
   return db;

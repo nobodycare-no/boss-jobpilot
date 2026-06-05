@@ -1,8 +1,17 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
-import { BarChart3, BriefcaseBusiness, FileText, Plus, RefreshCw, Trash2 } from "lucide-react";
+import {
+  BarChart3,
+  BriefcaseBusiness,
+  FileText,
+  MessageSquareText,
+  Plus,
+  RefreshCw,
+  Trash2
+} from "lucide-react";
 
 import type {
+  Application,
   JobAnalysis,
   JobPosting,
   JobPostingCreateInput,
@@ -13,7 +22,9 @@ import {
   analyzeJob,
   createJob,
   deleteJob,
+  generateGreeting,
   generateResume,
+  getLatestApplication,
   getLatestJobAnalysis,
   getLatestResume,
   listJobs
@@ -55,6 +66,7 @@ export function JobPool() {
   const [form, setForm] = useState<JobFormState>(emptyJobForm);
   const [analysisByJobId, setAnalysisByJobId] = useState<Record<string, JobAnalysis>>({});
   const [resumeByJobId, setResumeByJobId] = useState<Record<string, ResumeVersion>>({});
+  const [applicationByJobId, setApplicationByJobId] = useState<Record<string, Application>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +104,12 @@ export function JobPool() {
           return [job.id, latest.item] as const;
         })
       );
+      const latestApplications = await Promise.all(
+        response.items.map(async (job) => {
+          const latest = await getLatestApplication(job.id);
+          return [job.id, latest.item] as const;
+        })
+      );
 
       setAnalysisByJobId(
         Object.fromEntries(
@@ -103,6 +121,13 @@ export function JobPool() {
       setResumeByJobId(
         Object.fromEntries(
           latestResumes.filter((entry): entry is readonly [string, ResumeVersion] =>
+            Boolean(entry[1])
+          )
+        )
+      );
+      setApplicationByJobId(
+        Object.fromEntries(
+          latestApplications.filter((entry): entry is readonly [string, Application] =>
             Boolean(entry[1])
           )
         )
@@ -149,6 +174,11 @@ export function JobPool() {
         delete next[id];
         return next;
       });
+      setApplicationByJobId((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
       await refreshJobs();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "岗位删除失败");
@@ -180,6 +210,20 @@ export function JobPool() {
       }));
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "定制简历生成失败");
+    }
+  }
+
+  async function handleGenerateGreeting(id: string) {
+    setError(null);
+
+    try {
+      const response = await generateGreeting(id);
+      setApplicationByJobId((current) => ({
+        ...current,
+        [id]: response.item
+      }));
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "打招呼语生成失败");
     }
   }
 
@@ -335,10 +379,12 @@ export function JobPool() {
             {jobs.map((job) => (
               <JobCard
                 analysis={analysisByJobId[job.id]}
+                application={applicationByJobId[job.id]}
                 job={job}
                 key={job.id}
                 onAnalyze={handleAnalyze}
                 onDelete={handleDelete}
+                onGenerateGreeting={handleGenerateGreeting}
                 onGenerateResume={handleGenerateResume}
                 resume={resumeByJobId[job.id]}
               />
@@ -352,14 +398,25 @@ export function JobPool() {
 
 type JobCardProps = {
   analysis?: JobAnalysis;
+  application?: Application;
   job: JobPosting;
   onAnalyze: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onGenerateGreeting: (id: string) => Promise<void>;
   onGenerateResume: (id: string) => Promise<void>;
   resume?: ResumeVersion;
 };
 
-function JobCard({ analysis, job, onAnalyze, onDelete, onGenerateResume, resume }: JobCardProps) {
+function JobCard({
+  analysis,
+  application,
+  job,
+  onAnalyze,
+  onDelete,
+  onGenerateGreeting,
+  onGenerateResume,
+  resume
+}: JobCardProps) {
   return (
     <article className="experience-card">
       <div className="experience-card__header">
@@ -386,6 +443,14 @@ function JobCard({ analysis, job, onAnalyze, onDelete, onGenerateResume, resume 
           </button>
           <button
             type="button"
+            className="icon-button"
+            onClick={() => void onGenerateGreeting(job.id)}
+            title="生成打招呼语"
+          >
+            <MessageSquareText size={17} />
+          </button>
+          <button
+            type="button"
             className="icon-button danger"
             onClick={() => void onDelete(job.id)}
             title="删除"
@@ -402,7 +467,23 @@ function JobCard({ analysis, job, onAnalyze, onDelete, onGenerateResume, resume 
       <p>{job.jdRaw}</p>
       {analysis ? <AnalysisPanel analysis={analysis} /> : null}
       {resume ? <ResumePanel resume={resume} /> : null}
+      {application ? <ApplicationPanel application={application} /> : null}
     </article>
+  );
+}
+
+function ApplicationPanel({ application }: { application: Application }) {
+  return (
+    <div className="application-box">
+      <div className="application-box__header">
+        <strong>打招呼语草稿</strong>
+        <span>{application.status}</span>
+      </div>
+      <p>{application.greetingMessage}</p>
+      {application.resumeVersionId ? (
+        <small>已关联简历版本：{application.resumeVersionId}</small>
+      ) : null}
+    </div>
   );
 }
 

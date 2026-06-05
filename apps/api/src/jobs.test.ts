@@ -107,5 +107,31 @@ describe("job routes", () => {
 
     expect(resumeListResponse.statusCode).toBe(200);
     expect(resumeListResponse.json().items).toHaveLength(1);
+
+    const greetingResponse = await server.inject({
+      method: "POST",
+      url: `/jobs/${created.id}/greetings`
+    });
+
+    expect(greetingResponse.statusCode).toBe(201);
+    expect(greetingResponse.json().item.status).toBe("draft");
+    expect(greetingResponse.json().item.greetingMessage).toContain("AI Frontend Engineer");
+    expect(greetingResponse.json().item.resumeVersionId).toBe(resumeResponse.json().item.id);
+
+    const latestApplicationResponse = await server.inject({
+      method: "GET",
+      url: `/jobs/${created.id}/application/latest`
+    });
+
+    expect(latestApplicationResponse.statusCode).toBe(200);
+    expect(latestApplicationResponse.json().item.id).toBe(greetingResponse.json().item.id);
+
+    const applicationListResponse = await server.inject({
+      method: "GET",
+      url: `/jobs/${created.id}/applications`
+    });
+
+    expect(applicationListResponse.statusCode).toBe(200);
+    expect(applicationListResponse.json().items).toHaveLength(1);
   });
 });

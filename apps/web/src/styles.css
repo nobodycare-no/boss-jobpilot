@@ -346,7 +346,25 @@ button:disabled {
   background: #fffaf0;
 }
 
+.application-box {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #d4d8e5;
+  border-radius: 8px;
+  margin-top: 14px;
+  padding: 12px;
+  background: #f6f8ff;
+}
+
 .resume-box__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.application-box__header {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -356,6 +374,10 @@ button:disabled {
 
 .resume-box__header strong {
   color: #5b431d;
+}
+
+.application-box__header strong {
+  color: #26395e;
 }
 
 .resume-box__header span {
@@ -370,10 +392,33 @@ button:disabled {
   font-weight: 700;
 }
 
+.application-box__header span {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 9px;
+  color: #334a75;
+  background: #e5ebfb;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .resume-box p {
   margin: 0;
   color: #5d5548;
   line-height: 1.5;
+}
+
+.application-box p,
+.application-box small {
+  margin: 0;
+  color: #3f4f70;
+  line-height: 1.6;
+}
+
+.application-box small {
+  overflow-wrap: anywhere;
 }
 
 .resume-box pre {

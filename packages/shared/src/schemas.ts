@@ -114,3 +114,37 @@ export const ResumeVersionCreateSchema = ResumeVersionSchema.omit({
   id: z.string().min(1).optional(),
   createdAt: z.string().datetime().optional()
 });
+
+export const ApplicationStatusSchema = z.enum([
+  "draft",
+  "greeted",
+  "applied",
+  "replied",
+  "interview",
+  "rejected",
+  "offer",
+  "closed"
+]);
+
+export const ApplicationSchema = z.object({
+  id: z.string().min(1),
+  jobId: z.string().min(1),
+  resumeVersionId: z.string().min(1).optional(),
+  status: ApplicationStatusSchema.default("draft"),
+  greetingMessage: z.string().default(""),
+  appliedAt: z.string().datetime().optional(),
+  nextFollowUpAt: z.string().datetime().optional(),
+  outcome: z.string().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime()
+});
+
+export const ApplicationCreateSchema = ApplicationSchema.omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+}).extend({
+  id: z.string().min(1).optional(),
+  createdAt: z.string().datetime().optional(),
+  updatedAt: z.string().datetime().optional()
+});

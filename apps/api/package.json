@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@boss-jobpilot/ai": "workspace:*",
     "@boss-jobpilot/db": "workspace:*",
     "@boss-jobpilot/resume": "workspace:*",
     "@boss-jobpilot/scoring": "workspace:*",
