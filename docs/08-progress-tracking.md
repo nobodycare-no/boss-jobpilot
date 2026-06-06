@@ -230,6 +230,7 @@ Accepted / Proposed / Rejected
 - `npm run lint`
 - `npm run build`
 - `codegraph sync .`
+- Chrome DevTools 本地页面验证：`全部 2`、`未生成草稿 1`、`已打招呼 1` 计数正确，点击状态后岗位列表按 `1/2` 收窄。
 
 ### Next
 
@@ -284,3 +285,26 @@ Accepted / Proposed / Rejected
 - 增加投递看板视图，按状态聚合岗位。
 - 将应用事件时间线展示到 Web。
 - 支持从岗位卡片导出完整投递包文本。
+
+## 2026-06-06 更新 4
+
+### Done
+
+- Web 岗位池新增投递状态看板，按全部、未生成草稿、草稿、已打招呼、已投递、已回复、面试中、Offer、已拒绝、已关闭聚合数量。
+- 点击看板状态可筛选岗位列表，岗位数量显示为当前筛选数/总数。
+- 空筛选状态会显示明确空状态提示。
+- 使用手册已同步更新投递看板说明和推荐工作流。
+
+### Verification
+
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `codegraph sync .`
+
+### Next
+
+- 将应用事件时间线展示到 Web。
+- 支持从岗位卡片导出完整投递包文本。
+- 支持按跟进时间筛选待处理岗位。

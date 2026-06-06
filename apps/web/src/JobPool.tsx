@@ -78,6 +78,26 @@ const applicationStatusLabels: Record<Application["status"], string> = {
   closed: "已关闭"
 };
 
+type JobBoardStage = "unstarted" | Application["status"];
+type JobBoardFilter = "all" | JobBoardStage;
+
+const boardStageLabels: Record<JobBoardStage, string> = {
+  unstarted: "未生成草稿",
+  ...applicationStatusLabels
+};
+
+const boardStageOrder = [
+  "unstarted",
+  "draft",
+  "greeted",
+  "applied",
+  "replied",
+  "interview",
+  "offer",
+  "rejected",
+  "closed"
+] satisfies JobBoardStage[];
+
 const applicationStatusActions = [
   { status: "greeted", label: "已打招呼", Icon: CheckCircle2 },
   { status: "applied", label: "已投递", Icon: Send },
@@ -104,6 +124,7 @@ export function JobPool({ experiences }: JobPoolProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [activeBoardFilter, setActiveBoardFilter] = useState<JobBoardFilter>("all");
 
   const jobKeywords = useMemo(
     () =>
@@ -121,6 +142,38 @@ export function JobPool({ experiences }: JobPoolProps) {
   const experienceById = useMemo(
     () => new Map(experiences.map((experience) => [experience.id, experience])),
     [experiences]
+  );
+  const boardItems = useMemo(() => {
+    const counts = new Map<JobBoardStage, number>(
+      boardStageOrder.map((stage) => [stage, 0] as const)
+    );
+
+    for (const job of jobs) {
+      const stage = getJobBoardStage(job.id, applicationByJobId);
+      counts.set(stage, (counts.get(stage) ?? 0) + 1);
+    }
+
+    return [
+      {
+        count: jobs.length,
+        label: "全部",
+        stage: "all" as const
+      },
+      ...boardStageOrder.map((stage) => ({
+        count: counts.get(stage) ?? 0,
+        label: boardStageLabels[stage],
+        stage
+      }))
+    ];
+  }, [applicationByJobId, jobs]);
+  const visibleJobs = useMemo(
+    () =>
+      jobs.filter(
+        (job) =>
+          activeBoardFilter === "all" ||
+          getJobBoardStage(job.id, applicationByJobId) === activeBoardFilter
+      ),
+    [activeBoardFilter, applicationByJobId, jobs]
   );
 
   async function refreshJobs() {
@@ -436,7 +489,9 @@ export function JobPool({ experiences }: JobPoolProps) {
               </p>
               <h2>已保存岗位</h2>
             </div>
-            <span className="count-pill">{jobs.length}</span>
+            <span className="count-pill">
+              {visibleJobs.length}/{jobs.length}
+            </span>
           </div>
 
           {jobKeywords.length > 0 ? (
@@ -447,13 +502,33 @@ export function JobPool({ experiences }: JobPoolProps) {
             </div>
           ) : null}
 
+          {jobs.length > 0 ? (
+            <div className="application-board" aria-label="投递看板">
+              {boardItems.map((item) => (
+                <button
+                  aria-pressed={activeBoardFilter === item.stage}
+                  className="board-filter-button"
+                  key={item.stage}
+                  onClick={() => setActiveBoardFilter(item.stage)}
+                  type="button"
+                >
+                  <span>{item.label}</span>
+                  <strong>{item.count}</strong>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           {isLoading ? <p className="empty-state">正在加载岗位池...</p> : null}
           {!isLoading && jobs.length === 0 ? (
             <p className="empty-state">还没有岗位。先手动保存一个岗位，后续会接入插件采集。</p>
           ) : null}
+          {!isLoading && jobs.length > 0 && visibleJobs.length === 0 ? (
+            <p className="empty-state">当前投递状态下没有岗位。</p>
+          ) : null}
 
           <div className="experience-list">
-            {jobs.map((job) => (
+            {visibleJobs.map((job) => (
               <JobCard
                 analysis={analysisByJobId[job.id]}
                 application={applicationByJobId[job.id]}
@@ -737,6 +812,13 @@ function optionalText(value: string) {
   const trimmed = value.trim();
 
   return trimmed ? trimmed : undefined;
+}
+
+function getJobBoardStage(
+  jobId: string,
+  applicationByJobId: Record<string, Application>
+): JobBoardStage {
+  return applicationByJobId[jobId]?.status ?? "unstarted";
 }
 
 function formatDateTime(value: string) {

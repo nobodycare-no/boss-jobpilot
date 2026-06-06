@@ -280,6 +280,44 @@ button:disabled {
   margin-bottom: 16px;
 }
 
+.application-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.board-filter-button {
+  display: grid;
+  min-height: 56px;
+  justify-items: start;
+  border-color: #cbd9d7;
+  padding: 9px 10px;
+  color: #3e5558;
+  background: #ffffff;
+}
+
+.board-filter-button span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.board-filter-button strong {
+  color: #0f5d66;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.board-filter-button[aria-pressed="true"] {
+  border-color: #0f5d66;
+  color: #ffffff;
+  background: #0f5d66;
+}
+
+.board-filter-button[aria-pressed="true"] strong {
+  color: #ffffff;
+}
+
 .skill-strip span,
 .tag-row span {
   color: #3e5558;
@@ -579,6 +617,7 @@ button:disabled {
   .hero,
   .workspace-grid,
   .form-grid,
+  .application-board,
   .analysis-grid {
     grid-template-columns: 1fr;
   }
