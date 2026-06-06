@@ -5,6 +5,7 @@ import {
   BriefcaseBusiness,
   CalendarCheck,
   CheckCircle2,
+  Copy,
   FileText,
   MessageSquareText,
   Plus,
@@ -97,6 +98,7 @@ export function JobPool() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
 
   const jobKeywords = useMemo(
     () =>
@@ -115,6 +117,7 @@ export function JobPool() {
   async function refreshJobs() {
     setIsLoading(true);
     setError(null);
+    setFeedback(null);
 
     try {
       const response = await listJobs();
@@ -174,6 +177,7 @@ export function JobPool() {
     event.preventDefault();
     setIsSaving(true);
     setError(null);
+    setFeedback(null);
 
     try {
       await createJob(formToInput(form));
@@ -188,6 +192,7 @@ export function JobPool() {
 
   async function handleDelete(id: string) {
     setError(null);
+    setFeedback(null);
 
     try {
       await deleteJob(id);
@@ -214,6 +219,7 @@ export function JobPool() {
 
   async function handleAnalyze(id: string) {
     setError(null);
+    setFeedback(null);
 
     try {
       const response = await analyzeJob(id);
@@ -228,6 +234,7 @@ export function JobPool() {
 
   async function handleGenerateResume(id: string) {
     setError(null);
+    setFeedback(null);
 
     try {
       const response = await generateResume(id);
@@ -242,6 +249,7 @@ export function JobPool() {
 
   async function handleGenerateGreeting(id: string) {
     setError(null);
+    setFeedback(null);
 
     try {
       const response = await generateGreeting(id);
@@ -259,6 +267,7 @@ export function JobPool() {
     status: Application["status"]
   ) {
     setError(null);
+    setFeedback(null);
 
     try {
       const response = await updateApplication(applicationId, {
@@ -273,9 +282,22 @@ export function JobPool() {
     }
   }
 
+  async function handleCopyText(label: string, value: string) {
+    setError(null);
+    setFeedback(null);
+
+    try {
+      await writeClipboardText(value);
+      setFeedback(`${label}已复制`);
+    } catch {
+      setError("复制失败，请手动选择内容复制");
+    }
+  }
+
   return (
     <section className="job-section" aria-label="岗位池">
       {error ? <div className="notice">{error}</div> : null}
+      {feedback ? <div className="notice notice--success">{feedback}</div> : null}
 
       <div className="workspace-grid">
         <form className="editor-panel" onSubmit={handleSubmit}>
@@ -432,6 +454,7 @@ export function JobPool() {
                 onDelete={handleDelete}
                 onGenerateGreeting={handleGenerateGreeting}
                 onGenerateResume={handleGenerateResume}
+                onCopyText={handleCopyText}
                 onUpdateApplicationStatus={handleUpdateApplicationStatus}
                 resume={resumeByJobId[job.id]}
               />
@@ -451,6 +474,7 @@ type JobCardProps = {
   onDelete: (id: string) => Promise<void>;
   onGenerateGreeting: (id: string) => Promise<void>;
   onGenerateResume: (id: string) => Promise<void>;
+  onCopyText: (label: string, value: string) => Promise<void>;
   onUpdateApplicationStatus: (
     applicationId: string,
     status: Application["status"]
@@ -466,6 +490,7 @@ function JobCard({
   onDelete,
   onGenerateGreeting,
   onGenerateResume,
+  onCopyText,
   onUpdateApplicationStatus,
   resume
 }: JobCardProps) {
@@ -518,10 +543,11 @@ function JobCard({
       </p>
       <p>{job.jdRaw}</p>
       {analysis ? <AnalysisPanel analysis={analysis} /> : null}
-      {resume ? <ResumePanel resume={resume} /> : null}
+      {resume ? <ResumePanel resume={resume} onCopyText={onCopyText} /> : null}
       {application ? (
         <ApplicationPanel
           application={application}
+          onCopyText={onCopyText}
           onUpdateStatus={onUpdateApplicationStatus}
         />
       ) : null}
@@ -531,16 +557,28 @@ function JobCard({
 
 function ApplicationPanel({
   application,
+  onCopyText,
   onUpdateStatus
 }: {
   application: Application;
+  onCopyText: (label: string, value: string) => Promise<void>;
   onUpdateStatus: (applicationId: string, status: Application["status"]) => Promise<void>;
 }) {
   return (
     <div className="application-box">
       <div className="application-box__header">
         <strong>打招呼语草稿</strong>
-        <span>{applicationStatusLabels[application.status]}</span>
+        <div className="panel-actions">
+          <button
+            type="button"
+            className="panel-action-button"
+            onClick={() => void onCopyText("打招呼语", application.greetingMessage)}
+          >
+            <Copy size={15} />
+            复制
+          </button>
+          <span>{applicationStatusLabels[application.status]}</span>
+        </div>
       </div>
       <p>{application.greetingMessage}</p>
       <div className="application-actions">
@@ -565,12 +603,28 @@ function ApplicationPanel({
   );
 }
 
-function ResumePanel({ resume }: { resume: ResumeVersion }) {
+function ResumePanel({
+  resume,
+  onCopyText
+}: {
+  resume: ResumeVersion;
+  onCopyText: (label: string, value: string) => Promise<void>;
+}) {
   return (
     <div className="resume-box">
       <div className="resume-box__header">
         <strong>定制简历草稿</strong>
-        <span>{resume.variant}</span>
+        <div className="panel-actions">
+          <button
+            type="button"
+            className="panel-action-button"
+            onClick={() => void onCopyText("Markdown 简历", resume.markdownContent)}
+          >
+            <Copy size={15} />
+            复制
+          </button>
+          <span>{resume.variant}</span>
+        </div>
       </div>
       {resume.changeSummary ? <p>{resume.changeSummary}</p> : null}
       <pre>{resume.markdownContent}</pre>
@@ -635,4 +689,29 @@ function formatDateTime(value: string) {
     dateStyle: "short",
     timeStyle: "short"
   }).format(new Date(value));
+}
+
+async function writeClipboardText(value: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.append(textarea);
+  textarea.select();
+
+  try {
+    const copied = document.execCommand("copy");
+
+    if (!copied) {
+      throw new Error("Clipboard fallback failed");
+    }
+  } finally {
+    textarea.remove();
+  }
 }

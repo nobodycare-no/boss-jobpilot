@@ -213,3 +213,26 @@ Accepted / Proposed / Rejected
 - 增加投递看板视图，按状态聚合岗位。
 - 支持复制打招呼语和 Markdown 简历。
 - 将应用事件时间线展示到 Web。
+
+## 2026-06-06 更新 1
+
+### Done
+
+- Web 定制简历草稿面板新增“复制”按钮，可复制完整 Markdown 简历内容。
+- Web 打招呼语草稿面板新增“复制”按钮，可复制当前话术。
+- 复制成功后显示轻量成功提示；复制失败时提示用户手动选择内容复制。
+- 使用手册已同步更新复制入口和推荐工作流。
+
+### Verification
+
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `codegraph sync .`
+
+### Next
+
+- 增加投递看板视图，按状态聚合岗位。
+- 将应用事件时间线展示到 Web。
+- 将匹配经历 ID 展示升级为经历标题和摘要。

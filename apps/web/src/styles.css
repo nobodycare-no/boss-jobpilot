@@ -262,6 +262,12 @@ button:disabled {
   background: #fff4ef;
 }
 
+.notice--success {
+  border-color: #9cc8b2;
+  color: #215640;
+  background: #eef8f2;
+}
+
 .skill-strip,
 .tag-row,
 .truth-row {
@@ -370,6 +376,23 @@ button:disabled {
   gap: 8px;
   align-items: center;
   justify-content: space-between;
+}
+
+.panel-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.panel-action-button {
+  min-height: 30px;
+  border-color: #b9c3d4;
+  padding: 0 9px;
+  color: #334a75;
+  background: #ffffff;
+  font-size: 13px;
 }
 
 .resume-box__header strong {
