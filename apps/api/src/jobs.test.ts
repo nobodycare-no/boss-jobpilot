@@ -153,5 +153,20 @@ describe("job routes", () => {
     expect(applicationEventsResponse.statusCode).toBe(200);
     expect(applicationEventsResponse.json().items).toHaveLength(1);
     expect(applicationEventsResponse.json().items[0].type).toBe("status_changed");
+
+    const deleteResponse = await server.inject({
+      method: "DELETE",
+      url: `/jobs/${created.id}`
+    });
+
+    expect(deleteResponse.statusCode).toBe(204);
+
+    const listAfterDeleteResponse = await server.inject({
+      method: "GET",
+      url: "/jobs"
+    });
+
+    expect(listAfterDeleteResponse.statusCode).toBe(200);
+    expect(listAfterDeleteResponse.json().items).toHaveLength(0);
   });
 });

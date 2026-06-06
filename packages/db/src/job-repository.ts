@@ -151,16 +151,60 @@ export function createJobRepository(db: DatabaseSync) {
     },
 
     delete(id: string) {
-      const result = db
-        .prepare(
-          `
-          DELETE FROM job_postings
-          WHERE id = ?
-        `
-        )
-        .run(id);
+      const existing = this.get(id);
 
-      return result.changes > 0;
+      if (!existing) {
+        return false;
+      }
+
+      db.exec("BEGIN");
+
+      try {
+        db.prepare(
+          `
+          DELETE FROM application_events
+          WHERE application_id IN (
+            SELECT id
+            FROM applications
+            WHERE job_id = ?
+          )
+        `
+        ).run(id);
+        db.prepare(
+          `
+          DELETE FROM applications
+          WHERE job_id = ?
+        `
+        ).run(id);
+        db.prepare(
+          `
+          DELETE FROM resume_versions
+          WHERE job_id = ?
+        `
+        ).run(id);
+        db.prepare(
+          `
+          DELETE FROM job_analyses
+          WHERE job_id = ?
+        `
+        ).run(id);
+
+        const result = db
+          .prepare(
+            `
+            DELETE FROM job_postings
+            WHERE id = ?
+          `
+          )
+          .run(id);
+
+        db.exec("COMMIT");
+
+        return result.changes > 0;
+      } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
+      }
     }
   };
 }

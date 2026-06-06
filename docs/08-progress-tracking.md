@@ -259,3 +259,28 @@ Accepted / Proposed / Rejected
 - 增加投递看板视图，按状态聚合岗位。
 - 将应用事件时间线展示到 Web。
 - 支持从岗位卡片导出完整投递包文本。
+
+## 2026-06-06 更新 3
+
+### Done
+
+- 修复已保存岗位删除链路：删除岗位时会同步清理关联的投递事件、投递草稿、简历版本和岗位分析。
+- `job-repository` 新增级联清理测试，覆盖已生成完整投递包后删除岗位的场景。
+- API 路由测试新增 `DELETE /jobs/:id` 验证，确保完整投递包岗位删除后岗位池为空。
+- 使用手册已同步说明岗位删除会清理关联数据。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/db test`
+- `corepack pnpm --filter @boss-jobpilot/api test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `codegraph sync .`
+
+### Next
+
+- 增加投递看板视图，按状态聚合岗位。
+- 将应用事件时间线展示到 Web。
+- 支持从岗位卡片导出完整投递包文本。
