@@ -516,7 +516,45 @@ button:disabled {
   font-size: 12px;
 }
 
+.matched-experience-list {
+  display: grid;
+  gap: 8px;
+}
+
+.matched-experience-list > span {
+  color: #173c42;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.matched-experience-list > div {
+  display: grid;
+  gap: 8px;
+}
+
+.matched-experience-card {
+  display: grid;
+  gap: 5px;
+  border: 1px solid #d7e6e2;
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: #ffffff;
+}
+
+.matched-experience-card strong {
+  color: #173c42;
+  font-size: 14px;
+}
+
+.matched-experience-card p {
+  margin: 0;
+  color: #526165;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .analysis-list small,
+.matched-experience-list small,
 .analysis-strategy {
   color: #526165;
   line-height: 1.5;

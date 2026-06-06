@@ -454,7 +454,7 @@ export function App() {
         </section>
       </section>
 
-      <JobPool />
+      <JobPool experiences={items} />
     </main>
   );
 }

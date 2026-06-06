@@ -16,6 +16,7 @@ import {
 
 import type {
   Application,
+  ExperienceItem,
   JobAnalysis,
   JobPosting,
   JobPostingCreateInput,
@@ -89,7 +90,11 @@ const applicationStatusActions = [
   Icon: typeof CheckCircle2;
 }>;
 
-export function JobPool() {
+type JobPoolProps = {
+  experiences: ExperienceItem[];
+};
+
+export function JobPool({ experiences }: JobPoolProps) {
   const [jobs, setJobs] = useState<JobPosting[]>([]);
   const [form, setForm] = useState<JobFormState>(emptyJobForm);
   const [analysisByJobId, setAnalysisByJobId] = useState<Record<string, JobAnalysis>>({});
@@ -112,6 +117,10 @@ export function JobPool() {
         )
       ).slice(0, 10),
     [jobs]
+  );
+  const experienceById = useMemo(
+    () => new Map(experiences.map((experience) => [experience.id, experience])),
+    [experiences]
   );
 
   async function refreshJobs() {
@@ -448,6 +457,7 @@ export function JobPool() {
               <JobCard
                 analysis={analysisByJobId[job.id]}
                 application={applicationByJobId[job.id]}
+                experienceById={experienceById}
                 job={job}
                 key={job.id}
                 onAnalyze={handleAnalyze}
@@ -469,6 +479,7 @@ export function JobPool() {
 type JobCardProps = {
   analysis?: JobAnalysis;
   application?: Application;
+  experienceById: Map<string, ExperienceItem>;
   job: JobPosting;
   onAnalyze: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
@@ -485,6 +496,7 @@ type JobCardProps = {
 function JobCard({
   analysis,
   application,
+  experienceById,
   job,
   onAnalyze,
   onDelete,
@@ -542,7 +554,7 @@ function JobCard({
           .join(" / ")}
       </p>
       <p>{job.jdRaw}</p>
-      {analysis ? <AnalysisPanel analysis={analysis} /> : null}
+      {analysis ? <AnalysisPanel analysis={analysis} experienceById={experienceById} /> : null}
       {resume ? <ResumePanel resume={resume} onCopyText={onCopyText} /> : null}
       {application ? (
         <ApplicationPanel
@@ -632,7 +644,13 @@ function ResumePanel({
   );
 }
 
-function AnalysisPanel({ analysis }: { analysis: JobAnalysis }) {
+function AnalysisPanel({
+  analysis,
+  experienceById
+}: {
+  analysis: JobAnalysis;
+  experienceById: Map<string, ExperienceItem>;
+}) {
   return (
     <div className="analysis-box">
       <div className="analysis-score">
@@ -643,10 +661,47 @@ function AnalysisPanel({ analysis }: { analysis: JobAnalysis }) {
         <AnalysisList label="匹配关键词" values={analysis.matchedKeywords} />
         <AnalysisList label="必需技能" values={analysis.requiredSkills} />
         <AnalysisList label="加分技能" values={analysis.bonusSkills} />
-        <AnalysisList label="匹配经历" values={analysis.matchedExperienceIds} />
         <AnalysisList label="风险信号" values={analysis.riskFlags} />
       </div>
+      <MatchedExperienceList ids={analysis.matchedExperienceIds} experienceById={experienceById} />
       <p className="analysis-strategy">{analysis.resumeStrategy}</p>
+    </div>
+  );
+}
+
+function MatchedExperienceList({
+  ids,
+  experienceById
+}: {
+  ids: string[];
+  experienceById: Map<string, ExperienceItem>;
+}) {
+  if (ids.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="matched-experience-list">
+      <span>匹配经历</span>
+      <div>
+        {ids.map((id) => {
+          const experience = experienceById.get(id);
+
+          if (!experience) {
+            return <small key={id}>{id}</small>;
+          }
+
+          return (
+            <article className="matched-experience-card" key={id}>
+              <strong>{experience.title}</strong>
+              {experience.summary ? <p>{experience.summary}</p> : null}
+              {experience.techStack.length > 0 ? (
+                <small>{experience.techStack.slice(0, 6).join("、")}</small>
+              ) : null}
+            </article>
+          );
+        })}
+      </div>
     </div>
   );
 }
