@@ -659,6 +659,26 @@ function JobCard({
           </button>
           <button
             type="button"
+            className="icon-button"
+            onClick={() =>
+              void onCopyText(
+                "投递包",
+                buildApplicationPackage({
+                  analysis,
+                  application,
+                  events: applicationEvents,
+                  experienceById,
+                  job,
+                  resume
+                })
+              )
+            }
+            title="复制投递包"
+          >
+            <Copy size={17} />
+          </button>
+          <button
+            type="button"
             className="icon-button danger"
             onClick={() => void onDelete(job.id)}
             title="删除"
@@ -856,6 +876,136 @@ function AnalysisList({ label, values }: { label: string; values: string[] }) {
       <small>{values.join("、")}</small>
     </div>
   );
+}
+
+function buildApplicationPackage({
+  analysis,
+  application,
+  events,
+  experienceById,
+  job,
+  resume
+}: {
+  analysis?: JobAnalysis;
+  application?: Application;
+  events: ApplicationEvent[];
+  experienceById: Map<string, ExperienceItem>;
+  job: JobPosting;
+  resume?: ResumeVersion;
+}) {
+  const sections = [
+    `# ${job.title} - 投递包`,
+    formatPackageSection("岗位信息", [
+      ["平台", job.platform],
+      ["公司", job.companyName],
+      ["城市", job.city],
+      ["薪资", job.salaryText],
+      ["经验", job.experienceRequirement],
+      ["学历", job.educationRequirement],
+      ["链接", job.url],
+      ["采集时间", formatDateTime(job.capturedAt)]
+    ]),
+    `## JD\n\n${job.jdRaw || "未填写"}`
+  ];
+
+  if (analysis) {
+    sections.push(
+      formatPackageSection("岗位分析", [
+        ["匹配分", `${analysis.matchScore}/100`],
+        ["投递建议", recommendationLabels[analysis.recommendation]],
+        ["匹配关键词", formatList(analysis.matchedKeywords)],
+        ["必需技能", formatList(analysis.requiredSkills)],
+        ["加分技能", formatList(analysis.bonusSkills)],
+        ["风险信号", formatList(analysis.riskFlags)],
+        ["简历策略", analysis.resumeStrategy],
+        ["分析时间", formatDateTime(analysis.createdAt)]
+      ])
+    );
+
+    const matchedExperiences = analysis.matchedExperienceIds
+      .map((id) => formatPackageExperience(id, experienceById.get(id)))
+      .join("\n\n");
+
+    sections.push(`## 匹配经历\n\n${matchedExperiences || "暂无匹配经历"}`);
+  } else {
+    sections.push("## 岗位分析\n\n尚未生成岗位分析。");
+  }
+
+  if (resume) {
+    sections.push(
+      formatPackageSection("定制简历元信息", [
+        ["版本", resume.variant],
+        ["生成时间", formatDateTime(resume.createdAt)],
+        ["选用经历", formatList(resume.selectedExperienceIds)],
+        ["变更摘要", resume.changeSummary]
+      ]),
+      `## Markdown 简历\n\n${resume.markdownContent}`
+    );
+  } else {
+    sections.push("## Markdown 简历\n\n尚未生成定制简历。");
+  }
+
+  if (application) {
+    sections.push(
+      formatPackageSection("打招呼语与投递状态", [
+        ["状态", applicationStatusLabels[application.status]],
+        ["创建时间", formatDateTime(application.createdAt)],
+        ["更新时间", formatDateTime(application.updatedAt)],
+        ["投递时间", application.appliedAt ? formatDateTime(application.appliedAt) : undefined],
+        ["下次跟进", application.nextFollowUpAt ? formatDateTime(application.nextFollowUpAt) : undefined],
+        ["结果", application.outcome],
+        ["关联简历版本", application.resumeVersionId]
+      ]),
+      `## 打招呼语\n\n${application.greetingMessage || "暂无打招呼语"}`
+    );
+
+    if (events.length > 0) {
+      sections.push(
+        `## 状态时间线\n\n${events
+          .map((event) => `- ${formatDateTime(event.occurredAt)}：${formatApplicationEvent(event)}`)
+          .join("\n")}`
+      );
+    }
+  } else {
+    sections.push("## 打招呼语与投递状态\n\n尚未生成打招呼语草稿。");
+  }
+
+  return sections.join("\n\n");
+}
+
+function formatPackageSection(title: string, rows: Array<[string, string | undefined]>) {
+  const body = rows
+    .filter(([, value]) => Boolean(value))
+    .map(([label, value]) => `- ${label}：${value}`)
+    .join("\n");
+
+  return `## ${title}\n\n${body || "暂无信息"}`;
+}
+
+function formatPackageExperience(id: string, experience?: ExperienceItem) {
+  if (!experience) {
+    return `### ${id}\n\n素材已不存在。`;
+  }
+
+  return [
+    `### ${experience.title}`,
+    formatPackageSection("经历详情", [
+      ["类型", experience.type],
+      ["组织", experience.organization],
+      ["角色", experience.role],
+      ["时间", [experience.startDate, experience.endDate].filter(Boolean).join(" - ")],
+      ["负责程度", experience.ownershipLevel],
+      ["真实性", experience.evidenceLevel],
+      ["技术栈", formatList(experience.techStack)],
+      ["摘要", experience.summary],
+      ["职责", formatList(experience.responsibilities)],
+      ["成果", formatList(experience.achievements)]
+    ])
+  ].join("\n\n");
+}
+
+function formatList(values: string[]) {
+  return values.length > 0 ? values.join("、") : undefined;
 }
 
 function formToInput(form: JobFormState): JobPostingCreateInput {
