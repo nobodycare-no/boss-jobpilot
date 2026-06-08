@@ -504,6 +504,45 @@ button:disabled {
   opacity: 1;
 }
 
+.application-timeline {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid #d4d8e5;
+  padding-top: 10px;
+}
+
+.application-timeline > strong {
+  color: #26395e;
+  font-size: 13px;
+}
+
+.application-timeline ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.application-timeline li {
+  display: grid;
+  gap: 3px;
+  border-left: 2px solid #8c9bc2;
+  padding-left: 10px;
+}
+
+.application-timeline span {
+  color: #66728d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.application-timeline p {
+  margin: 0;
+  color: #3f4f70;
+  line-height: 1.5;
+}
+
 .resume-box pre {
   max-height: 320px;
   min-width: 0;

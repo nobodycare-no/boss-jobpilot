@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
   BarChart3,
+  BadgeCheck,
   BriefcaseBusiness,
   CalendarCheck,
   CheckCircle2,
@@ -11,11 +12,13 @@ import {
   Plus,
   RefreshCw,
   Send,
-  Trash2
+  Trash2,
+  XCircle
 } from "lucide-react";
 
 import type {
   Application,
+  ApplicationEvent,
   ExperienceItem,
   JobAnalysis,
   JobPosting,
@@ -29,6 +32,7 @@ import {
   deleteJob,
   generateGreeting,
   generateResume,
+  getApplicationEvents,
   getLatestApplication,
   getLatestJobAnalysis,
   getLatestResume,
@@ -103,6 +107,8 @@ const applicationStatusActions = [
   { status: "applied", label: "已投递", Icon: Send },
   { status: "replied", label: "已回复", Icon: MessageSquareText },
   { status: "interview", label: "面试", Icon: CalendarCheck },
+  { status: "offer", label: "Offer", Icon: BadgeCheck },
+  { status: "rejected", label: "已拒绝", Icon: XCircle },
   { status: "closed", label: "关闭", Icon: Trash2 }
 ] satisfies Array<{
   status: Application["status"];
@@ -120,6 +126,9 @@ export function JobPool({ experiences }: JobPoolProps) {
   const [analysisByJobId, setAnalysisByJobId] = useState<Record<string, JobAnalysis>>({});
   const [resumeByJobId, setResumeByJobId] = useState<Record<string, ResumeVersion>>({});
   const [applicationByJobId, setApplicationByJobId] = useState<Record<string, Application>>({});
+  const [eventsByApplicationId, setEventsByApplicationId] = useState<
+    Record<string, ApplicationEvent[]>
+  >({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -202,6 +211,15 @@ export function JobPool({ experiences }: JobPoolProps) {
           return [job.id, latest.item] as const;
         })
       );
+      const applicationEvents = await Promise.all(
+        latestApplications
+          .map(([, application]) => application)
+          .filter((application): application is Application => Boolean(application))
+          .map(async (application) => {
+            const events = await getApplicationEvents(application.id);
+            return [application.id, events.items] as const;
+          })
+      );
 
       setAnalysisByJobId(
         Object.fromEntries(
@@ -224,6 +242,7 @@ export function JobPool({ experiences }: JobPoolProps) {
           )
         )
       );
+      setEventsByApplicationId(Object.fromEntries(applicationEvents));
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "岗位池加载失败");
     } finally {
@@ -273,6 +292,14 @@ export function JobPool({ experiences }: JobPoolProps) {
         delete next[id];
         return next;
       });
+      const applicationId = applicationByJobId[id]?.id;
+      if (applicationId) {
+        setEventsByApplicationId((current) => {
+          const next = { ...current };
+          delete next[applicationId];
+          return next;
+        });
+      }
       await refreshJobs();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "岗位删除失败");
@@ -319,6 +346,11 @@ export function JobPool({ experiences }: JobPoolProps) {
         ...current,
         [id]: response.item
       }));
+      const events = await getApplicationEvents(response.item.id);
+      setEventsByApplicationId((current) => ({
+        ...current,
+        [response.item.id]: events.items
+      }));
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "打招呼语生成失败");
     }
@@ -338,6 +370,11 @@ export function JobPool({ experiences }: JobPoolProps) {
       setApplicationByJobId((current) => ({
         ...current,
         [response.item.jobId]: response.item
+      }));
+      const events = await getApplicationEvents(response.item.id);
+      setEventsByApplicationId((current) => ({
+        ...current,
+        [response.item.id]: events.items
       }));
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "投递状态更新失败");
@@ -528,22 +565,27 @@ export function JobPool({ experiences }: JobPoolProps) {
           ) : null}
 
           <div className="experience-list">
-            {visibleJobs.map((job) => (
-              <JobCard
-                analysis={analysisByJobId[job.id]}
-                application={applicationByJobId[job.id]}
-                experienceById={experienceById}
-                job={job}
-                key={job.id}
-                onAnalyze={handleAnalyze}
-                onDelete={handleDelete}
-                onGenerateGreeting={handleGenerateGreeting}
-                onGenerateResume={handleGenerateResume}
-                onCopyText={handleCopyText}
-                onUpdateApplicationStatus={handleUpdateApplicationStatus}
-                resume={resumeByJobId[job.id]}
-              />
-            ))}
+            {visibleJobs.map((job) => {
+              const application = applicationByJobId[job.id];
+
+              return (
+                <JobCard
+                  analysis={analysisByJobId[job.id]}
+                  application={application}
+                  applicationEvents={application ? eventsByApplicationId[application.id] ?? [] : []}
+                  experienceById={experienceById}
+                  job={job}
+                  key={job.id}
+                  onAnalyze={handleAnalyze}
+                  onDelete={handleDelete}
+                  onGenerateGreeting={handleGenerateGreeting}
+                  onGenerateResume={handleGenerateResume}
+                  onCopyText={handleCopyText}
+                  onUpdateApplicationStatus={handleUpdateApplicationStatus}
+                  resume={resumeByJobId[job.id]}
+                />
+              );
+            })}
           </div>
         </section>
       </div>
@@ -554,6 +596,7 @@ export function JobPool({ experiences }: JobPoolProps) {
 type JobCardProps = {
   analysis?: JobAnalysis;
   application?: Application;
+  applicationEvents: ApplicationEvent[];
   experienceById: Map<string, ExperienceItem>;
   job: JobPosting;
   onAnalyze: (id: string) => Promise<void>;
@@ -571,6 +614,7 @@ type JobCardProps = {
 function JobCard({
   analysis,
   application,
+  applicationEvents,
   experienceById,
   job,
   onAnalyze,
@@ -634,6 +678,7 @@ function JobCard({
       {application ? (
         <ApplicationPanel
           application={application}
+          events={applicationEvents}
           onCopyText={onCopyText}
           onUpdateStatus={onUpdateApplicationStatus}
         />
@@ -644,10 +689,12 @@ function JobCard({
 
 function ApplicationPanel({
   application,
+  events,
   onCopyText,
   onUpdateStatus
 }: {
   application: Application;
+  events: ApplicationEvent[];
   onCopyText: (label: string, value: string) => Promise<void>;
   onUpdateStatus: (applicationId: string, status: Application["status"]) => Promise<void>;
 }) {
@@ -686,6 +733,23 @@ function ApplicationPanel({
         <small>已关联简历版本：{application.resumeVersionId}</small>
       ) : null}
       {application.appliedAt ? <small>投递时间：{formatDateTime(application.appliedAt)}</small> : null}
+      {events.length > 0 ? <ApplicationTimeline events={events} /> : null}
+    </div>
+  );
+}
+
+function ApplicationTimeline({ events }: { events: ApplicationEvent[] }) {
+  return (
+    <div className="application-timeline">
+      <strong>状态时间线</strong>
+      <ol>
+        {events.map((event) => (
+          <li key={event.id}>
+            <span>{formatDateTime(event.occurredAt)}</span>
+            <p>{formatApplicationEvent(event)}</p>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
@@ -826,6 +890,31 @@ function formatDateTime(value: string) {
     dateStyle: "short",
     timeStyle: "short"
   }).format(new Date(value));
+}
+
+function formatApplicationEvent(event: ApplicationEvent) {
+  if (event.type === "status_changed" && event.content) {
+    try {
+      const payload = JSON.parse(event.content) as Partial<{
+        from: Application["status"];
+        to: Application["status"];
+      }>;
+
+      if (payload.from && payload.to) {
+        return `状态从 ${applicationStatusLabels[payload.from]} 更新为 ${
+          applicationStatusLabels[payload.to]
+        }`;
+      }
+    } catch {
+      return event.content;
+    }
+  }
+
+  if (event.content) {
+    return event.content;
+  }
+
+  return event.type;
 }
 
 async function writeClipboardText(value: string) {

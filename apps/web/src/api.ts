@@ -1,5 +1,6 @@
 import type {
   Application,
+  ApplicationEvent,
   ApplicationUpdateInput,
   ExperienceItem,
   ExperienceItemCreateInput,
@@ -33,6 +34,10 @@ type ResumeVersionResponse = {
 
 type ApplicationResponse = {
   item: Application;
+};
+
+type ApplicationEventListResponse = {
+  items: ApplicationEvent[];
 };
 
 export type JobAnalysisResponse = {
@@ -234,4 +239,14 @@ export async function updateApplication(id: string, input: ApplicationUpdateInpu
   }
 
   return (await response.json()) as ApplicationResponse;
+}
+
+export async function getApplicationEvents(id: string) {
+  const response = await fetch(`${apiBaseUrl}/applications/${id}/events`);
+
+  if (!response.ok) {
+    throw new Error("无法加载投递事件");
+  }
+
+  return (await response.json()) as ApplicationEventListResponse;
 }
