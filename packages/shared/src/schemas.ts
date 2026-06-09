@@ -207,3 +207,30 @@ export const ApplicationReviewStrategyRecapSchema = z.object({
   modelName: z.string().min(1),
   promptVersion: z.string().min(1)
 });
+
+export const AiGenerationRunStatusSchema = z.enum([
+  "provider_success",
+  "provider_fallback",
+  "rule_based"
+]);
+
+export const AiGenerationRunSchema = z.object({
+  id: z.string().min(1),
+  feature: z.string().min(1),
+  status: AiGenerationRunStatusSchema,
+  providerName: z.string().optional(),
+  modelName: z.string().optional(),
+  promptVersion: z.string().optional(),
+  durationMs: z.number().int().min(0),
+  errorMessage: z.string().optional(),
+  relatedJobId: z.string().min(1).optional(),
+  createdAt: z.string().datetime()
+});
+
+export const AiGenerationRunCreateSchema = AiGenerationRunSchema.omit({
+  id: true,
+  createdAt: true
+}).extend({
+  id: z.string().min(1).optional(),
+  createdAt: z.string().datetime().optional()
+});

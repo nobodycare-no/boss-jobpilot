@@ -1,4 +1,4 @@
-# 进度追踪计划
+﻿# 进度追踪计划
 
 ## 工作方式
 
@@ -731,3 +731,30 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 增加 AI 生成请求的可观测记录，保存模型名、提示词版本、降级原因和生成耗时，方便后续排查和优化。
+
+## 2026-06-09 更新 13
+
+### Done
+
+- 新增 `ai_generation_runs` 本地表，用于记录 AI 生成运行元数据。
+- API 新增 `GET /ai/generation-runs`，返回最近 20 次 AI 生成记录。
+- 岗位分析、即时分析、定制简历、打招呼语和策略复盘都会记录 provider_success、provider_fallback 或 rule_based 状态。
+- Web 投递复盘区新增“最近 AI 生成”，展示最近 5 次模型调用、降级状态、耗时和 Prompt 版本。
+- 使用手册、数据模型和迭代计划已同步更新。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/db test`
+- `corepack pnpm --filter @boss-jobpilot/api test`
+- `corepack pnpm --filter @boss-jobpilot/web test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- 浏览器检查 `http://127.0.0.1:5194`，确认“最近 AI 生成”显示正常且未覆盖复盘筛选控件。
+- `git diff --check`
+- `codegraph sync .`
+
+### Next
+
+- 增加 AI 生成记录的筛选和明细面板，支持按能力、状态和岗位快速定位异常调用。

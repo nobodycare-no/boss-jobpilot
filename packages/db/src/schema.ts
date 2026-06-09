@@ -103,3 +103,16 @@ export const jobAnalyses = sqliteTable("job_analyses", {
   promptVersion: text("prompt_version"),
   createdAt: text("created_at").notNull()
 });
+
+export const aiGenerationRuns = sqliteTable("ai_generation_runs", {
+  id: text("id").primaryKey(),
+  feature: text("feature").notNull(),
+  status: text("status").notNull(),
+  providerName: text("provider_name"),
+  modelName: text("model_name"),
+  promptVersion: text("prompt_version"),
+  durationMs: integer("duration_ms").notNull(),
+  errorMessage: text("error_message"),
+  relatedJobId: text("related_job_id").references(() => jobPostings.id),
+  createdAt: text("created_at").notNull()
+});

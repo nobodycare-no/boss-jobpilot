@@ -153,3 +153,19 @@
 | type           | captured / greeted / applied / replied / interview / rejected / offer |
 | content        | 事件内容                                                              |
 | occurred_at    | 发生时间                                                              |
+### ai_generation_run
+
+AI 生成请求观测记录。只保存运行元数据，不保存完整 Prompt、简历正文、经历库正文或 JD 正文。
+
+| 字段           | 说明                                               |
+| -------------- | -------------------------------------------------- |
+| id             | 主键                                               |
+| feature        | 能力名，如 job-analysis / resume-generation         |
+| status         | provider_success / provider_fallback / rule_based |
+| provider_name  | Provider 名称                                      |
+| model_name     | 模型名或规则版标识                                 |
+| prompt_version | Prompt 版本                                        |
+| duration_ms    | 本次生成耗时                                       |
+| error_message  | Provider 失败摘要                                  |
+| related_job_id | 关联岗位                                           |
+| created_at     | 创建时间                                           |

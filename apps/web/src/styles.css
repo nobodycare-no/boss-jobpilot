@@ -608,6 +608,76 @@ button:disabled {
   background: #fbfaf7;
 }
 
+.ai-generation-runs {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid #d8d0c3;
+  padding-top: 10px;
+}
+
+.ai-generation-runs > strong {
+  color: #3e5558;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ai-generation-runs > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ai-generation-run {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid #d8d0c3;
+  border-radius: 8px;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.ai-generation-run > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ai-generation-run span {
+  color: #263033;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ai-generation-run small {
+  color: #607073;
+  font-size: 11px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.ai-generation-run p {
+  margin: 0;
+  color: #526165;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.ai-generation-run--provider_success {
+  border-color: #b7d4c4;
+}
+
+.ai-generation-run--provider_fallback {
+  border-color: #e0bdba;
+}
+
+.ai-generation-run--rule_based {
+  border-color: #d8d0c3;
+}
+
 .review-distributions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1211,6 +1281,7 @@ button:disabled {
   .review-metrics,
   .review-controls,
   .review-strategy > div,
+  .ai-generation-runs > div,
   .review-ai-recap > div:not(.review-ai-recap__header),
   .review-distributions,
   .review-attribution,

@@ -162,6 +162,12 @@ export function createJobRepository(db: DatabaseSync) {
       try {
         db.prepare(
           `
+          DELETE FROM ai_generation_runs
+          WHERE related_job_id = ?
+        `
+        ).run(id);
+        db.prepare(
+          `
           DELETE FROM application_events
           WHERE application_id IN (
             SELECT id

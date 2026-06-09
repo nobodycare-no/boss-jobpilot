@@ -15,6 +15,7 @@ import {
   type AiProvider
 } from "@boss-jobpilot/ai";
 import {
+  createAiGenerationRunRepository,
   createApplicationRepository,
   createExperienceRepository,
   createJobAnalysisRepository,
@@ -32,6 +33,7 @@ import {
   JobPostingCreateSchema,
   JobPostingSchema,
   JobPostingUpdateSchema,
+  type AiGenerationRunCreateInput,
   type CandidatePreference,
   type ResumeVersionCreateInput
 } from "@boss-jobpilot/shared";
@@ -63,6 +65,7 @@ export function buildServer(options: BuildServerOptions = {}) {
   const jobAnalyses = createJobAnalysisRepository(database);
   const resumeVersions = createResumeVersionRepository(database);
   const applications = createApplicationRepository(database);
+  const aiGenerationRuns = createAiGenerationRunRepository(database);
   const server = Fastify({
     logger: true
   });
@@ -84,6 +87,10 @@ export function buildServer(options: BuildServerOptions = {}) {
   }));
 
   server.get("/ai/provider/health", async () => checkAiProviderHealth(aiProvider));
+
+  server.get("/ai/generation-runs", async () => ({
+    items: aiGenerationRuns.listRecent(20)
+  }));
 
   server.get("/experiences", async () => ({
     items: experiences.list()
@@ -238,8 +245,12 @@ export function buildServer(options: BuildServerOptions = {}) {
     const fallbackAnalysis = analyzeJobPosting(job, defaultCandidatePreference, currentExperiences);
     const generatedAnalysis = await runWithAiFallback({
       fallback: fallbackAnalysis,
+      feature: "job-analysis",
       featureLabel: "岗位分析",
+      onRecord: (input) => aiGenerationRuns.create(input),
+      promptVersion: "job-analyzer@0.1.0",
       provider: aiProvider,
+      relatedJobId: job.id,
       run: () =>
         generateJobAnalysisWithProvider({
           job,
@@ -305,8 +316,12 @@ export function buildServer(options: BuildServerOptions = {}) {
     );
     const analysis = await runWithAiFallback({
       fallback: fallbackAnalysis,
+      feature: "instant-job-analysis",
       featureLabel: "岗位分析",
+      onRecord: (input) => aiGenerationRuns.create(input),
+      promptVersion: "job-analyzer@0.1.0",
       provider: aiProvider,
+      relatedJobId: parsedJob.data.id,
       run: () =>
         generateJobAnalysisWithProvider({
           job: parsedJob.data,
@@ -357,8 +372,12 @@ export function buildServer(options: BuildServerOptions = {}) {
     };
     const resume = await runWithAiFallback({
       fallback: fallbackResume,
+      feature: "resume-generation",
       featureLabel: "定制简历",
+      onRecord: (input) => aiGenerationRuns.create(input),
+      promptVersion: "resume-writer@0.1.0",
       provider: aiProvider,
+      relatedJobId: job.id,
       run: () =>
         generateResumeVersionWithProvider({
           job,
@@ -430,8 +449,12 @@ export function buildServer(options: BuildServerOptions = {}) {
         analysis,
         experiences: currentExperiences
       }),
+      feature: "greeting-generation",
       featureLabel: "打招呼语",
+      onRecord: (input) => aiGenerationRuns.create(input),
+      promptVersion: "greeting-writer@0.1.0",
       provider: aiProvider,
+      relatedJobId: job.id,
       run: () =>
         generateGreetingDraftWithProvider({
           job,
@@ -531,7 +554,10 @@ export function buildServer(options: BuildServerOptions = {}) {
 
     const recap = await runWithAiFallback({
       fallback: generateApplicationReviewStrategyRecap(parsedReview.data),
+      feature: "application-review-strategy",
       featureLabel: "AI 策略复盘",
+      onRecord: (input) => aiGenerationRuns.create(input),
+      promptVersion: "application-review-strategist@0.1.0",
       provider: aiProvider,
       run: () =>
         generateApplicationReviewStrategyRecapWithProvider({
@@ -565,16 +591,37 @@ function analysisToLegacyScore(analysis: {
 
 async function runWithAiFallback<T>({
   fallback,
+  feature,
   featureLabel,
+  onRecord,
+  promptVersion,
   provider,
+  relatedJobId,
   run
 }: {
   fallback: T;
+  feature: string;
   featureLabel: string;
+  onRecord?: (input: AiGenerationRunCreateInput) => void;
+  promptVersion?: string;
   provider?: AiProvider;
+  relatedJobId?: string;
   run: () => Promise<T>;
 }) {
+  const startedAt = Date.now();
+
   if (!provider) {
+    recordAiGenerationRun(onRecord, {
+      durationMs: Date.now() - startedAt,
+      feature,
+      ...getAiGenerationMetadata(fallback, {
+        modelName: "rule-based",
+        promptVersion
+      }),
+      relatedJobId,
+      status: "rule_based"
+    });
+
     return {
       value: fallback,
       warnings: [] satisfies AiFallbackWarning[]
@@ -582,15 +629,71 @@ async function runWithAiFallback<T>({
   }
 
   try {
+    const value = await run();
+    recordAiGenerationRun(onRecord, {
+      durationMs: Date.now() - startedAt,
+      feature,
+      ...getAiGenerationMetadata(value, {
+        modelName: provider.name,
+        promptVersion
+      }),
+      providerName: provider.name,
+      relatedJobId,
+      status: "provider_success"
+    });
+
     return {
-      value: await run(),
+      value,
       warnings: [] satisfies AiFallbackWarning[]
     };
   } catch (error) {
+    recordAiGenerationRun(onRecord, {
+      durationMs: Date.now() - startedAt,
+      errorMessage: error instanceof Error ? error.message : "Unknown AI provider error",
+      feature,
+      ...getAiGenerationMetadata(fallback, {
+        modelName: "rule-based",
+        promptVersion
+      }),
+      providerName: provider.name,
+      relatedJobId,
+      status: "provider_fallback"
+    });
+
     return {
       value: fallback,
       warnings: [createAiFallbackWarning(featureLabel, error)]
     };
+  }
+}
+
+function getAiGenerationMetadata(
+  value: unknown,
+  fallback: { modelName?: string; promptVersion?: string }
+) {
+  if (!value || typeof value !== "object") {
+    return fallback;
+  }
+
+  const maybeMetadata = value as { modelName?: unknown; promptVersion?: unknown };
+
+  return {
+    modelName: typeof maybeMetadata.modelName === "string" ? maybeMetadata.modelName : fallback.modelName,
+    promptVersion:
+      typeof maybeMetadata.promptVersion === "string"
+        ? maybeMetadata.promptVersion
+        : fallback.promptVersion
+  };
+}
+
+function recordAiGenerationRun(
+  onRecord: ((input: AiGenerationRunCreateInput) => void) | undefined,
+  input: AiGenerationRunCreateInput
+) {
+  try {
+    onRecord?.(input);
+  } catch (error) {
+    console.warn("Failed to record AI generation run", error);
   }
 }
 

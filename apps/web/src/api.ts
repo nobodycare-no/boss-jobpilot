@@ -4,6 +4,7 @@ import type {
   ApplicationReviewStrategyRecap,
   ApplicationReviewStrategyRequest,
   ApplicationUpdateInput,
+  AiGenerationRun,
   ExperienceItem,
   ExperienceItemCreateInput,
   JobAnalysis,
@@ -72,6 +73,10 @@ type ApplicationReviewStrategyResponse = {
   warnings?: ApiWarning[];
 };
 
+type AiGenerationRunListResponse = {
+  items: AiGenerationRun[];
+};
+
 export type JobAnalysisResponse = {
   jobId: string;
   analysis: JobAnalysis;
@@ -114,6 +119,16 @@ export async function getAiProviderHealth() {
   }
 
   return (await response.json()) as AiProviderHealth;
+}
+
+export async function listAiGenerationRuns() {
+  const response = await fetch(`${apiBaseUrl}/ai/generation-runs`);
+
+  if (!response.ok) {
+    throw new Error("无法加载 AI 生成记录");
+  }
+
+  return (await response.json()) as AiGenerationRunListResponse;
 }
 
 export async function createExperience(input: ExperienceItemCreateInput) {

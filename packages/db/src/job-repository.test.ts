@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createAiGenerationRunRepository } from "./ai-generation-run-repository";
 import { createApplicationRepository } from "./application-repository";
 import { openJobpilotDatabase } from "./experience-repository";
 import { createJobAnalysisRepository } from "./job-analysis-repository";
@@ -40,6 +41,7 @@ describe("job repository", () => {
     const analyses = createJobAnalysisRepository(db);
     const resumes = createResumeVersionRepository(db);
     const applications = createApplicationRepository(db);
+    const aiGenerationRuns = createAiGenerationRunRepository(db);
 
     const job = jobs.create({
       platform: "boss",
@@ -68,6 +70,14 @@ describe("job repository", () => {
       status: "draft",
       greetingMessage: "Hello, I am interested in this role."
     });
+    aiGenerationRuns.create({
+      durationMs: 42,
+      feature: "job-analysis",
+      modelName: "test-model",
+      promptVersion: "job-analyzer@0.1.0",
+      relatedJobId: job.id,
+      status: "provider_success"
+    });
 
     applications.update(application.id, {
       status: "greeted"
@@ -79,6 +89,7 @@ describe("job repository", () => {
     expect(resumes.listByJobId(job.id)).toHaveLength(0);
     expect(applications.listByJobId(job.id)).toHaveLength(0);
     expect(applications.listEventsByApplicationId(application.id)).toHaveLength(0);
+    expect(aiGenerationRuns.listRecent()).toHaveLength(0);
 
     db.close();
   });

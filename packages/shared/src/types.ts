@@ -7,6 +7,8 @@ import type {
   ApplicationReviewStrategyRequestSchema,
   ApplicationSchema,
   ApplicationUpdateSchema,
+  AiGenerationRunCreateSchema,
+  AiGenerationRunSchema,
   ExperienceItemCreateSchema,
   ExperienceItemSchema,
   ExperienceItemUpdateSchema,
@@ -27,6 +29,8 @@ export type ApplicationReviewStrategyRequest = z.infer<
   typeof ApplicationReviewStrategyRequestSchema
 >;
 export type ApplicationReviewStrategyRecap = z.infer<typeof ApplicationReviewStrategyRecapSchema>;
+export type AiGenerationRun = z.infer<typeof AiGenerationRunSchema>;
+export type AiGenerationRunCreateInput = z.input<typeof AiGenerationRunCreateSchema>;
 export type ExperienceItem = z.infer<typeof ExperienceItemSchema>;
 export type ExperienceItemCreateInput = z.input<typeof ExperienceItemCreateSchema>;
 export type ExperienceItemUpdateInput = z.input<typeof ExperienceItemUpdateSchema>;

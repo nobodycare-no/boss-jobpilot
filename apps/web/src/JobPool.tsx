@@ -22,6 +22,7 @@ import type {
   Application,
   ApplicationEvent,
   ApplicationReviewStrategyRecap,
+  AiGenerationRun,
   ExperienceItem,
   JobAnalysis,
   JobPosting,
@@ -42,6 +43,7 @@ import {
   getLatestJobAnalysis,
   getLatestResume,
   listApplications,
+  listAiGenerationRuns,
   listJobs,
   listResumes,
   type AiProviderHealth,
@@ -182,6 +184,7 @@ export function JobPool({ experiences }: JobPoolProps) {
   const [aiProviderHealth, setAiProviderHealth] = useState<AiProviderHealth | null>(null);
   const [aiProviderHealthError, setAiProviderHealthError] = useState<string | null>(null);
   const [isAiProviderHealthLoading, setIsAiProviderHealthLoading] = useState(false);
+  const [aiGenerationRuns, setAiGenerationRuns] = useState<AiGenerationRun[]>([]);
   const [activeBoardFilter, setActiveBoardFilter] = useState<JobBoardFilter>("all");
   const [reviewFilters, setReviewFilters] = useState<ApplicationReviewFilters>(
     defaultApplicationReviewFilters
@@ -423,8 +426,18 @@ export function JobPool({ experiences }: JobPoolProps) {
     }
   }
 
+  async function refreshAiGenerationRuns() {
+    try {
+      const response = await listAiGenerationRuns();
+      setAiGenerationRuns(response.items);
+    } catch {
+      setAiGenerationRuns([]);
+    }
+  }
+
   useEffect(() => {
     void refreshAiProviderHealth();
+    void refreshAiGenerationRuns();
   }, []);
 
   useEffect(() => {
@@ -447,6 +460,7 @@ export function JobPool({ experiences }: JobPoolProps) {
         if (!isCancelled) {
           setStrategyRecap(response.item);
           setStrategyRecapError(formatApiWarnings(response.warnings));
+          void refreshAiGenerationRuns();
         }
       })
       .catch((caughtError) => {
@@ -541,6 +555,7 @@ export function JobPool({ experiences }: JobPoolProps) {
         [id]: response.analysis
       }));
       setFeedback(formatApiWarnings(response.warnings));
+      void refreshAiGenerationRuns();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "岗位分析失败");
     }
@@ -562,6 +577,7 @@ export function JobPool({ experiences }: JobPoolProps) {
         [id]: history.items
       }));
       setFeedback(formatApiWarnings(response.warnings));
+      void refreshAiGenerationRuns();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "定制简历生成失败");
     }
@@ -588,6 +604,7 @@ export function JobPool({ experiences }: JobPoolProps) {
         [response.item.id]: events.items
       }));
       setFeedback(formatApiWarnings(response.warnings));
+      void refreshAiGenerationRuns();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "打招呼语生成失败");
     }
@@ -809,6 +826,7 @@ export function JobPool({ experiences }: JobPoolProps) {
 
           {jobs.length > 0 ? (
             <ApplicationReviewPanel
+              aiGenerationRuns={aiGenerationRuns.slice(0, 5)}
               aiProviderHealth={aiProviderHealth}
               aiProviderHealthError={aiProviderHealthError}
               cityOptions={reviewCityOptions}
@@ -1034,6 +1052,7 @@ function JobCard({
 }
 
 function ApplicationReviewPanel({
+  aiGenerationRuns,
   aiProviderHealth,
   aiProviderHealthError,
   cityOptions,
@@ -1047,6 +1066,7 @@ function ApplicationReviewPanel({
   summary,
   totalJobs
 }: {
+  aiGenerationRuns: AiGenerationRun[];
   aiProviderHealth: AiProviderHealth | null;
   aiProviderHealthError: string | null;
   cityOptions: string[];
@@ -1118,6 +1138,8 @@ function ApplicationReviewPanel({
         isLoading={isAiProviderHealthLoading}
         onRefresh={onRefreshAiProviderHealth}
       />
+
+      <AiGenerationRunList runs={aiGenerationRuns} />
 
       <div className="review-controls" aria-label="复盘筛选">
         <label>
@@ -1270,6 +1292,57 @@ function AiProviderHealthCard({
       </button>
     </div>
   );
+}
+
+function AiGenerationRunList({ runs }: { runs: AiGenerationRun[] }) {
+  if (runs.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="ai-generation-runs" aria-label="最近 AI 生成记录">
+      <strong>最近 AI 生成</strong>
+      <div>
+        {runs.map((run) => (
+          <article className={`ai-generation-run ai-generation-run--${run.status}`} key={run.id}>
+            <div>
+              <span>{formatAiGenerationFeature(run.feature)}</span>
+              <small>{formatAiGenerationStatus(run.status)}</small>
+            </div>
+            <p>
+              {run.providerName ?? run.modelName ?? "rule-based"} · {run.durationMs}ms
+              {run.promptVersion ? ` · ${run.promptVersion}` : ""}
+            </p>
+            {run.errorMessage ? <small>{run.errorMessage}</small> : null}
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function formatAiGenerationFeature(feature: string) {
+  const labels: Record<string, string> = {
+    "application-review-strategy": "策略复盘",
+    "greeting-generation": "打招呼语",
+    "instant-job-analysis": "即时分析",
+    "job-analysis": "岗位分析",
+    "resume-generation": "定制简历"
+  };
+
+  return labels[feature] ?? feature;
+}
+
+function formatAiGenerationStatus(status: AiGenerationRun["status"]) {
+  if (status === "provider_success") {
+    return "模型成功";
+  }
+
+  if (status === "provider_fallback") {
+    return "已降级";
+  }
+
+  return "规则版";
 }
 
 function getAiProviderHealthTitle(status: AiProviderHealth["status"]) {

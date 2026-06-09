@@ -396,6 +396,36 @@ describe("job routes", () => {
       "您好，我基于真实项目经历匹配这个岗位，想进一步沟通。"
     );
     expect(greetingResponse.json().greeting.modelName).toBe("test-provider-model");
+
+    const generationRunsResponse = await providerServer.inject({
+      method: "GET",
+      url: "/ai/generation-runs"
+    });
+    const generationRuns = generationRunsResponse.json().items;
+
+    expect(generationRunsResponse.statusCode).toBe(200);
+    expect(generationRuns).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          feature: "job-analysis",
+          providerName: "test-provider",
+          relatedJobId: created.id,
+          status: "provider_success"
+        }),
+        expect.objectContaining({
+          feature: "resume-generation",
+          providerName: "test-provider",
+          relatedJobId: created.id,
+          status: "provider_success"
+        }),
+        expect.objectContaining({
+          feature: "greeting-generation",
+          providerName: "test-provider",
+          relatedJobId: created.id,
+          status: "provider_success"
+        })
+      ])
+    );
   });
 
   it("falls back to rule-based generation when the configured AI provider fails", async () => {
@@ -478,5 +508,30 @@ describe("job routes", () => {
     expect(reviewStrategyResponse.statusCode).toBe(200);
     expect(reviewStrategyResponse.json().item.modelName).toBe("rule-based");
     expect(reviewStrategyResponse.json().warnings[0].code).toBe("AI_PROVIDER_FALLBACK");
+
+    const generationRunsResponse = await failingProviderServer.inject({
+      method: "GET",
+      url: "/ai/generation-runs"
+    });
+    const generationRuns = generationRunsResponse.json().items;
+
+    expect(generationRunsResponse.statusCode).toBe(200);
+    expect(generationRuns).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          errorMessage: "provider unavailable",
+          feature: "job-analysis",
+          providerName: "failing-provider",
+          relatedJobId: created.id,
+          status: "provider_fallback"
+        }),
+        expect.objectContaining({
+          errorMessage: "provider unavailable",
+          feature: "application-review-strategy",
+          providerName: "failing-provider",
+          status: "provider_fallback"
+        })
+      ])
+    );
   });
 });
