@@ -287,6 +287,15 @@ button:disabled {
   margin-bottom: 16px;
 }
 
+.follow-up-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  border-top: 1px solid #d8d0c3;
+  margin: -4px 0 16px;
+  padding-top: 12px;
+}
+
 .board-filter-button {
   display: grid;
   min-height: 56px;
@@ -298,6 +307,9 @@ button:disabled {
 }
 
 .board-filter-button span {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
   font-size: 12px;
   font-weight: 700;
 }
@@ -316,6 +328,21 @@ button:disabled {
 
 .board-filter-button[aria-pressed="true"] strong {
   color: #ffffff;
+}
+
+.follow-up-filter-button {
+  border-color: #d8c8a3;
+  color: #5c4b24;
+  background: #fffaf0;
+}
+
+.follow-up-filter-button strong {
+  color: #7a5b12;
+}
+
+.follow-up-filter-button[aria-pressed="true"] {
+  border-color: #7a5b12;
+  background: #7a5b12;
 }
 
 .skill-strip span,
@@ -488,6 +515,17 @@ button:disabled {
   gap: 8px;
 }
 
+.follow-up-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.follow-up-row label {
+  min-width: 0;
+}
+
 .status-button {
   min-height: 32px;
   border-color: #8c9bc2;
@@ -541,6 +579,67 @@ button:disabled {
   margin: 0;
   color: #3f4f70;
   line-height: 1.5;
+}
+
+.version-box {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid #d8d0c3;
+  margin-top: 14px;
+  padding-top: 12px;
+}
+
+.version-box__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.version-box__header strong {
+  color: #172126;
+}
+
+.version-box__header span {
+  color: #607073;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.version-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.version-snapshot {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border-left: 2px solid #b8c8cb;
+  padding-left: 10px;
+}
+
+.version-snapshot > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.version-snapshot strong {
+  color: #334a75;
+  font-size: 13px;
+}
+
+.version-snapshot p {
+  margin: 0;
+  color: #526165;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .resume-box pre {
@@ -657,6 +756,8 @@ button:disabled {
   .workspace-grid,
   .form-grid,
   .application-board,
+  .follow-up-board,
+  .version-pair,
   .analysis-grid {
     grid-template-columns: 1fr;
   }

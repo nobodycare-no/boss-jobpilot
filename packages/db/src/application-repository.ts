@@ -160,6 +160,10 @@ export function createApplicationRepository(db: DatabaseSync) {
           input.status === "applied" && !input.appliedAt
             ? (current.appliedAt ?? now)
             : (input.appliedAt ?? current.appliedAt),
+        nextFollowUpAt:
+          input.nextFollowUpAt === null
+            ? undefined
+            : (input.nextFollowUpAt ?? current.nextFollowUpAt),
         updatedAt: now
       });
 

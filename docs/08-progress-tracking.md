@@ -21,19 +21,19 @@
 
 ## 当前进度
 
-| 模块          | 状态        | 说明                                                                |
-| ------------- | ----------- | ------------------------------------------------------------------- |
-| 项目命名      | Done        | 使用 `boss-jobpilot`                                                |
-| 技术栈设计    | Done        | 已形成初版文档                                                      |
-| 系统架构      | Done        | 已形成初版文档                                                      |
-| 数据模型      | Done        | 已形成初版文档                                                      |
-| AI Agent 设计 | Done        | 已形成初版文档                                                      |
-| 安全与合规    | Done        | 已形成初版文档                                                      |
-| 代码脚手架    | Done        | 已初始化 pnpm workspace、Web/API/Extension 和共享包                 |
-| 经历库        | Done        | 已支持 SQLite 持久化、API CRUD 和 Web 端录入管理                    |
-| 岗位采集      | Done        | 已支持岗位池 SQLite 持久化、API CRUD、Web 手动录入和插件一键保存    |
-| 简历生成      | Done        | 已支持基于岗位分析和匹配经历生成 Markdown 定制简历草稿              |
-| 投递管理      | In Progress | 已支持打招呼语草稿、application draft 持久化和基础状态流转          |
+| 模块          | 状态        | 说明                                                             |
+| ------------- | ----------- | ---------------------------------------------------------------- |
+| 项目命名      | Done        | 使用 `boss-jobpilot`                                             |
+| 技术栈设计    | Done        | 已形成初版文档                                                   |
+| 系统架构      | Done        | 已形成初版文档                                                   |
+| 数据模型      | Done        | 已形成初版文档                                                   |
+| AI Agent 设计 | Done        | 已形成初版文档                                                   |
+| 安全与合规    | Done        | 已形成初版文档                                                   |
+| 代码脚手架    | Done        | 已初始化 pnpm workspace、Web/API/Extension 和共享包              |
+| 经历库        | Done        | 已支持 SQLite 持久化、API CRUD 和 Web 端录入管理                 |
+| 岗位采集      | Done        | 已支持岗位池 SQLite 持久化、API CRUD、Web 手动录入和插件一键保存 |
+| 简历生成      | Done        | 已支持基于岗位分析和匹配经历生成 Markdown 定制简历草稿           |
+| 投递管理      | In Progress | 已支持打招呼语草稿、application draft 持久化和基础状态流转       |
 
 ## 每日开发记录模板
 
@@ -279,6 +279,11 @@ Accepted / Proposed / Rejected
 - `npm run lint`
 - `npm run build`
 - `codegraph sync .`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `codegraph sync .`
 
 ### Next
 
@@ -356,3 +361,76 @@ Accepted / Proposed / Rejected
 - 支持按跟进时间筛选待处理岗位。
 - 增加今日待跟进提醒入口。
 - 支持多版本话术和简历版本对比。
+
+## 2026-06-08 更新 3
+
+### Done
+
+- Web 投递看板新增“今日待跟进”入口，统计并筛选下次跟进时间早于或等于今天结束的岗位。
+- 打招呼语草稿面板新增“下次跟进”时间输入框，支持保存和清除本地跟进时间。
+- `ApplicationUpdateSchema` 修正为无默认值的 PATCH schema，避免只更新跟进时间时把状态隐式重置为草稿。
+- API 和 application repository 测试覆盖跟进时间写入、清除和不产生额外状态事件的场景。
+- 使用手册已同步更新跟进时间入口和推荐工作流。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/db test`
+- `corepack pnpm --filter @boss-jobpilot/api test`
+
+### Next
+
+- 增加更完整的待跟进视图，例如按逾期、今天、未来 3 天分组。
+- 支持多版本话术和简历版本对比。
+- 增加投递复盘 UI，汇总回复率、面试率和不同版本效果。
+
+## 2026-06-08 更新 4
+
+### Done
+
+- Web 岗位池新增独立跟进队列区，保留“今日待跟进”总入口，并拆分为“逾期”“今天”“未来 3 天”。
+- 跟进队列按 `nextFollowUpAt` 的本地日期归类：早于今天为逾期，今天内为今天，今天之后 3 天内为未来 3 天。
+- 点击跟进队列可筛选岗位列表；空队列会显示明确空状态。
+- 使用手册已同步更新跟进队列说明。
+
+### Verification
+
+- `npm run format`
+- `corepack pnpm --filter @boss-jobpilot/shared --filter @boss-jobpilot/db --filter @boss-jobpilot/api --filter @boss-jobpilot/web --filter @boss-jobpilot/extension --filter @boss-jobpilot/ai --filter @boss-jobpilot/resume --filter @boss-jobpilot/scoring --recursive --if-present typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `codegraph sync .`
+- Chrome DevTools 本地页面验证：跟进队列显示“今日待跟进 3 / 逾期 1 / 今天 2 / 未来 3 天 1”；点击“逾期”“今天”“未来 3 天”后岗位列表分别显示 1/4、2/4、1/4。
+
+### Next
+
+- 支持多版本话术和简历版本对比。
+- 增加投递复盘 UI，汇总回复率、面试率和不同版本效果。
+- 支持按岗位状态、跟进时间和公司/城市组合筛选。
+
+## 2026-06-08 更新 5
+
+### Done
+
+- Web 岗位池加载每个岗位的简历版本历史和打招呼语草稿历史。
+- 生成新简历或新打招呼语后，会同步刷新当前岗位的版本历史。
+- 岗位卡片新增“版本对比”，当同一岗位存在至少两版简历或两版话术时，对比最新和上一版。
+- 简历对比展示生成时间、变更摘要、正文长度和选用经历数量；话术对比展示状态、更新时间和消息摘要。
+- 对比面板支持复制最新或上一版 Markdown 简历、打招呼语。
+- 使用手册已同步更新版本对比说明。
+
+### Verification
+
+- `npm run format`
+- `corepack pnpm --filter @boss-jobpilot/shared --filter @boss-jobpilot/db --filter @boss-jobpilot/api --filter @boss-jobpilot/web --filter @boss-jobpilot/extension --filter @boss-jobpilot/ai --filter @boss-jobpilot/resume --filter @boss-jobpilot/scoring --recursive --if-present typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `codegraph sync .`
+- 本地浏览器验证：使用 2 版简历和 2 版打招呼语的岗位，页面显示“版本对比”“简历 2 / 话术 2”“最新简历”“上一版简历”“最新话术”“上一版话术”；点击对比面板复制按钮后显示“最新 Markdown 简历已复制”。
+
+### Next
+
+- 增加投递复盘 UI，汇总回复率、面试率和不同版本效果。
+- 支持按岗位状态、跟进时间和公司/城市组合筛选。
+- 将版本对比从摘要升级为字段级 diff。

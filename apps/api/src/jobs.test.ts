@@ -145,6 +145,28 @@ describe("job routes", () => {
     expect(updateApplicationResponse.statusCode).toBe(200);
     expect(updateApplicationResponse.json().item.status).toBe("greeted");
 
+    const followUpResponse = await server.inject({
+      method: "PATCH",
+      url: `/applications/${greetingResponse.json().item.id}`,
+      payload: {
+        nextFollowUpAt: "2026-01-04T02:00:00.000Z"
+      }
+    });
+
+    expect(followUpResponse.statusCode).toBe(200);
+    expect(followUpResponse.json().item.nextFollowUpAt).toBe("2026-01-04T02:00:00.000Z");
+
+    const clearFollowUpResponse = await server.inject({
+      method: "PATCH",
+      url: `/applications/${greetingResponse.json().item.id}`,
+      payload: {
+        nextFollowUpAt: null
+      }
+    });
+
+    expect(clearFollowUpResponse.statusCode).toBe(200);
+    expect(clearFollowUpResponse.json().item.nextFollowUpAt).toBeUndefined();
+
     const applicationEventsResponse = await server.inject({
       method: "GET",
       url: `/applications/${greetingResponse.json().item.id}/events`

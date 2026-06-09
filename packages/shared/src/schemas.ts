@@ -157,13 +157,14 @@ export const ApplicationCreateSchema = ApplicationSchema.omit({
   updatedAt: z.string().datetime().optional()
 });
 
-export const ApplicationUpdateSchema = ApplicationSchema.pick({
-  resumeVersionId: true,
-  status: true,
-  greetingMessage: true,
-  appliedAt: true,
-  nextFollowUpAt: true,
-  outcome: true
-})
+export const ApplicationUpdateSchema = z
+  .object({
+    resumeVersionId: ApplicationSchema.shape.resumeVersionId,
+    status: ApplicationStatusSchema,
+    greetingMessage: z.string(),
+    appliedAt: ApplicationSchema.shape.appliedAt,
+    nextFollowUpAt: ApplicationSchema.shape.nextFollowUpAt.nullable(),
+    outcome: ApplicationSchema.shape.outcome
+  })
   .partial()
   .refine((value) => Object.keys(value).length > 0, "At least one field is required");

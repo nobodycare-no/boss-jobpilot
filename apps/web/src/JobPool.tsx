@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   BarChart3,
@@ -12,6 +12,7 @@ import {
   Plus,
   RefreshCw,
   Send,
+  Timer,
   Trash2,
   XCircle
 } from "lucide-react";
@@ -36,7 +37,9 @@ import {
   getLatestApplication,
   getLatestJobAnalysis,
   getLatestResume,
+  listApplications,
   listJobs,
+  listResumes,
   updateApplication
 } from "./api";
 
@@ -83,7 +86,9 @@ const applicationStatusLabels: Record<Application["status"], string> = {
 };
 
 type JobBoardStage = "unstarted" | Application["status"];
-type JobBoardFilter = "all" | JobBoardStage;
+type FollowUpFilter = "followUpDue" | "followUpOverdue" | "followUpToday" | "followUpUpcoming";
+type JobBoardFilter = "all" | FollowUpFilter | JobBoardStage;
+type FollowUpBucket = "overdue" | "today" | "upcoming" | "none";
 
 const boardStageLabels: Record<JobBoardStage, string> = {
   unstarted: "未生成草稿",
@@ -101,6 +106,16 @@ const boardStageOrder = [
   "rejected",
   "closed"
 ] satisfies JobBoardStage[];
+
+const followUpFilterItems = [
+  { filter: "followUpDue", label: "今日待跟进" },
+  { filter: "followUpOverdue", label: "逾期" },
+  { filter: "followUpToday", label: "今天" },
+  { filter: "followUpUpcoming", label: "未来 3 天" }
+] satisfies Array<{
+  filter: FollowUpFilter;
+  label: string;
+}>;
 
 const applicationStatusActions = [
   { status: "greeted", label: "已打招呼", Icon: CheckCircle2 },
@@ -125,7 +140,13 @@ export function JobPool({ experiences }: JobPoolProps) {
   const [form, setForm] = useState<JobFormState>(emptyJobForm);
   const [analysisByJobId, setAnalysisByJobId] = useState<Record<string, JobAnalysis>>({});
   const [resumeByJobId, setResumeByJobId] = useState<Record<string, ResumeVersion>>({});
+  const [resumeHistoryByJobId, setResumeHistoryByJobId] = useState<Record<string, ResumeVersion[]>>(
+    {}
+  );
   const [applicationByJobId, setApplicationByJobId] = useState<Record<string, Application>>({});
+  const [applicationHistoryByJobId, setApplicationHistoryByJobId] = useState<
+    Record<string, Application[]>
+  >({});
   const [eventsByApplicationId, setEventsByApplicationId] = useState<
     Record<string, ApplicationEvent[]>
   >({});
@@ -175,13 +196,62 @@ export function JobPool({ experiences }: JobPoolProps) {
       }))
     ];
   }, [applicationByJobId, jobs]);
+  const followUpItems = useMemo(() => {
+    const counts = {
+      followUpDue: 0,
+      followUpOverdue: 0,
+      followUpToday: 0,
+      followUpUpcoming: 0
+    } satisfies Record<FollowUpFilter, number>;
+
+    for (const job of jobs) {
+      const bucket = getFollowUpBucket(applicationByJobId[job.id]?.nextFollowUpAt);
+
+      if (bucket === "overdue") {
+        counts.followUpDue += 1;
+        counts.followUpOverdue += 1;
+      }
+
+      if (bucket === "today") {
+        counts.followUpDue += 1;
+        counts.followUpToday += 1;
+      }
+
+      if (bucket === "upcoming") {
+        counts.followUpUpcoming += 1;
+      }
+    }
+
+    return followUpFilterItems.map((item) => ({
+      count: counts[item.filter],
+      ...item
+    }));
+  }, [applicationByJobId, jobs]);
   const visibleJobs = useMemo(
     () =>
-      jobs.filter(
-        (job) =>
-          activeBoardFilter === "all" ||
-          getJobBoardStage(job.id, applicationByJobId) === activeBoardFilter
-      ),
+      jobs.filter((job) => {
+        if (activeBoardFilter === "all") {
+          return true;
+        }
+
+        if (activeBoardFilter === "followUpDue") {
+          return isFollowUpDue(applicationByJobId[job.id]?.nextFollowUpAt);
+        }
+
+        if (activeBoardFilter === "followUpOverdue") {
+          return getFollowUpBucket(applicationByJobId[job.id]?.nextFollowUpAt) === "overdue";
+        }
+
+        if (activeBoardFilter === "followUpToday") {
+          return getFollowUpBucket(applicationByJobId[job.id]?.nextFollowUpAt) === "today";
+        }
+
+        if (activeBoardFilter === "followUpUpcoming") {
+          return getFollowUpBucket(applicationByJobId[job.id]?.nextFollowUpAt) === "upcoming";
+        }
+
+        return getJobBoardStage(job.id, applicationByJobId) === activeBoardFilter;
+      }),
     [activeBoardFilter, applicationByJobId, jobs]
   );
 
@@ -205,10 +275,22 @@ export function JobPool({ experiences }: JobPoolProps) {
           return [job.id, latest.item] as const;
         })
       );
+      const resumeHistories = await Promise.all(
+        response.items.map(async (job) => {
+          const history = await listResumes(job.id);
+          return [job.id, history.items] as const;
+        })
+      );
       const latestApplications = await Promise.all(
         response.items.map(async (job) => {
           const latest = await getLatestApplication(job.id);
           return [job.id, latest.item] as const;
+        })
+      );
+      const applicationHistories = await Promise.all(
+        response.items.map(async (job) => {
+          const history = await listApplications(job.id);
+          return [job.id, history.items] as const;
         })
       );
       const applicationEvents = await Promise.all(
@@ -235,6 +317,7 @@ export function JobPool({ experiences }: JobPoolProps) {
           )
         )
       );
+      setResumeHistoryByJobId(Object.fromEntries(resumeHistories));
       setApplicationByJobId(
         Object.fromEntries(
           latestApplications.filter((entry): entry is readonly [string, Application] =>
@@ -242,6 +325,7 @@ export function JobPool({ experiences }: JobPoolProps) {
           )
         )
       );
+      setApplicationHistoryByJobId(Object.fromEntries(applicationHistories));
       setEventsByApplicationId(Object.fromEntries(applicationEvents));
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "岗位池加载失败");
@@ -287,7 +371,17 @@ export function JobPool({ experiences }: JobPoolProps) {
         delete next[id];
         return next;
       });
+      setResumeHistoryByJobId((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
       setApplicationByJobId((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+      setApplicationHistoryByJobId((current) => {
         const next = { ...current };
         delete next[id];
         return next;
@@ -331,6 +425,11 @@ export function JobPool({ experiences }: JobPoolProps) {
         ...current,
         [id]: response.item
       }));
+      const history = await listResumes(id);
+      setResumeHistoryByJobId((current) => ({
+        ...current,
+        [id]: history.items
+      }));
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "定制简历生成失败");
     }
@@ -345,6 +444,11 @@ export function JobPool({ experiences }: JobPoolProps) {
       setApplicationByJobId((current) => ({
         ...current,
         [id]: response.item
+      }));
+      const history = await listApplications(id);
+      setApplicationHistoryByJobId((current) => ({
+        ...current,
+        [id]: history.items
       }));
       const events = await getApplicationEvents(response.item.id);
       setEventsByApplicationId((current) => ({
@@ -371,6 +475,11 @@ export function JobPool({ experiences }: JobPoolProps) {
         ...current,
         [response.item.jobId]: response.item
       }));
+      const history = await listApplications(response.item.jobId);
+      setApplicationHistoryByJobId((current) => ({
+        ...current,
+        [response.item.jobId]: history.items
+      }));
       const events = await getApplicationEvents(response.item.id);
       setEventsByApplicationId((current) => ({
         ...current,
@@ -378,6 +487,32 @@ export function JobPool({ experiences }: JobPoolProps) {
       }));
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "投递状态更新失败");
+    }
+  }
+
+  async function handleUpdateApplicationFollowUp(
+    applicationId: string,
+    nextFollowUpAt: string | null
+  ) {
+    setError(null);
+    setFeedback(null);
+
+    try {
+      const response = await updateApplication(applicationId, {
+        nextFollowUpAt
+      });
+      setApplicationByJobId((current) => ({
+        ...current,
+        [response.item.jobId]: response.item
+      }));
+      const history = await listApplications(response.item.jobId);
+      setApplicationHistoryByJobId((current) => ({
+        ...current,
+        [response.item.jobId]: history.items
+      }));
+      setFeedback(nextFollowUpAt ? "下次跟进时间已更新" : "下次跟进时间已清除");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "跟进时间更新失败");
     }
   }
 
@@ -556,12 +691,36 @@ export function JobPool({ experiences }: JobPoolProps) {
             </div>
           ) : null}
 
+          {jobs.length > 0 ? (
+            <div className="follow-up-board" aria-label="跟进队列">
+              {followUpItems.map((item) => (
+                <button
+                  aria-pressed={activeBoardFilter === item.filter}
+                  className="board-filter-button follow-up-filter-button"
+                  key={item.filter}
+                  onClick={() => setActiveBoardFilter(item.filter)}
+                  type="button"
+                >
+                  <span>
+                    <Timer size={13} />
+                    {item.label}
+                  </span>
+                  <strong>{item.count}</strong>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           {isLoading ? <p className="empty-state">正在加载岗位池...</p> : null}
           {!isLoading && jobs.length === 0 ? (
             <p className="empty-state">还没有岗位。先手动保存一个岗位，后续会接入插件采集。</p>
           ) : null}
           {!isLoading && jobs.length > 0 && visibleJobs.length === 0 ? (
-            <p className="empty-state">当前投递状态下没有岗位。</p>
+            <p className="empty-state">
+              {isFollowUpFilter(activeBoardFilter)
+                ? "当前跟进队列下没有岗位。"
+                : "当前投递状态下没有岗位。"}
+            </p>
           ) : null}
 
           <div className="experience-list">
@@ -572,7 +731,10 @@ export function JobPool({ experiences }: JobPoolProps) {
                 <JobCard
                   analysis={analysisByJobId[job.id]}
                   application={application}
-                  applicationEvents={application ? eventsByApplicationId[application.id] ?? [] : []}
+                  applicationEvents={
+                    application ? (eventsByApplicationId[application.id] ?? []) : []
+                  }
+                  applicationHistory={applicationHistoryByJobId[job.id] ?? []}
                   experienceById={experienceById}
                   job={job}
                   key={job.id}
@@ -581,8 +743,10 @@ export function JobPool({ experiences }: JobPoolProps) {
                   onGenerateGreeting={handleGenerateGreeting}
                   onGenerateResume={handleGenerateResume}
                   onCopyText={handleCopyText}
+                  onUpdateFollowUp={handleUpdateApplicationFollowUp}
                   onUpdateApplicationStatus={handleUpdateApplicationStatus}
                   resume={resumeByJobId[job.id]}
+                  resumeHistory={resumeHistoryByJobId[job.id] ?? []}
                 />
               );
             })}
@@ -597,6 +761,7 @@ type JobCardProps = {
   analysis?: JobAnalysis;
   application?: Application;
   applicationEvents: ApplicationEvent[];
+  applicationHistory: Application[];
   experienceById: Map<string, ExperienceItem>;
   job: JobPosting;
   onAnalyze: (id: string) => Promise<void>;
@@ -604,17 +769,20 @@ type JobCardProps = {
   onGenerateGreeting: (id: string) => Promise<void>;
   onGenerateResume: (id: string) => Promise<void>;
   onCopyText: (label: string, value: string) => Promise<void>;
+  onUpdateFollowUp: (applicationId: string, nextFollowUpAt: string | null) => Promise<void>;
   onUpdateApplicationStatus: (
     applicationId: string,
     status: Application["status"]
   ) => Promise<void>;
   resume?: ResumeVersion;
+  resumeHistory: ResumeVersion[];
 };
 
 function JobCard({
   analysis,
   application,
   applicationEvents,
+  applicationHistory,
   experienceById,
   job,
   onAnalyze,
@@ -622,8 +790,10 @@ function JobCard({
   onGenerateGreeting,
   onGenerateResume,
   onCopyText,
+  onUpdateFollowUp,
   onUpdateApplicationStatus,
-  resume
+  resume,
+  resumeHistory
 }: JobCardProps) {
   return (
     <article className="experience-card">
@@ -700,9 +870,15 @@ function JobCard({
           application={application}
           events={applicationEvents}
           onCopyText={onCopyText}
+          onUpdateFollowUp={onUpdateFollowUp}
           onUpdateStatus={onUpdateApplicationStatus}
         />
       ) : null}
+      <VersionComparePanel
+        applications={applicationHistory}
+        onCopyText={onCopyText}
+        resumes={resumeHistory}
+      />
     </article>
   );
 }
@@ -711,13 +887,26 @@ function ApplicationPanel({
   application,
   events,
   onCopyText,
+  onUpdateFollowUp,
   onUpdateStatus
 }: {
   application: Application;
   events: ApplicationEvent[];
   onCopyText: (label: string, value: string) => Promise<void>;
+  onUpdateFollowUp: (applicationId: string, nextFollowUpAt: string | null) => Promise<void>;
   onUpdateStatus: (applicationId: string, status: Application["status"]) => Promise<void>;
 }) {
+  const followUpInputValue = application.nextFollowUpAt
+    ? toDateTimeLocalValue(application.nextFollowUpAt)
+    : "";
+  const followUpInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (followUpInputRef.current) {
+      followUpInputRef.current.value = followUpInputValue;
+    }
+  }, [followUpInputValue]);
+
   return (
     <div className="application-box">
       <div className="application-box__header">
@@ -752,9 +941,189 @@ function ApplicationPanel({
       {application.resumeVersionId ? (
         <small>已关联简历版本：{application.resumeVersionId}</small>
       ) : null}
-      {application.appliedAt ? <small>投递时间：{formatDateTime(application.appliedAt)}</small> : null}
+      {application.appliedAt ? (
+        <small>投递时间：{formatDateTime(application.appliedAt)}</small>
+      ) : null}
+      <div className="follow-up-row">
+        <label>
+          下次跟进
+          <input defaultValue={followUpInputValue} ref={followUpInputRef} type="datetime-local" />
+        </label>
+        <button
+          type="button"
+          className="panel-action-button"
+          onClick={() =>
+            void onUpdateFollowUp(
+              application.id,
+              followUpInputRef.current?.value
+                ? new Date(followUpInputRef.current.value).toISOString()
+                : null
+            )
+          }
+        >
+          保存
+        </button>
+        {application.nextFollowUpAt ? (
+          <button
+            type="button"
+            className="panel-action-button"
+            onClick={() => void onUpdateFollowUp(application.id, null)}
+          >
+            清除
+          </button>
+        ) : null}
+      </div>
       {events.length > 0 ? <ApplicationTimeline events={events} /> : null}
     </div>
+  );
+}
+
+function VersionComparePanel({
+  applications,
+  onCopyText,
+  resumes
+}: {
+  applications: Application[];
+  onCopyText: (label: string, value: string) => Promise<void>;
+  resumes: ResumeVersion[];
+}) {
+  const [latestResume, previousResume] = resumes;
+  const [latestApplication, previousApplication] = applications;
+
+  if (!previousResume && !previousApplication) {
+    return null;
+  }
+
+  return (
+    <div className="version-box">
+      <div className="version-box__header">
+        <strong>版本对比</strong>
+        <span>
+          简历 {resumes.length} / 话术 {applications.length}
+        </span>
+      </div>
+
+      {previousResume && latestResume ? (
+        <VersionPair
+          latest={{
+            actions: (
+              <button
+                className="panel-action-button"
+                onClick={() => void onCopyText("最新 Markdown 简历", latestResume.markdownContent)}
+                type="button"
+              >
+                <Copy size={15} />
+                复制
+              </button>
+            ),
+            body: [
+              latestResume.changeSummary,
+              `${latestResume.markdownContent.length} 字符`,
+              `经历：${latestResume.selectedExperienceIds.length}`
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            title: `最新简历 · ${formatDateTime(latestResume.createdAt)}`
+          }}
+          previous={{
+            actions: (
+              <button
+                className="panel-action-button"
+                onClick={() =>
+                  void onCopyText("上一版 Markdown 简历", previousResume.markdownContent)
+                }
+                type="button"
+              >
+                <Copy size={15} />
+                复制
+              </button>
+            ),
+            body: [
+              previousResume.changeSummary,
+              `${previousResume.markdownContent.length} 字符`,
+              `经历：${previousResume.selectedExperienceIds.length}`
+            ]
+              .filter(Boolean)
+              .join(" · "),
+            title: `上一版简历 · ${formatDateTime(previousResume.createdAt)}`
+          }}
+        />
+      ) : null}
+
+      {previousApplication && latestApplication ? (
+        <VersionPair
+          latest={{
+            actions: (
+              <button
+                className="panel-action-button"
+                onClick={() => void onCopyText("最新打招呼语", latestApplication.greetingMessage)}
+                type="button"
+              >
+                <Copy size={15} />
+                复制
+              </button>
+            ),
+            body: compactText(latestApplication.greetingMessage),
+            title: `最新话术 · ${applicationStatusLabels[latestApplication.status]} · ${formatDateTime(
+              latestApplication.updatedAt
+            )}`
+          }}
+          previous={{
+            actions: (
+              <button
+                className="panel-action-button"
+                onClick={() =>
+                  void onCopyText("上一版打招呼语", previousApplication.greetingMessage)
+                }
+                type="button"
+              >
+                <Copy size={15} />
+                复制
+              </button>
+            ),
+            body: compactText(previousApplication.greetingMessage),
+            title: `上一版话术 · ${
+              applicationStatusLabels[previousApplication.status]
+            } · ${formatDateTime(previousApplication.updatedAt)}`
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function VersionPair({
+  latest,
+  previous
+}: {
+  latest: { actions: ReactNode; body: string; title: string };
+  previous: { actions: ReactNode; body: string; title: string };
+}) {
+  return (
+    <div className="version-pair">
+      <VersionSnapshot {...latest} />
+      <VersionSnapshot {...previous} />
+    </div>
+  );
+}
+
+function VersionSnapshot({
+  actions,
+  body,
+  title
+}: {
+  actions: ReactNode;
+  body: string;
+  title: string;
+}) {
+  return (
+    <article className="version-snapshot">
+      <div>
+        <strong>{title}</strong>
+        {actions}
+      </div>
+      <p>{body || "暂无摘要"}</p>
+    </article>
   );
 }
 
@@ -952,7 +1321,10 @@ function buildApplicationPackage({
         ["创建时间", formatDateTime(application.createdAt)],
         ["更新时间", formatDateTime(application.updatedAt)],
         ["投递时间", application.appliedAt ? formatDateTime(application.appliedAt) : undefined],
-        ["下次跟进", application.nextFollowUpAt ? formatDateTime(application.nextFollowUpAt) : undefined],
+        [
+          "下次跟进",
+          application.nextFollowUpAt ? formatDateTime(application.nextFollowUpAt) : undefined
+        ],
         ["结果", application.outcome],
         ["关联简历版本", application.resumeVersionId]
       ]),
@@ -1008,6 +1380,16 @@ function formatList(values: string[]) {
   return values.length > 0 ? values.join("、") : undefined;
 }
 
+function compactText(value: string, maxLength = 120) {
+  const normalized = value.replace(/\s+/g, " ").trim();
+
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, maxLength)}...`;
+}
+
 function formToInput(form: JobFormState): JobPostingCreateInput {
   return {
     platform: form.platform.trim(),
@@ -1035,11 +1417,64 @@ function getJobBoardStage(
   return applicationByJobId[jobId]?.status ?? "unstarted";
 }
 
+function isFollowUpDue(value?: string) {
+  const bucket = getFollowUpBucket(value);
+
+  return bucket === "overdue" || bucket === "today";
+}
+
+function isFollowUpFilter(value: JobBoardFilter): value is FollowUpFilter {
+  return value.startsWith("followUp");
+}
+
+function getFollowUpBucket(value?: string): FollowUpBucket {
+  if (!value) {
+    return "none";
+  }
+
+  const timestamp = new Date(value).getTime();
+
+  if (Number.isNaN(timestamp)) {
+    return "none";
+  }
+
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
+
+  const endOfUpcoming = new Date(endOfToday);
+  endOfUpcoming.setDate(endOfUpcoming.getDate() + 3);
+
+  if (timestamp < startOfToday.getTime()) {
+    return "overdue";
+  }
+
+  if (timestamp <= endOfToday.getTime()) {
+    return "today";
+  }
+
+  if (timestamp <= endOfUpcoming.getTime()) {
+    return "upcoming";
+  }
+
+  return "none";
+}
+
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("zh-CN", {
     dateStyle: "short",
     timeStyle: "short"
   }).format(new Date(value));
+}
+
+function toDateTimeLocalValue(value: string) {
+  const date = new Date(value);
+  const timezoneOffsetMs = date.getTimezoneOffset() * 60 * 1000;
+
+  return new Date(date.getTime() - timezoneOffsetMs).toISOString().slice(0, 16);
 }
 
 function formatApplicationEvent(event: ApplicationEvent) {

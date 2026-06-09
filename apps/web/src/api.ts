@@ -32,8 +32,16 @@ type ResumeVersionResponse = {
   item: ResumeVersion;
 };
 
+type ResumeVersionListResponse = {
+  items: ResumeVersion[];
+};
+
 type ApplicationResponse = {
   item: Application;
+};
+
+type ApplicationListResponse = {
+  items: Application[];
 };
 
 type ApplicationEventListResponse = {
@@ -199,6 +207,16 @@ export async function getLatestResume(id: string) {
   return (await response.json()) as LatestResumeVersionResponse;
 }
 
+export async function listResumes(id: string) {
+  const response = await fetch(`${apiBaseUrl}/jobs/${id}/resumes`);
+
+  if (!response.ok) {
+    throw new Error("无法加载简历版本");
+  }
+
+  return (await response.json()) as ResumeVersionListResponse;
+}
+
 export async function generateGreeting(id: string) {
   const response = await fetch(`${apiBaseUrl}/jobs/${id}/greetings`, {
     method: "POST"
@@ -223,6 +241,16 @@ export async function getLatestApplication(id: string) {
   }
 
   return (await response.json()) as LatestApplicationResponse;
+}
+
+export async function listApplications(id: string) {
+  const response = await fetch(`${apiBaseUrl}/jobs/${id}/applications`);
+
+  if (!response.ok) {
+    throw new Error("无法加载投递草稿版本");
+  }
+
+  return (await response.json()) as ApplicationListResponse;
 }
 
 export async function updateApplication(id: string, input: ApplicationUpdateInput) {

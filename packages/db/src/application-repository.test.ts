@@ -52,6 +52,19 @@ describe("application repository", () => {
     expect(events).toHaveLength(2);
     expect(events.at(-1)?.type).toBe("status_changed");
 
+    const followUp = applications.update(second.id, {
+      nextFollowUpAt: "2026-01-03T02:00:00.000Z"
+    });
+
+    expect(followUp?.nextFollowUpAt).toBe("2026-01-03T02:00:00.000Z");
+    expect(applications.listEventsByApplicationId(second.id)).toHaveLength(2);
+
+    const clearedFollowUp = applications.update(second.id, {
+      nextFollowUpAt: null
+    });
+
+    expect(clearedFollowUp?.nextFollowUpAt).toBeUndefined();
+
     db.close();
   });
 });
