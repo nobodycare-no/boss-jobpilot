@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import type { Application, JobAnalysis, JobPosting, ResumeVersion } from "@boss-jobpilot/shared";
 
-import { buildApplicationReviewSummary, formatReviewRate } from "./application-review";
+import {
+  buildApplicationReviewSummary,
+  filterApplicationReviewJobs,
+  formatReviewRate
+} from "./application-review";
 
 const recommendationLabels: Record<JobAnalysis["recommendation"], string> = {
   apply: "可以投递",
@@ -310,6 +314,50 @@ describe("application review summary", () => {
         title: "积累复盘样本"
       }
     ]);
+  });
+
+  it("filters review jobs by status, recommendation and city", () => {
+    const jobs = [
+      createJob("job-1", "AI Frontend Engineer", "上海", "Alpha 科技"),
+      createJob("job-2", "Full Stack Engineer", "北京", "Beta 金融"),
+      createJob("job-3", "Frontend Intern", "上海", "Gamma 外包咨询"),
+      createJob("job-4", "Data Analyst", undefined, "Example")
+    ];
+    const analysisByJobId = {
+      "job-1": createAnalysis("job-1", 90, "prioritize"),
+      "job-2": createAnalysis("job-2", 70, "apply"),
+      "job-3": createAnalysis("job-3", 50, "cautious")
+    };
+    const applicationByJobId = {
+      "job-1": createApplication("app-1", "job-1", "replied"),
+      "job-2": createApplication("app-2", "job-2", "interview"),
+      "job-3": createApplication("app-3", "job-3", "applied")
+    };
+
+    expect(
+      filterApplicationReviewJobs({
+        analysisByJobId,
+        applicationByJobId,
+        filters: {
+          city: "上海",
+          recommendation: "cautious",
+          status: "applied"
+        },
+        jobs
+      }).map((job) => job.id)
+    ).toEqual(["job-3"]);
+    expect(
+      filterApplicationReviewJobs({
+        analysisByJobId,
+        applicationByJobId,
+        filters: {
+          city: "all",
+          recommendation: "unanalyzed",
+          status: "unstarted"
+        },
+        jobs
+      }).map((job) => job.id)
+    ).toEqual(["job-4"]);
   });
 });
 

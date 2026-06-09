@@ -360,6 +360,34 @@ button:disabled {
   font-weight: 700;
 }
 
+.review-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.review-controls label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: #3e5558;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.review-controls select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #d8d0c3;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #172126;
+  background: #fffdfa;
+  font: inherit;
+  font-size: 13px;
+}
+
 .review-strategy {
   display: grid;
   gap: 8px;
@@ -1052,6 +1080,7 @@ button:disabled {
   .application-board,
   .follow-up-board,
   .review-metrics,
+  .review-controls,
   .review-strategy > div,
   .review-distributions,
   .review-attribution,

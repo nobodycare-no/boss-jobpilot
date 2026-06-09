@@ -46,6 +46,22 @@ export type ApplicationReviewSummary = {
   strategySuggestions: ApplicationReviewStrategySuggestion[];
 };
 
+export type ApplicationReviewStatusFilter = "all" | "unstarted" | Application["status"];
+
+export type ApplicationReviewRecommendationFilter = "all" | "unanalyzed" | JobAnalysis["recommendation"];
+
+export type ApplicationReviewFilters = {
+  city: string;
+  recommendation: ApplicationReviewRecommendationFilter;
+  status: ApplicationReviewStatusFilter;
+};
+
+export const defaultApplicationReviewFilters: ApplicationReviewFilters = {
+  city: "all",
+  recommendation: "all",
+  status: "all"
+};
+
 export type ApplicationReviewInput = {
   analysisByJobId: Record<string, JobAnalysis>;
   applicationByJobId: Record<string, Application>;
@@ -104,11 +120,7 @@ export function buildApplicationReviewSummary({
       title: "公司类型"
     },
     {
-      items: buildAttributionItems(
-        jobs,
-        applicationByJobId,
-        (job) => job.city?.trim() || "未填写城市"
-      ),
+      items: buildAttributionItems(jobs, applicationByJobId, getApplicationReviewCityLabel),
       title: "城市"
     },
     {
@@ -140,10 +152,7 @@ export function buildApplicationReviewSummary({
     appliedOrBeyond,
     attributionGroups,
     averageMatchScore,
-    cityDistribution: buildDistribution(
-      jobs.map((job) => job.city?.trim() || "未填写城市"),
-      jobs.length
-    ),
+    cityDistribution: buildDistribution(jobs.map(getApplicationReviewCityLabel), jobs.length),
     generatedPackages,
     interviewOrOffer,
     overdueFollowUps,
@@ -185,6 +194,53 @@ export function buildApplicationReviewSummary({
       jobs.length
     )
   };
+}
+
+export function filterApplicationReviewJobs({
+  analysisByJobId,
+  applicationByJobId,
+  filters,
+  jobs
+}: {
+  analysisByJobId: Record<string, JobAnalysis>;
+  applicationByJobId: Record<string, Application>;
+  filters: ApplicationReviewFilters;
+  jobs: JobPosting[];
+}) {
+  return jobs.filter((job) => {
+    if (filters.city !== "all" && getApplicationReviewCityLabel(job) !== filters.city) {
+      return false;
+    }
+
+    const analysis = analysisByJobId[job.id];
+
+    if (filters.recommendation === "unanalyzed") {
+      if (analysis) {
+        return false;
+      }
+    } else if (
+      filters.recommendation !== "all" &&
+      analysis?.recommendation !== filters.recommendation
+    ) {
+      return false;
+    }
+
+    const application = applicationByJobId[job.id];
+
+    if (filters.status === "unstarted") {
+      return !application;
+    }
+
+    if (filters.status !== "all" && application?.status !== filters.status) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+export function getApplicationReviewCityLabel(job: JobPosting) {
+  return job.city?.trim() || "未填写城市";
 }
 
 export function formatReviewRate(numerator: number, denominator: number) {

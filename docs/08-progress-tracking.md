@@ -159,6 +159,10 @@ Accepted / Proposed / Rejected
 - `npm run build`
 - `git diff --check`
 - `codegraph sync .`
+- `git diff --check`
+- `codegraph sync .`
+- `git diff --check`
+- `codegraph sync .`
 
 ### Next
 
@@ -527,8 +531,33 @@ Accepted / Proposed / Rejected
 - `npm run test`
 - `npm run lint`
 - `npm run build`
+- `git diff --check`
+- `codegraph sync .`
 
 ### Next
 
 - 将投递复盘从摘要升级为可筛选的复盘页。
+- 接入 AI 策略复盘，基于真实投递结果给出下一轮投递策略。
+
+## 2026-06-09 更新 5
+
+### Done
+
+- 投递复盘新增复盘范围筛选器，支持按投递状态、投递建议和城市筛选。
+- 复盘筛选只影响复盘摘要、轻量分布、效果归因和策略建议，不影响岗位列表自身的看板筛选。
+- `application-review` 新增可测试的复盘筛选纯函数，并覆盖组合筛选、未分析和未生成草稿边界。
+- 使用手册和迭代计划已同步更新复盘筛选说明。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/web test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+- `codegraph sync .`
+
+### Next
+
 - 接入 AI 策略复盘，基于真实投递结果给出下一轮投递策略。

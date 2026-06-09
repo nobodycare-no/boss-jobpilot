@@ -45,9 +45,15 @@ import {
 } from "./api";
 import {
   buildApplicationReviewSummary,
+  defaultApplicationReviewFilters,
+  filterApplicationReviewJobs,
   formatReviewRate,
+  getApplicationReviewCityLabel,
   type ApplicationReviewAttributionGroup,
   type ApplicationReviewDistributionItem,
+  type ApplicationReviewFilters,
+  type ApplicationReviewRecommendationFilter,
+  type ApplicationReviewStatusFilter,
   type ApplicationReviewStrategySuggestion,
   type ApplicationReviewSummary
 } from "./application-review";
@@ -82,6 +88,10 @@ const recommendationLabels: Record<JobAnalysis["recommendation"], string> = {
   cautious: "谨慎投递",
   skip: "建议跳过"
 };
+
+const recommendationOrder = ["prioritize", "apply", "cautious", "skip"] satisfies Array<
+  JobAnalysis["recommendation"]
+>;
 
 const applicationStatusLabels: Record<Application["status"], string> = {
   draft: "草稿",
@@ -164,6 +174,9 @@ export function JobPool({ experiences }: JobPoolProps) {
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [activeBoardFilter, setActiveBoardFilter] = useState<JobBoardFilter>("all");
+  const [reviewFilters, setReviewFilters] = useState<ApplicationReviewFilters>(
+    defaultApplicationReviewFilters
+  );
 
   const jobKeywords = useMemo(
     () =>
@@ -236,17 +249,40 @@ export function JobPool({ experiences }: JobPoolProps) {
       ...item
     }));
   }, [applicationByJobId, jobs]);
+  const reviewCityOptions = useMemo(
+    () =>
+      Array.from(new Set(jobs.map(getApplicationReviewCityLabel))).sort((left, right) =>
+        left.localeCompare(right)
+      ),
+    [jobs]
+  );
+  const reviewJobs = useMemo(
+    () =>
+      filterApplicationReviewJobs({
+        analysisByJobId,
+        applicationByJobId,
+        filters: reviewFilters,
+        jobs
+      }),
+    [analysisByJobId, applicationByJobId, jobs, reviewFilters]
+  );
   const reviewSummary = useMemo(
     () =>
       buildApplicationReviewSummary({
         analysisByJobId,
         applicationByJobId,
         applicationHistoryByJobId,
-        jobs,
+        jobs: reviewJobs,
         recommendationLabels,
         resumeHistoryByJobId
       }),
-    [analysisByJobId, applicationByJobId, applicationHistoryByJobId, jobs, resumeHistoryByJobId]
+    [
+      analysisByJobId,
+      applicationByJobId,
+      applicationHistoryByJobId,
+      resumeHistoryByJobId,
+      reviewJobs
+    ]
   );
   const visibleJobs = useMemo(
     () =>
@@ -695,7 +731,15 @@ export function JobPool({ experiences }: JobPoolProps) {
             </div>
           ) : null}
 
-          {jobs.length > 0 ? <ApplicationReviewPanel summary={reviewSummary} /> : null}
+          {jobs.length > 0 ? (
+            <ApplicationReviewPanel
+              cityOptions={reviewCityOptions}
+              filters={reviewFilters}
+              onFiltersChange={setReviewFilters}
+              summary={reviewSummary}
+              totalJobs={jobs.length}
+            />
+          ) : null}
 
           {jobs.length > 0 ? (
             <div className="application-board" aria-label="投递看板">
@@ -906,8 +950,24 @@ function JobCard({
   );
 }
 
-function ApplicationReviewPanel({ summary }: { summary: ApplicationReviewSummary }) {
+function ApplicationReviewPanel({
+  cityOptions,
+  filters,
+  onFiltersChange,
+  summary,
+  totalJobs
+}: {
+  cityOptions: string[];
+  filters: ApplicationReviewFilters;
+  onFiltersChange: (filters: ApplicationReviewFilters) => void;
+  summary: ApplicationReviewSummary;
+  totalJobs: number;
+}) {
   const denominator = summary.statusTotal || summary.totalJobs;
+  const isFiltered =
+    filters.city !== defaultApplicationReviewFilters.city ||
+    filters.recommendation !== defaultApplicationReviewFilters.recommendation ||
+    filters.status !== defaultApplicationReviewFilters.status;
   const metrics = [
     {
       detail: `${summary.appliedOrBeyond}/${denominator} 个岗位已推进到投递后`,
@@ -951,8 +1011,77 @@ function ApplicationReviewPanel({ summary }: { summary: ApplicationReviewSummary
           <h3>效果概览</h3>
         </div>
         <span>
-          {summary.activeApplications}/{summary.totalJobs} 个岗位已生成话术
+          {summary.totalJobs}/{totalJobs} 个岗位纳入复盘 · {summary.activeApplications} 个已生成话术
         </span>
+      </div>
+
+      <div className="review-controls" aria-label="复盘筛选">
+        <label>
+          状态
+          <select
+            value={filters.status}
+            onChange={(event) =>
+              onFiltersChange({
+                ...filters,
+                status: event.target.value as ApplicationReviewStatusFilter
+              })
+            }
+          >
+            <option value="all">全部状态</option>
+            {boardStageOrder.map((stage) => (
+              <option key={stage} value={stage}>
+                {boardStageLabels[stage]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          投递建议
+          <select
+            value={filters.recommendation}
+            onChange={(event) =>
+              onFiltersChange({
+                ...filters,
+                recommendation: event.target.value as ApplicationReviewRecommendationFilter
+              })
+            }
+          >
+            <option value="all">全部建议</option>
+            <option value="unanalyzed">未分析</option>
+            {recommendationOrder.map((recommendation) => (
+              <option key={recommendation} value={recommendation}>
+                {recommendationLabels[recommendation]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          城市
+          <select
+            value={filters.city}
+            onChange={(event) =>
+              onFiltersChange({
+                ...filters,
+                city: event.target.value
+              })
+            }
+          >
+            <option value="all">全部城市</option>
+            {cityOptions.map((city) => (
+              <option key={city} value={city}>
+                {city}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          className="panel-action-button"
+          disabled={!isFiltered}
+          onClick={() => onFiltersChange(defaultApplicationReviewFilters)}
+          type="button"
+        >
+          重置
+        </button>
       </div>
 
       <div className="review-metrics">
