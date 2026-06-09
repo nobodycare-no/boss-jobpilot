@@ -48,6 +48,7 @@ import {
   formatReviewRate,
   type ApplicationReviewAttributionGroup,
   type ApplicationReviewDistributionItem,
+  type ApplicationReviewStrategySuggestion,
   type ApplicationReviewSummary
 } from "./application-review";
 
@@ -972,6 +973,15 @@ function ApplicationReviewPanel({ summary }: { summary: ApplicationReviewSummary
         </div>
       ) : null}
 
+      <div className="review-strategy" aria-label="策略建议">
+        <strong>策略建议</strong>
+        <div>
+          {summary.strategySuggestions.map((suggestion) => (
+            <ReviewStrategySuggestionItem key={suggestion.title} suggestion={suggestion} />
+          ))}
+        </div>
+      </div>
+
       <div className="review-distributions">
         <ReviewDistribution items={summary.recommendationDistribution} title="投递建议分布" />
         <ReviewDistribution items={summary.cityDistribution} title="城市分布" />
@@ -984,6 +994,29 @@ function ApplicationReviewPanel({ summary }: { summary: ApplicationReviewSummary
         ))}
       </div>
     </section>
+  );
+}
+
+function ReviewStrategySuggestionItem({
+  suggestion
+}: {
+  suggestion: ApplicationReviewStrategySuggestion;
+}) {
+  const priorityLabel = {
+    high: "高",
+    low: "低",
+    medium: "中"
+  }[suggestion.priority];
+
+  return (
+    <article className={`review-strategy-item review-strategy-item--${suggestion.priority}`}>
+      <div>
+        <span>{priorityLabel}</span>
+        <strong>{suggestion.title}</strong>
+      </div>
+      <p>{suggestion.detail}</p>
+      <small>{suggestion.action}</small>
+    </article>
   );
 }
 

@@ -56,6 +56,31 @@ describe("application review summary", () => {
     expect(summary.generatedPackages).toBe(2);
     expect(summary.overdueFollowUps).toBe(1);
     expect(summary.staleActiveApplications).toBe(2);
+    expect(summary.strategySuggestions).toHaveLength(4);
+    expect(summary.strategySuggestions.slice(0, 3)).toEqual([
+      {
+        action: "打开跟进队列，优先更新这些岗位状态或重新触达。",
+        detail: "1 个岗位已经超过下次跟进时间，先处理它们能减少机会沉没。",
+        priority: "high",
+        title: "先处理逾期跟进"
+      },
+      {
+        action: "为推进中的岗位补上明确的下次跟进时间。",
+        detail: "2 个仍在推进的岗位没有跟进提醒，容易丢失节奏。",
+        priority: "medium",
+        title: "补齐下次跟进"
+      },
+      {
+        action: "给已有话术但缺少简历版本的岗位补生成定制简历。",
+        detail: "3 个已生成话术岗位中，只有 2 个有简历草稿。",
+        priority: "low",
+        title: "补齐定制简历"
+      }
+    ]);
+    expect(summary.strategySuggestions[3]).toMatchObject({
+      priority: "low",
+      title: "放大有效信号"
+    });
     expect(summary.cityDistribution).toEqual([
       { count: 2, label: "上海", rate: 0.5 },
       { count: 1, label: "北京", rate: 0.25 },
@@ -265,6 +290,26 @@ describe("application review summary", () => {
   it("formats unavailable rates without dividing by zero", () => {
     expect(formatReviewRate(0, 0)).toBe("-");
     expect(formatReviewRate(2, 3)).toBe("67%");
+  });
+
+  it("returns a starter strategy suggestion when there is no review sample", () => {
+    const summary = buildApplicationReviewSummary({
+      analysisByJobId: {},
+      applicationByJobId: {},
+      applicationHistoryByJobId: {},
+      jobs: [],
+      recommendationLabels,
+      resumeHistoryByJobId: {}
+    });
+
+    expect(summary.strategySuggestions).toEqual([
+      {
+        action: "先采集岗位、生成分析、定制简历和打招呼语，再开始复盘。",
+        detail: "目前还没有足够的投递和反馈数据，策略建议会随岗位状态自动更新。",
+        priority: "low",
+        title: "积累复盘样本"
+      }
+    ]);
   });
 });
 

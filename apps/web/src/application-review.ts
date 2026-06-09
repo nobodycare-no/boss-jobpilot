@@ -21,6 +21,13 @@ export type ApplicationReviewAttributionGroup = {
   title: string;
 };
 
+export type ApplicationReviewStrategySuggestion = {
+  action: string;
+  detail: string;
+  priority: "high" | "medium" | "low";
+  title: string;
+};
+
 export type ApplicationReviewSummary = {
   activeApplications: number;
   appliedOrBeyond: number;
@@ -36,6 +43,7 @@ export type ApplicationReviewSummary = {
   recommendationDistribution: ApplicationReviewDistributionItem[];
   versionDistribution: ApplicationReviewDistributionItem[];
   attributionGroups: ApplicationReviewAttributionGroup[];
+  strategySuggestions: ApplicationReviewStrategySuggestion[];
 };
 
 export type ApplicationReviewInput = {
@@ -84,56 +92,59 @@ export function buildApplicationReviewSummary({
           analyses.reduce((total, analysis) => total + analysis.matchScore, 0) / analyses.length
         )
       : undefined;
+  const generatedPackages = jobs.filter((job) => (resumeHistoryByJobId[job.id]?.length ?? 0) > 0)
+    .length;
+  const attributionGroups = [
+    {
+      items: buildAttributionItems(jobs, applicationByJobId, (job) => getJobTypeLabel(job.title)),
+      title: "岗位类型"
+    },
+    {
+      items: buildAttributionItems(jobs, applicationByJobId, getCompanyTypeLabel),
+      title: "公司类型"
+    },
+    {
+      items: buildAttributionItems(
+        jobs,
+        applicationByJobId,
+        (job) => job.city?.trim() || "未填写城市"
+      ),
+      title: "城市"
+    },
+    {
+      items: buildAttributionItems(
+        jobs.filter((job) => Boolean(analysisByJobId[job.id])),
+        applicationByJobId,
+        (job) => recommendationLabels[analysisByJobId[job.id]?.recommendation ?? "apply"]
+      ),
+      title: "投递建议"
+    },
+    {
+      items: buildAttributionItems(jobs, applicationByJobId, (job) => {
+        const application = applicationByJobId[job.id];
+
+        if (!application) {
+          return "未生成话术";
+        }
+
+        return application.resumeVersionId
+          ? `简历 ${shortId(application.resumeVersionId)}`
+          : "未关联简历版本";
+      }),
+      title: "简历版本"
+    }
+  ];
 
   return {
     activeApplications: applications.length,
     appliedOrBeyond,
-    attributionGroups: [
-      {
-        items: buildAttributionItems(jobs, applicationByJobId, (job) => getJobTypeLabel(job.title)),
-        title: "岗位类型"
-      },
-      {
-        items: buildAttributionItems(jobs, applicationByJobId, getCompanyTypeLabel),
-        title: "公司类型"
-      },
-      {
-        items: buildAttributionItems(
-          jobs,
-          applicationByJobId,
-          (job) => job.city?.trim() || "未填写城市"
-        ),
-        title: "城市"
-      },
-      {
-        items: buildAttributionItems(
-          jobs.filter((job) => Boolean(analysisByJobId[job.id])),
-          applicationByJobId,
-          (job) => recommendationLabels[analysisByJobId[job.id]?.recommendation ?? "apply"]
-        ),
-        title: "投递建议"
-      },
-      {
-        items: buildAttributionItems(jobs, applicationByJobId, (job) => {
-          const application = applicationByJobId[job.id];
-
-          if (!application) {
-            return "未生成话术";
-          }
-
-          return application.resumeVersionId
-            ? `简历 ${shortId(application.resumeVersionId)}`
-            : "未关联简历版本";
-        }),
-        title: "简历版本"
-      }
-    ],
+    attributionGroups,
     averageMatchScore,
     cityDistribution: buildDistribution(
       jobs.map((job) => job.city?.trim() || "未填写城市"),
       jobs.length
     ),
-    generatedPackages: jobs.filter((job) => (resumeHistoryByJobId[job.id]?.length ?? 0) > 0).length,
+    generatedPackages,
     interviewOrOffer,
     overdueFollowUps,
     recommendationDistribution: buildDistribution(
@@ -142,6 +153,17 @@ export function buildApplicationReviewSummary({
     ),
     replyCount,
     staleActiveApplications,
+    strategySuggestions: buildStrategySuggestions({
+      activeApplications: applications.length,
+      appliedOrBeyond,
+      attributionGroups,
+      averageMatchScore,
+      generatedPackages,
+      overdueFollowUps,
+      replyCount,
+      staleActiveApplications,
+      totalJobs: jobs.length
+    }),
     statusTotal: applications.length,
     totalJobs: jobs.length,
     versionDistribution: buildDistribution(
@@ -171,6 +193,134 @@ export function formatReviewRate(numerator: number, denominator: number) {
   }
 
   return `${Math.round((numerator / denominator) * 100)}%`;
+}
+
+function buildStrategySuggestions({
+  activeApplications,
+  appliedOrBeyond,
+  attributionGroups,
+  averageMatchScore,
+  generatedPackages,
+  overdueFollowUps,
+  replyCount,
+  staleActiveApplications,
+  totalJobs
+}: {
+  activeApplications: number;
+  appliedOrBeyond: number;
+  attributionGroups: ApplicationReviewAttributionGroup[];
+  averageMatchScore?: number;
+  generatedPackages: number;
+  overdueFollowUps: number;
+  replyCount: number;
+  staleActiveApplications: number;
+  totalJobs: number;
+}): ApplicationReviewStrategySuggestion[] {
+  const suggestions: ApplicationReviewStrategySuggestion[] = [];
+  const replyRate = appliedOrBeyond > 0 ? replyCount / appliedOrBeyond : undefined;
+
+  if (overdueFollowUps > 0) {
+    suggestions.push({
+      action: "打开跟进队列，优先更新这些岗位状态或重新触达。",
+      detail: `${overdueFollowUps} 个岗位已经超过下次跟进时间，先处理它们能减少机会沉没。`,
+      priority: "high",
+      title: "先处理逾期跟进"
+    });
+  }
+
+  if (staleActiveApplications > 0) {
+    suggestions.push({
+      action: "为推进中的岗位补上明确的下次跟进时间。",
+      detail: `${staleActiveApplications} 个仍在推进的岗位没有跟进提醒，容易丢失节奏。`,
+      priority: overdueFollowUps > 0 ? "medium" : "high",
+      title: "补齐下次跟进"
+    });
+  }
+
+  if (appliedOrBeyond === 0 && activeApplications > 0) {
+    suggestions.push({
+      action: "筛出最匹配的岗位，今天至少推进 3 个到已投递。",
+      detail: `${activeApplications} 个岗位已经生成话术，但还没有真实投递记录。`,
+      priority: "medium",
+      title: "推进草稿到投递"
+    });
+  }
+
+  if (replyRate !== undefined && appliedOrBeyond >= 3 && replyRate < 0.2) {
+    suggestions.push({
+      action: "复查岗位方向、开场话术和简历首屏，把低匹配岗位降级。",
+      detail: `当前 ${appliedOrBeyond} 个已投递岗位中只有 ${replyCount} 个有回复，回复率偏低。`,
+      priority: "medium",
+      title: "调整投递方向或话术"
+    });
+  }
+
+  if (averageMatchScore !== undefined && averageMatchScore < 60) {
+    suggestions.push({
+      action: "优先投递匹配分更高的岗位，并把低分岗位放入观察。",
+      detail: `当前平均匹配分为 ${averageMatchScore}/100，说明岗位要求和经历匹配度不足。`,
+      priority: "medium",
+      title: "收窄到更匹配岗位"
+    });
+  }
+
+  if (totalJobs > 0 && generatedPackages < activeApplications) {
+    suggestions.push({
+      action: "给已有话术但缺少简历版本的岗位补生成定制简历。",
+      detail: `${activeApplications} 个已生成话术岗位中，只有 ${generatedPackages} 个有简历草稿。`,
+      priority: appliedOrBeyond > 0 ? "low" : "medium",
+      title: "补齐定制简历"
+    });
+  }
+
+  const strongestSignal = findStrongestAttributionSignal(attributionGroups);
+
+  if (strongestSignal) {
+    suggestions.push({
+      action: `下一轮优先寻找更多“${strongestSignal.label}”相关岗位，并复用当前有效版本。`,
+      detail: `${strongestSignal.groupTitle}中“${strongestSignal.label}”已有 ${formatReviewRate(
+        strongestSignal.replyCount,
+        strongestSignal.appliedOrBeyond
+      )} 回复率、${formatReviewRate(
+        strongestSignal.interviewOrOffer,
+        strongestSignal.appliedOrBeyond
+      )} 面试率。`,
+      priority: "low",
+      title: "放大有效信号"
+    });
+  }
+
+  if (suggestions.length === 0) {
+    return [
+      {
+        action: "先采集岗位、生成分析、定制简历和打招呼语，再开始复盘。",
+        detail: "目前还没有足够的投递和反馈数据，策略建议会随岗位状态自动更新。",
+        priority: "low",
+        title: "积累复盘样本"
+      }
+    ];
+  }
+
+  return suggestions.slice(0, 4);
+}
+
+function findStrongestAttributionSignal(attributionGroups: ApplicationReviewAttributionGroup[]) {
+  const candidates = attributionGroups.flatMap((group) =>
+    group.items
+      .filter((item) => item.appliedOrBeyond > 0 && (item.replyCount > 0 || item.interviewOrOffer > 0))
+      .map((item) => ({
+        ...item,
+        groupTitle: group.title
+      }))
+  );
+
+  return candidates.sort(
+    (left, right) =>
+      right.interviewRate - left.interviewRate ||
+      right.replyRate - left.replyRate ||
+      right.appliedOrBeyond - left.appliedOrBeyond ||
+      left.label.localeCompare(right.label)
+  )[0];
 }
 
 function buildDistribution(values: string[], total: number): ApplicationReviewDistributionItem[] {

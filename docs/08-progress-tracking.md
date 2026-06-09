@@ -157,6 +157,8 @@ Accepted / Proposed / Rejected
 - `npm run test`
 - `npm run lint`
 - `npm run build`
+- `git diff --check`
+- `codegraph sync .`
 
 ### Next
 
@@ -503,6 +505,28 @@ Accepted / Proposed / Rejected
 - `npm run lint`
 - `npm run build`
 - `codegraph sync .`
+
+### Next
+
+- 将投递复盘从摘要升级为可筛选的复盘页。
+- 接入 AI 策略复盘，基于真实投递结果给出下一轮投递策略。
+
+## 2026-06-09 更新 4
+
+### Done
+
+- 投递复盘新增“策略建议”区域。
+- `application-review` 会基于逾期跟进、未设置下次跟进、回复率、平均匹配分、定制简历覆盖率和效果归因信号生成最多 4 条规则版行动建议。
+- 空数据时会显示“积累复盘样本”的起步建议，避免复盘区域无指引。
+- 使用手册和迭代计划已同步说明策略建议当前是规则版，AI 策略复盘仍未接入。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/web test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
 
 ### Next
 
