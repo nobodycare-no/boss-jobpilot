@@ -8,6 +8,7 @@ import {
   generateApplicationReviewStrategyRecapWithProvider,
   generateGreetingDraftWithProvider,
   generateJobAnalysisWithProvider,
+  generateResumeVersionWithProvider,
   type AiProvider
 } from "@boss-jobpilot/ai";
 import {
@@ -316,17 +317,27 @@ export function buildServer(options: BuildServerOptions = {}) {
       });
     }
 
+    const currentExperiences = experiences.list();
     const draft = generateTailoredResumeDraft({
       job,
       analysis,
-      experiences: experiences.list()
+      experiences: currentExperiences
     });
-    const item = resumeVersions.create({
+    const fallbackResume = {
       jobId: job.id,
       variant: "tailored",
       markdownContent: renderResumeMarkdown(draft),
       selectedExperienceIds: draft.experiences.map((experience) => experience.id),
       changeSummary: draft.changeSummary
+    };
+    const item = resumeVersions.create({
+      ...(await generateResumeVersionWithProvider({
+        job,
+        analysis,
+        experiences: currentExperiences,
+        fallbackResume,
+        provider: aiProvider
+      }))
     });
 
     return reply.status(201).send({

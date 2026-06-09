@@ -653,3 +653,29 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 将真实 Provider 扩展到简历生成。
+
+## 2026-06-09 更新 10
+
+### Done
+
+- `packages/ai` 新增 `generateResumeVersionWithProvider`，配置 AI Provider 时可用 PackyAPI 生成最终 Markdown 简历版本。
+- 简历 Provider 输出会合并规则版兜底草稿，并使用 `ResumeVersionCreateSchema` 校验。
+- `selectedExperienceIds` 会被限制为真实经历库中存在的 ID，避免模型编造经历引用。
+- API 的 `POST /jobs/:id/resumes` 已接入可选 Provider；未配置密钥时仍回退规则版。
+- API 测试新增 fake Provider 覆盖，确认分析、简历和打招呼语可以在同一工作流中使用配置的模型输出。
+- 使用手册和迭代计划已同步更新 AI Provider 覆盖范围。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/ai test`
+- `corepack pnpm --filter @boss-jobpilot/api test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+- `codegraph sync .`
+
+### Next
+
+- 为真实 Provider 调用增加失败兜底和用户可见错误提示，避免模型异常中断投递工作流。

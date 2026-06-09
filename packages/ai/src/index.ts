@@ -5,9 +5,14 @@ import type {
   ExperienceItem,
   JobAnalysis,
   JobAnalysisCreateInput,
-  JobPosting
+  JobPosting,
+  ResumeVersionCreateInput
 } from "@boss-jobpilot/shared";
-import { ApplicationReviewStrategyRecapSchema, JobAnalysisCreateSchema } from "@boss-jobpilot/shared";
+import {
+  ApplicationReviewStrategyRecapSchema,
+  JobAnalysisCreateSchema,
+  ResumeVersionCreateSchema
+} from "@boss-jobpilot/shared";
 import { z } from "zod";
 
 export type AiMessage = {
@@ -129,6 +134,13 @@ export type JobAnalysisGenerationInput = {
   fallbackAnalysis: JobAnalysisCreateInput;
 };
 
+export type ResumeVersionGenerationInput = {
+  job: JobPosting;
+  analysis: JobAnalysis;
+  experiences: ExperienceItem[];
+  fallbackResume: ResumeVersionCreateInput;
+};
+
 export type GreetingDraft = {
   message: string;
   selectedExperienceIds: string[];
@@ -190,6 +202,55 @@ export async function generateJobAnalysisWithProvider({
     ),
     modelName: generated.modelName || provider.name,
     promptVersion: generated.promptVersion || promptVersions.jobAnalyzer
+  });
+}
+
+export async function generateResumeVersionWithProvider({
+  analysis,
+  experiences,
+  fallbackResume,
+  job,
+  provider
+}: ResumeVersionGenerationInput & {
+  provider?: AiProvider;
+}): Promise<ResumeVersionCreateInput> {
+  if (!provider) {
+    return fallbackResume;
+  }
+
+  const selectedExperiences = selectExperiences(experiences, analysis.matchedExperienceIds);
+  const generated = await provider.generateJson<Partial<ResumeVersionCreateInput>>({
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a resume tailoring assistant. Return JSON only with fields: jobId, variant, markdownContent, selectedExperienceIds, changeSummary."
+      },
+      {
+        role: "user",
+        content: JSON.stringify({
+          instruction:
+            "Write a tailored Chinese Markdown resume for this job. Use only the provided real candidate experiences. Do not invent education, employer names, project names, metrics, or experience ids. Keep the Markdown concise but not limited to one page when more relevant evidence is useful.",
+          job,
+          analysis,
+          candidateExperiences: selectedExperiences,
+          fallbackResume
+        })
+      }
+    ],
+    temperature: 0.25
+  });
+
+  return ResumeVersionCreateSchema.parse({
+    ...fallbackResume,
+    ...generated,
+    jobId: job.id,
+    variant: "tailored",
+    selectedExperienceIds: sanitizeExperienceIds(
+      generated.selectedExperienceIds ?? fallbackResume.selectedExperienceIds ?? [],
+      experiences
+    ),
+    changeSummary: generated.changeSummary || fallbackResume.changeSummary
   });
 }
 

@@ -31,6 +31,17 @@ const providerServer = buildServer({
         } as T;
       }
 
+      if (promptText.includes("resume tailoring assistant")) {
+        return {
+          jobId: "provider-job",
+          variant: "provider",
+          markdownContent:
+            "# Provider generated resume\n\n## Project\n\nProvider backed greeting with React workflow.",
+          selectedExperienceIds: ["exp-provider", "missing-exp"],
+          changeSummary: "Provider generated a tailored resume around the React workflow."
+        } as T;
+      }
+
       return {
         message: "您好，我基于真实项目经历匹配这个岗位，想进一步沟通。",
         selectedExperienceIds: ["exp-provider"],
@@ -268,7 +279,7 @@ describe("job routes", () => {
     expect(listAfterDeleteResponse.json().items).toHaveLength(0);
   });
 
-  it("uses the configured AI provider for analysis and greeting generation", async () => {
+  it("uses the configured AI provider for analysis, resume and greeting generation", async () => {
     await providerServer.inject({
       method: "POST",
       url: "/experiences",
@@ -306,12 +317,23 @@ describe("job routes", () => {
     expect(analysisResponse.json().analysis.matchScore).toBe(93);
     expect(analysisResponse.json().analysis.modelName).toBe("test-analysis-model");
 
+    const resumeResponse = await providerServer.inject({
+      method: "POST",
+      url: `/jobs/${created.id}/resumes`
+    });
+
+    expect(resumeResponse.statusCode).toBe(201);
+    expect(resumeResponse.json().item.markdownContent).toContain("Provider generated resume");
+    expect(resumeResponse.json().item.selectedExperienceIds).toEqual(["exp-provider"]);
+    expect(resumeResponse.json().item.variant).toBe("tailored");
+
     const greetingResponse = await providerServer.inject({
       method: "POST",
       url: `/jobs/${created.id}/greetings`
     });
 
     expect(greetingResponse.statusCode).toBe(201);
+    expect(greetingResponse.json().item.resumeVersionId).toBe(resumeResponse.json().item.id);
     expect(greetingResponse.json().item.greetingMessage).toBe(
       "您好，我基于真实项目经历匹配这个岗位，想进一步沟通。"
     );

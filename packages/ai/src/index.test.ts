@@ -8,6 +8,7 @@ import {
   generateGreetingDraft,
   generateGreetingDraftWithProvider,
   generateJobAnalysisWithProvider,
+  generateResumeVersionWithProvider,
   promptVersions
 } from "./index";
 
@@ -81,6 +82,77 @@ describe("job analysis generation", () => {
     expect(analysis.recommendation).toBe("prioritize");
     expect(analysis.matchedExperienceIds).toEqual(["exp-1"]);
     expect(analysis.modelName).toBe("test-model");
+  });
+});
+
+describe("resume version generation", () => {
+  it("uses an AI provider for resume markdown and filters hallucinated experience ids", async () => {
+    const resume = await generateResumeVersionWithProvider({
+      job: {
+        id: "job-1",
+        platform: "boss",
+        title: "AI Frontend Engineer",
+        jdRaw: "React TypeScript AI",
+        companyName: "Example Tech",
+        capturedAt: "2026-01-01T00:00:00.000Z"
+      },
+      analysis: {
+        id: "analysis-1",
+        jobId: "job-1",
+        matchScore: 91,
+        recommendation: "prioritize",
+        matchedKeywords: ["React", "TypeScript", "AI"],
+        requiredSkills: ["React", "TypeScript", "AI"],
+        bonusSkills: [],
+        matchedExperienceIds: ["exp-1"],
+        riskFlags: [],
+        resumeStrategy: "Lead with AI frontend delivery.",
+        modelName: "test-model",
+        promptVersion: "test-analysis",
+        createdAt: "2026-01-01T00:00:00.000Z"
+      },
+      experiences: [
+        {
+          id: "exp-1",
+          type: "project",
+          title: "AI resume tailoring workspace",
+          summary: "Built React and TypeScript workflow for AI job applications.",
+          techStack: ["React", "TypeScript"],
+          responsibilities: ["Built the resume tailoring UI"],
+          achievements: ["Reduced manual drafting time"],
+          metrics: ["Saved 70% drafting time"],
+          evidenceLevel: "deep_interview_ready",
+          ownershipLevel: "owned",
+          tags: []
+        }
+      ],
+      fallbackResume: {
+        jobId: "job-1",
+        variant: "tailored",
+        markdownContent: "# Rule based resume",
+        selectedExperienceIds: ["exp-1"],
+        changeSummary: "Rule based change summary."
+      },
+      provider: {
+        name: "test-provider",
+        async generateJson<T>() {
+          return {
+            jobId: "wrong-job",
+            variant: "provider",
+            markdownContent:
+              "# Provider generated resume\n\n## Project\n\nAI resume tailoring workspace with React.",
+            selectedExperienceIds: ["exp-1", "missing-exp"],
+            changeSummary: "Provider emphasized React and AI resume tailoring."
+          } as T;
+        }
+      }
+    });
+
+    expect(resume.jobId).toBe("job-1");
+    expect(resume.variant).toBe("tailored");
+    expect(resume.markdownContent).toContain("Provider generated resume");
+    expect(resume.selectedExperienceIds).toEqual(["exp-1"]);
+    expect(resume.changeSummary).toContain("Provider emphasized");
   });
 });
 
