@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Send,
   Timer,
+  TrendingUp,
   Trash2,
   XCircle
 } from "lucide-react";
@@ -42,6 +43,12 @@ import {
   listResumes,
   updateApplication
 } from "./api";
+import {
+  buildApplicationReviewSummary,
+  formatReviewRate,
+  type ApplicationReviewDistributionItem,
+  type ApplicationReviewSummary
+} from "./application-review";
 
 type JobFormState = {
   platform: string;
@@ -227,6 +234,18 @@ export function JobPool({ experiences }: JobPoolProps) {
       ...item
     }));
   }, [applicationByJobId, jobs]);
+  const reviewSummary = useMemo(
+    () =>
+      buildApplicationReviewSummary({
+        analysisByJobId,
+        applicationByJobId,
+        applicationHistoryByJobId,
+        jobs,
+        recommendationLabels,
+        resumeHistoryByJobId
+      }),
+    [analysisByJobId, applicationByJobId, applicationHistoryByJobId, jobs, resumeHistoryByJobId]
+  );
   const visibleJobs = useMemo(
     () =>
       jobs.filter((job) => {
@@ -674,6 +693,8 @@ export function JobPool({ experiences }: JobPoolProps) {
             </div>
           ) : null}
 
+          {jobs.length > 0 ? <ApplicationReviewPanel summary={reviewSummary} /> : null}
+
           {jobs.length > 0 ? (
             <div className="application-board" aria-label="投递看板">
               {boardItems.map((item) => (
@@ -880,6 +901,116 @@ function JobCard({
         resumes={resumeHistory}
       />
     </article>
+  );
+}
+
+function ApplicationReviewPanel({ summary }: { summary: ApplicationReviewSummary }) {
+  const denominator = summary.statusTotal || summary.totalJobs;
+  const metrics = [
+    {
+      detail: `${summary.appliedOrBeyond}/${denominator} 个岗位已推进到投递后`,
+      label: "投递推进率",
+      value: formatReviewRate(summary.appliedOrBeyond, denominator)
+    },
+    {
+      detail: `${summary.replyCount}/${summary.appliedOrBeyond} 个已投递岗位有回复`,
+      label: "回复率",
+      value: formatReviewRate(summary.replyCount, summary.appliedOrBeyond)
+    },
+    {
+      detail: `${summary.interviewOrOffer}/${summary.appliedOrBeyond} 个已投递岗位进入面试或 Offer`,
+      label: "面试转化",
+      value: formatReviewRate(summary.interviewOrOffer, summary.appliedOrBeyond)
+    },
+    {
+      detail:
+        summary.averageMatchScore === undefined
+          ? "暂无岗位分析"
+          : `${summary.generatedPackages} 个岗位已有简历草稿`,
+      label: "平均匹配分",
+      value: summary.averageMatchScore === undefined ? "-" : `${summary.averageMatchScore}/100`
+    }
+  ];
+  const alerts = [
+    summary.overdueFollowUps > 0 ? `${summary.overdueFollowUps} 个岗位跟进已逾期` : undefined,
+    summary.staleActiveApplications > 0
+      ? `${summary.staleActiveApplications} 个推进中岗位未设置下次跟进`
+      : undefined
+  ].filter((alert): alert is string => Boolean(alert));
+
+  return (
+    <section className="review-panel" aria-label="投递复盘">
+      <div className="review-panel__header">
+        <div>
+          <p className="eyebrow">
+            <TrendingUp size={16} />
+            投递复盘
+          </p>
+          <h3>效果概览</h3>
+        </div>
+        <span>
+          {summary.activeApplications}/{summary.totalJobs} 个岗位已生成话术
+        </span>
+      </div>
+
+      <div className="review-metrics">
+        {metrics.map((metric) => (
+          <article className="review-metric" key={metric.label}>
+            <span>{metric.label}</span>
+            <strong>{metric.value}</strong>
+            <small>{metric.detail}</small>
+          </article>
+        ))}
+      </div>
+
+      {alerts.length > 0 ? (
+        <div className="review-alerts">
+          {alerts.map((alert) => (
+            <span key={alert}>{alert}</span>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="review-distributions">
+        <ReviewDistribution items={summary.recommendationDistribution} title="投递建议分布" />
+        <ReviewDistribution items={summary.cityDistribution} title="城市分布" />
+        <ReviewDistribution items={summary.versionDistribution} title="版本迭代" />
+      </div>
+    </section>
+  );
+}
+
+function ReviewDistribution({
+  items,
+  title
+}: {
+  items: ApplicationReviewDistributionItem[];
+  title: string;
+}) {
+  if (items.length === 0) {
+    return (
+      <div className="review-distribution">
+        <strong>{title}</strong>
+        <p>暂无数据</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="review-distribution">
+      <strong>{title}</strong>
+      <div>
+        {items.map((item) => (
+          <div className="review-distribution-row" key={item.label}>
+            <span>{item.label}</span>
+            <div>
+              <i style={{ width: `${Math.max(item.rate * 100, 4)}%` }} />
+            </div>
+            <small>{item.count}</small>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
