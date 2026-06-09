@@ -126,6 +126,35 @@ AI 输出应使用 JSON schema 或 Zod schema 校验。
 - 证据不足：返回需要用户补充的问题。
 - 低置信度：标记为“需人工确认”。
 
+## Provider 预留
+
+当前代码已经预留 OpenAI-compatible Provider 适配层，默认用于 PackyAPI 中转站。
+
+环境变量：
+
+```text
+AI_PROVIDER=packyapi
+AI_API_KEY=你的 PackyAPI Key
+AI_API_BASE_URL=https://www.packyapi.com/v1
+AI_MODEL=gpt-5
+```
+
+兼容别名：
+
+```text
+AI_BASE_URL=
+PACKY_API_KEY=
+PACKY_API_BASE_URL=
+PACKY_API_MODEL=
+```
+
+接入原则：
+
+- 密钥只放在本地 `.env` 或系统环境变量中，不提交到 Git。
+- API 端通过 `createAiProviderFromEnv(process.env)` 创建 Provider。
+- 未配置密钥时，继续使用本地规则版生成器。
+- 已接入 Provider 的能力应继续通过 Zod schema 校验输出。
+
 ## Prompt 版本管理
 
 每个 Agent 的 Prompt 需要版本号：

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  createAiProviderFromEnv,
+  createOpenAiCompatibleProvider,
   generateApplicationReviewStrategyRecap,
+  generateApplicationReviewStrategyRecapWithProvider,
   generateGreetingDraft,
   promptVersions
 } from "./index";
@@ -94,5 +97,111 @@ describe("application review strategy recap", () => {
     expect(recap.experiments.join(" ")).toContain("补生成简历");
     expect(recap.modelName).toBe("rule-based");
     expect(recap.promptVersion).toBe(promptVersions.applicationReviewStrategist);
+  });
+
+  it("uses an AI provider when one is supplied", async () => {
+    const recap = await generateApplicationReviewStrategyRecapWithProvider({
+      input: {
+        activeApplications: 1,
+        appliedOrBeyond: 1,
+        generatedPackages: 1,
+        interviewOrOffer: 0,
+        overdueFollowUps: 0,
+        replyCount: 0,
+        staleActiveApplications: 0,
+        totalJobs: 1,
+        scopeLabel: "全部岗位",
+        strategySuggestions: [],
+        attributionSignals: []
+      },
+      provider: {
+        name: "test-provider",
+        async generateJson<T>() {
+          return {
+            summary: "全部岗位样本较少，先补齐反馈记录。",
+            focus: ["记录下一次跟进时间。"],
+            experiments: ["对比两版打招呼语。"],
+            risks: ["样本量偏少。"],
+            modelName: "test-model",
+            promptVersion: "test-prompt"
+          } as T;
+        }
+      }
+    });
+
+    expect(recap.modelName).toBe("test-model");
+    expect(recap.focus).toEqual(["记录下一次跟进时间。"]);
+  });
+});
+
+describe("OpenAI compatible provider", () => {
+  it("creates a PackyAPI provider from environment variables", () => {
+    const provider = createAiProviderFromEnv({
+      AI_API_KEY: "test-key",
+      AI_MODEL: "gpt-5",
+      AI_PROVIDER_NAME: "packyapi-test"
+    });
+
+    expect(provider?.name).toBe("packyapi-test");
+  });
+
+  it("accepts Packy-specific and legacy environment aliases", () => {
+    const provider = createAiProviderFromEnv({
+      AI_BASE_URL: "https://legacy.example/v1",
+      AI_PROVIDER: "packy-legacy",
+      PACKY_API_KEY: "test-key"
+    });
+
+    expect(provider?.name).toBe("packy-legacy");
+  });
+
+  it("calls the chat completions endpoint and parses JSON content", async () => {
+    const calls: Array<{ body: string; headers: Record<string, string>; url: string }> = [];
+    const provider = createOpenAiCompatibleProvider({
+      apiKey: "test-key",
+      baseUrl: "https://www.packyapi.com/v1/",
+      fetch: async (url, init) => {
+        calls.push({
+          body: String(init?.body),
+          headers: init?.headers as Record<string, string>,
+          url: String(url)
+        });
+
+        return new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    ok: true
+                  })
+                }
+              }
+            ]
+          }),
+          {
+            status: 200
+          }
+        );
+      },
+      model: "gpt-5"
+    });
+
+    await expect(
+      provider.generateJson({
+        messages: [{ role: "user", content: "Return JSON." }]
+      })
+    ).resolves.toEqual({ ok: true });
+    const [call] = calls;
+
+    expect(call).toBeDefined();
+    expect(call?.url).toBe("https://www.packyapi.com/v1/chat/completions");
+    expect(call?.headers.Authorization).toBe("Bearer test-key");
+    expect(JSON.parse(call?.body ?? "{}")).toMatchObject({
+      model: "gpt-5",
+      response_format: {
+        type: "json_object"
+      }
+    });
   });
 });

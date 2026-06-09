@@ -3,7 +3,12 @@ import { pathToFileURL } from "node:url";
 
 import Fastify from "fastify";
 
-import { generateApplicationReviewStrategyRecap, generateGreetingDraft } from "@boss-jobpilot/ai";
+import {
+  createAiProviderFromEnv,
+  generateApplicationReviewStrategyRecapWithProvider,
+  generateGreetingDraft,
+  type AiProvider
+} from "@boss-jobpilot/ai";
 import {
   createApplicationRepository,
   createExperienceRepository,
@@ -26,6 +31,7 @@ import {
 } from "@boss-jobpilot/shared";
 
 type BuildServerOptions = {
+  aiProvider?: AiProvider;
   database?: DatabaseSync;
   databasePath?: string;
 };
@@ -39,6 +45,7 @@ const defaultCandidatePreference: CandidatePreference = {
 
 export function buildServer(options: BuildServerOptions = {}) {
   const database = options.database ?? openJobpilotDatabase(options.databasePath);
+  const aiProvider = options.aiProvider;
   const experiences = createExperienceRepository(database);
   const jobs = createJobRepository(database);
   const jobAnalyses = createJobAnalysisRepository(database);
@@ -451,7 +458,10 @@ export function buildServer(options: BuildServerOptions = {}) {
     }
 
     return {
-      item: generateApplicationReviewStrategyRecap(parsedReview.data)
+      item: await generateApplicationReviewStrategyRecapWithProvider({
+        input: parsedReview.data,
+        provider: aiProvider
+      })
     };
   });
 
@@ -476,6 +486,7 @@ async function main() {
   const host = process.env.API_HOST ?? "127.0.0.1";
   const port = Number(process.env.API_PORT ?? 4000);
   const server = buildServer({
+    aiProvider: createAiProviderFromEnv(process.env),
     databasePath: process.env.DATABASE_PATH
   });
 

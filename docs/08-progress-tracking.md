@@ -183,6 +183,8 @@ Accepted / Proposed / Rejected
 - `npm run test`
 - `npm run lint`
 - `npm run build`
+- `git diff --check`
+- `codegraph sync .`
 
 ### Next
 
@@ -579,3 +581,26 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 接入真实 AI Provider，让岗位分析、简历生成、打招呼语和策略复盘都能切换到真实模型。
+
+## 2026-06-09 更新 7
+
+### Done
+
+- `packages/ai` 新增 OpenAI-compatible Provider 适配器，默认 base URL 面向 PackyAPI：`https://www.packyapi.com/v1`。
+- 新增 `createAiProviderFromEnv`，支持 `AI_API_KEY`、`AI_API_BASE_URL`、`AI_MODEL`，并兼容 `AI_BASE_URL`、`PACKY_API_KEY`、`PACKY_API_BASE_URL`、`PACKY_API_MODEL`。
+- API 启动时会从环境变量创建 AI Provider；未配置密钥时继续回退规则版生成逻辑。
+- 投递复盘策略接口已支持配置 Provider 后走真实模型。
+- `.env.example`、README、使用手册、AI Agent 设计和安全合规文档已同步 PackyAPI 配置说明。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/ai test`
+- `corepack pnpm --filter @boss-jobpilot/api test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+
+### Next
+
+- 将真实 Provider 扩展到岗位分析、简历生成和打招呼语生成。

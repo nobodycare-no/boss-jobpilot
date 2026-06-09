@@ -5,6 +5,7 @@ import type {
   JobAnalysis,
   JobPosting
 } from "@boss-jobpilot/shared";
+import { ApplicationReviewStrategyRecapSchema } from "@boss-jobpilot/shared";
 
 export type AiMessage = {
   role: "system" | "user" | "assistant";
@@ -22,6 +23,14 @@ export type AiProvider = {
   generateJson<T>(request: AiJsonRequest): Promise<T>;
 };
 
+export type OpenAiCompatibleProviderOptions = {
+  apiKey: string;
+  baseUrl?: string;
+  fetch?: typeof fetch;
+  model?: string;
+  name?: string;
+};
+
 export const promptVersions = {
   jdParser: "jd-parser@0.1.0",
   experienceMatcher: "experience-matcher@0.1.0",
@@ -30,6 +39,78 @@ export const promptVersions = {
   applicationReviewStrategist: "application-review-strategist@0.1.0",
   interviewCoach: "interview-coach@0.1.0"
 } as const;
+
+const defaultPackyApiBaseUrl = "https://www.packyapi.com/v1";
+const defaultPackyApiModel = "gpt-5";
+
+export function createOpenAiCompatibleProvider({
+  apiKey,
+  baseUrl = defaultPackyApiBaseUrl,
+  fetch: fetchImpl = globalThis.fetch,
+  model = defaultPackyApiModel,
+  name = "packyapi"
+}: OpenAiCompatibleProviderOptions): AiProvider {
+  const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
+
+  return {
+    name,
+    async generateJson<T>(request: AiJsonRequest): Promise<T> {
+      if (!fetchImpl) {
+        throw new Error("Fetch API is not available for AI provider requests");
+      }
+
+      const response = await fetchImpl(`${normalizedBaseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          messages: request.messages,
+          model: request.model ?? model,
+          response_format: {
+            type: "json_object"
+          },
+          temperature: request.temperature ?? 0.2
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`AI provider request failed with status ${response.status}`);
+      }
+
+      const payload = (await response.json()) as {
+        choices?: Array<{
+          message?: {
+            content?: string;
+          };
+        }>;
+      };
+      const content = payload.choices?.[0]?.message?.content;
+
+      if (!content) {
+        throw new Error("AI provider returned an empty response");
+      }
+
+      return JSON.parse(content) as T;
+    }
+  };
+}
+
+export function createAiProviderFromEnv(env: Record<string, string | undefined>) {
+  const apiKey = env.AI_API_KEY ?? env.PACKY_API_KEY ?? env.PACKYCODE_API_KEY;
+
+  if (!apiKey) {
+    return undefined;
+  }
+
+  return createOpenAiCompatibleProvider({
+    apiKey,
+    baseUrl: env.AI_API_BASE_URL ?? env.AI_BASE_URL ?? env.PACKY_API_BASE_URL ?? defaultPackyApiBaseUrl,
+    model: env.AI_MODEL ?? env.PACKY_API_MODEL ?? defaultPackyApiModel,
+    name: env.AI_PROVIDER_NAME ?? env.AI_PROVIDER ?? "packyapi"
+  });
+}
 
 export type GreetingDraftInput = {
   job: JobPosting;
@@ -128,6 +209,43 @@ export function generateApplicationReviewStrategyRecap(
     modelName: "rule-based",
     promptVersion: promptVersions.applicationReviewStrategist
   };
+}
+
+export async function generateApplicationReviewStrategyRecapWithProvider({
+  input,
+  provider
+}: {
+  input: ApplicationReviewStrategyRequest;
+  provider?: AiProvider;
+}): Promise<ApplicationReviewStrategyRecap> {
+  if (!provider) {
+    return generateApplicationReviewStrategyRecap(input);
+  }
+
+  const generated = await provider.generateJson<ApplicationReviewStrategyRecap>({
+    messages: [
+      {
+        role: "system",
+        content:
+          "你是求职投递策略顾问。只输出 JSON，字段为 summary、focus、experiments、risks、modelName、promptVersion。不要输出 Markdown。"
+      },
+      {
+        role: "user",
+        content: JSON.stringify({
+          instruction:
+            "基于复盘指标生成下一轮投递策略。summary 用一句话，focus/experiments/risks 各 1-4 条，必须具体可执行。",
+          input
+        })
+      }
+    ],
+    temperature: 0.2
+  });
+
+  return ApplicationReviewStrategyRecapSchema.parse({
+    ...generated,
+    modelName: generated.modelName || provider.name,
+    promptVersion: generated.promptVersion || promptVersions.applicationReviewStrategist
+  });
 }
 
 function selectExperiences(experiences: ExperienceItem[], matchedExperienceIds: string[]) {

@@ -78,6 +78,19 @@ npm run dev
 - API：`http://127.0.0.1:4000`
 - Web：`http://127.0.0.1:5173`
 
+### AI Provider
+
+项目已预留 OpenAI-compatible Provider，默认面向 PackyAPI 中转站：
+
+```powershell
+$env:AI_API_KEY="你的 PackyAPI Key"
+$env:AI_API_BASE_URL="https://www.packyapi.com/v1"
+$env:AI_MODEL="gpt-5"
+npm run dev
+```
+
+不配置 `AI_API_KEY` 时，系统会继续使用本地规则版生成逻辑。不要把真实密钥提交到 Git。
+
 也可以分别启动：
 
 ```powershell

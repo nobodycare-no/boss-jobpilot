@@ -79,6 +79,30 @@ npm run lint
 npm run build
 ```
 
+## 配置 PackyAPI
+
+项目已经预留 OpenAI-compatible AI Provider，默认面向 PackyAPI。
+
+PowerShell 示例：
+
+```powershell
+$env:AI_API_KEY="你的 PackyAPI Key"
+$env:AI_API_BASE_URL="https://www.packyapi.com/v1"
+$env:AI_MODEL="gpt-5"
+npm run dev
+```
+
+也可以复制 `.env.example` 为 `.env` 后填写：
+
+```text
+AI_PROVIDER=packyapi
+AI_API_KEY=你的 PackyAPI Key
+AI_API_BASE_URL=https://www.packyapi.com/v1
+AI_MODEL=gpt-5
+```
+
+不配置 `AI_API_KEY` 时，软件会继续使用本地规则版生成逻辑。不要把真实密钥提交到 Git。
+
 ## 数据保存位置
 
 默认数据文件：
