@@ -7,6 +7,7 @@ import {
   createAiProviderFromEnv,
   generateApplicationReviewStrategyRecapWithProvider,
   generateGreetingDraftWithProvider,
+  generateJobAnalysisWithProvider,
   type AiProvider
 } from "@boss-jobpilot/ai";
 import {
@@ -18,7 +19,7 @@ import {
   openJobpilotDatabase
 } from "@boss-jobpilot/db";
 import { generateTailoredResumeDraft, renderResumeMarkdown } from "@boss-jobpilot/resume";
-import { analyzeJobPosting, computeJobMatchScore } from "@boss-jobpilot/scoring";
+import { analyzeJobPosting } from "@boss-jobpilot/scoring";
 import {
   ExperienceItemCreateSchema,
   ExperienceItemUpdateSchema,
@@ -220,8 +221,16 @@ export function buildServer(options: BuildServerOptions = {}) {
       });
     }
 
+    const currentExperiences = experiences.list();
+    const fallbackAnalysis = analyzeJobPosting(job, defaultCandidatePreference, currentExperiences);
     const analysis = jobAnalyses.create(
-      analyzeJobPosting(job, defaultCandidatePreference, experiences.list())
+      await generateJobAnalysisWithProvider({
+        job,
+        preference: defaultCandidatePreference,
+        experiences: currentExperiences,
+        fallbackAnalysis,
+        provider: aiProvider
+      })
     );
 
     return {
@@ -269,17 +278,24 @@ export function buildServer(options: BuildServerOptions = {}) {
       });
     }
 
-    const score = computeJobMatchScore(parsedJob.data, defaultCandidatePreference);
-    const analysis = analyzeJobPosting(
+    const currentExperiences = experiences.list();
+    const fallbackAnalysis = analyzeJobPosting(
       parsedJob.data,
       defaultCandidatePreference,
-      experiences.list()
+      currentExperiences
     );
+    const analysis = await generateJobAnalysisWithProvider({
+      job: parsedJob.data,
+      preference: defaultCandidatePreference,
+      experiences: currentExperiences,
+      fallbackAnalysis,
+      provider: aiProvider
+    });
 
     return {
       jobId: parsedJob.data.id,
       analysis,
-      score
+      score: analysisToLegacyScore(analysis)
     };
   });
 
@@ -472,14 +488,14 @@ export function buildServer(options: BuildServerOptions = {}) {
 function analysisToLegacyScore(analysis: {
   matchScore: number;
   recommendation: "prioritize" | "apply" | "cautious" | "skip";
-  matchedKeywords: string[];
-  riskFlags: string[];
+  matchedKeywords?: string[];
+  riskFlags?: string[];
 }) {
   return {
     total: analysis.matchScore,
     recommendation: analysis.recommendation,
-    matchedKeywords: analysis.matchedKeywords,
-    riskFlags: analysis.riskFlags
+    matchedKeywords: analysis.matchedKeywords ?? [],
+    riskFlags: analysis.riskFlags ?? []
   };
 }
 

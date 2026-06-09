@@ -1,11 +1,13 @@
 import type {
   ApplicationReviewStrategyRecap,
   ApplicationReviewStrategyRequest,
+  CandidatePreference,
   ExperienceItem,
   JobAnalysis,
+  JobAnalysisCreateInput,
   JobPosting
 } from "@boss-jobpilot/shared";
-import { ApplicationReviewStrategyRecapSchema } from "@boss-jobpilot/shared";
+import { ApplicationReviewStrategyRecapSchema, JobAnalysisCreateSchema } from "@boss-jobpilot/shared";
 import { z } from "zod";
 
 export type AiMessage = {
@@ -35,6 +37,7 @@ export type OpenAiCompatibleProviderOptions = {
 export const promptVersions = {
   jdParser: "jd-parser@0.1.0",
   experienceMatcher: "experience-matcher@0.1.0",
+  jobAnalyzer: "job-analyzer@0.1.0",
   resumeWriter: "resume-writer@0.1.0",
   greetingWriter: "greeting-writer@0.1.0",
   applicationReviewStrategist: "application-review-strategist@0.1.0",
@@ -119,6 +122,13 @@ export type GreetingDraftInput = {
   experiences: ExperienceItem[];
 };
 
+export type JobAnalysisGenerationInput = {
+  job: JobPosting;
+  preference: CandidatePreference;
+  experiences: ExperienceItem[];
+  fallbackAnalysis: JobAnalysisCreateInput;
+};
+
 export type GreetingDraft = {
   message: string;
   selectedExperienceIds: string[];
@@ -134,6 +144,54 @@ const GreetingDraftSchema = z.object({
   modelName: z.string().min(1),
   promptVersion: z.string().min(1)
 }) satisfies z.ZodType<GreetingDraft>;
+
+export async function generateJobAnalysisWithProvider({
+  experiences,
+  fallbackAnalysis,
+  job,
+  preference,
+  provider
+}: JobAnalysisGenerationInput & {
+  provider?: AiProvider;
+}): Promise<JobAnalysisCreateInput> {
+  if (!provider) {
+    return fallbackAnalysis;
+  }
+
+  const generated = await provider.generateJson<Partial<JobAnalysisCreateInput>>({
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a job application analyst. Return JSON only with fields: jobId, matchScore, recommendation, matchedKeywords, requiredSkills, bonusSkills, matchedExperienceIds, riskFlags, resumeStrategy, modelName, promptVersion."
+      },
+      {
+        role: "user",
+        content: JSON.stringify({
+          instruction:
+            "Analyze this Boss Zhipin job for the candidate. Keep recommendation one of prioritize/apply/cautious/skip. Do not invent experience ids; use only candidateExperiences ids. resumeStrategy should be concrete Chinese guidance for tailoring the resume.",
+          job,
+          preference,
+          candidateExperiences: experiences,
+          ruleBasedDraft: fallbackAnalysis
+        })
+      }
+    ],
+    temperature: 0.2
+  });
+
+  return JobAnalysisCreateSchema.parse({
+    ...fallbackAnalysis,
+    ...generated,
+    jobId: job.id,
+    matchedExperienceIds: sanitizeExperienceIds(
+      generated.matchedExperienceIds ?? fallbackAnalysis.matchedExperienceIds ?? [],
+      experiences
+    ),
+    modelName: generated.modelName || provider.name,
+    promptVersion: generated.promptVersion || promptVersions.jobAnalyzer
+  });
+}
 
 export function generateGreetingDraft({ job, analysis, experiences }: GreetingDraftInput) {
   const selectedExperiences = selectExperiences(experiences, analysis.matchedExperienceIds);
@@ -313,6 +371,12 @@ function selectExperiences(experiences: ExperienceItem[], matchedExperienceIds: 
   }
 
   return experiences.filter((experience) => experience.evidenceLevel !== "do_not_use").slice(0, 1);
+}
+
+function sanitizeExperienceIds(ids: string[], experiences: ExperienceItem[]) {
+  const availableIds = new Set(experiences.map((experience) => experience.id));
+
+  return unique(ids).filter((id) => availableIds.has(id)).slice(0, 5);
 }
 
 function summarizeExperience(experience: ExperienceItem) {

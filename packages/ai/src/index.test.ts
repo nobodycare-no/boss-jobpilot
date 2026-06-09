@@ -7,8 +7,82 @@ import {
   generateApplicationReviewStrategyRecapWithProvider,
   generateGreetingDraft,
   generateGreetingDraftWithProvider,
+  generateJobAnalysisWithProvider,
   promptVersions
 } from "./index";
+
+describe("job analysis generation", () => {
+  it("uses an AI provider for job analysis and filters hallucinated experience ids", async () => {
+    const analysis = await generateJobAnalysisWithProvider({
+      job: {
+        id: "job-1",
+        platform: "boss",
+        title: "AI Frontend Engineer",
+        jdRaw: "React TypeScript AI product workflow",
+        companyName: "Example Tech",
+        capturedAt: "2026-01-01T00:00:00.000Z"
+      },
+      preference: {
+        targetRoles: ["Frontend Engineer"],
+        targetCities: [],
+        preferredKeywords: ["React", "TypeScript", "AI"],
+        blockedKeywords: []
+      },
+      experiences: [
+        {
+          id: "exp-1",
+          type: "project",
+          title: "AI resume tailoring workspace",
+          summary: "Built React and TypeScript workflow for AI job applications.",
+          techStack: ["React", "TypeScript"],
+          responsibilities: [],
+          achievements: [],
+          metrics: [],
+          evidenceLevel: "deep_interview_ready",
+          ownershipLevel: "owned",
+          tags: []
+        }
+      ],
+      fallbackAnalysis: {
+        jobId: "job-1",
+        matchScore: 70,
+        recommendation: "apply",
+        matchedKeywords: ["React"],
+        requiredSkills: ["React"],
+        bonusSkills: [],
+        matchedExperienceIds: ["exp-1"],
+        riskFlags: [],
+        resumeStrategy: "Rule based strategy.",
+        modelName: "rule-based",
+        promptVersion: "rule-based-job-analysis@0.1.0"
+      },
+      provider: {
+        name: "test-provider",
+        async generateJson<T>() {
+          return {
+            jobId: "wrong-job",
+            matchScore: 91,
+            recommendation: "prioritize",
+            matchedKeywords: ["React", "TypeScript", "AI"],
+            requiredSkills: ["React", "TypeScript", "AI"],
+            bonusSkills: ["RAG"],
+            matchedExperienceIds: ["exp-1", "missing-exp"],
+            riskFlags: [],
+            resumeStrategy: "Prioritize the AI resume tailoring workspace and React delivery.",
+            modelName: "test-model",
+            promptVersion: "test-analysis"
+          } as T;
+        }
+      }
+    });
+
+    expect(analysis.jobId).toBe("job-1");
+    expect(analysis.matchScore).toBe(91);
+    expect(analysis.recommendation).toBe("prioritize");
+    expect(analysis.matchedExperienceIds).toEqual(["exp-1"]);
+    expect(analysis.modelName).toBe("test-model");
+  });
+});
 
 describe("greeting draft generation", () => {
   it("generates a personalized greeting from job analysis and matched experience", () => {

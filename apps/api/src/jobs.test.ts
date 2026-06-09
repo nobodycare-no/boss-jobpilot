@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 
 import { openJobpilotDatabase } from "@boss-jobpilot/db";
+import type { AiJsonRequest } from "@boss-jobpilot/ai";
 
 import { buildServer } from "./index";
 
@@ -11,7 +12,25 @@ const providerServer = buildServer({
   database: providerDb,
   aiProvider: {
     name: "test-provider",
-    async generateJson<T>() {
+    async generateJson<T>(request: AiJsonRequest) {
+      const promptText = request.messages.map((message) => message.content).join("\n");
+
+      if (promptText.includes("job application analyst")) {
+        return {
+          jobId: "provider-job",
+          matchScore: 93,
+          recommendation: "prioritize",
+          matchedKeywords: ["React", "TypeScript"],
+          requiredSkills: ["React", "TypeScript"],
+          bonusSkills: ["AI"],
+          matchedExperienceIds: ["exp-provider"],
+          riskFlags: [],
+          resumeStrategy: "Use the provider backed React workflow as the lead experience.",
+          modelName: "test-analysis-model",
+          promptVersion: "test-analysis"
+        } as T;
+      }
+
       return {
         message: "您好，我基于真实项目经历匹配这个岗位，想进一步沟通。",
         selectedExperienceIds: ["exp-provider"],
@@ -249,7 +268,7 @@ describe("job routes", () => {
     expect(listAfterDeleteResponse.json().items).toHaveLength(0);
   });
 
-  it("uses the configured AI provider for greeting generation", async () => {
+  it("uses the configured AI provider for analysis and greeting generation", async () => {
     await providerServer.inject({
       method: "POST",
       url: "/experiences",
@@ -278,10 +297,15 @@ describe("job routes", () => {
     });
     const created = createResponse.json().item;
 
-    await providerServer.inject({
+    const analysisResponse = await providerServer.inject({
       method: "POST",
       url: `/jobs/${created.id}/analyze`
     });
+
+    expect(analysisResponse.statusCode).toBe(200);
+    expect(analysisResponse.json().analysis.matchScore).toBe(93);
+    expect(analysisResponse.json().analysis.modelName).toBe("test-analysis-model");
+
     const greetingResponse = await providerServer.inject({
       method: "POST",
       url: `/jobs/${created.id}/greetings`

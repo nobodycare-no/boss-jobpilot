@@ -628,3 +628,28 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 将真实 Provider 扩展到岗位分析和简历生成。
+
+## 2026-06-09 更新 9
+
+### Done
+
+- `packages/ai` 新增 `generateJobAnalysisWithProvider`，配置 AI Provider 时可用 PackyAPI 生成结构化岗位分析。
+- 岗位分析 Provider 输出会合并规则版草稿，并使用 `JobAnalysisCreateSchema` 校验，降低模型漏字段导致的失败风险。
+- `matchedExperienceIds` 会被限制为真实经历库中存在的 ID，避免模型编造经历引用。
+- API 的 `POST /jobs/:id/analyze` 和 `POST /jobs/analyze` 已接入可选 Provider；未配置密钥时仍回退规则版。
+- API 测试新增 fake Provider 覆盖，确认岗位分析路由会使用配置的模型输出。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/ai test`
+- `corepack pnpm --filter @boss-jobpilot/api test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+- `codegraph sync .`
+
+### Next
+
+- 将真实 Provider 扩展到简历生成。
