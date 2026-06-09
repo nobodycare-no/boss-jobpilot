@@ -452,9 +452,36 @@ Accepted / Proposed / Rejected
 - `npm run test`
 - `npm run lint`
 - `npm run build`
+- `codegraph sync .`
 
 ### Next
 
 - 支持按公司类型、岗位类型和具体简历/话术版本做效果归因。
+- 将投递复盘从摘要升级为可筛选的复盘页。
+- 接入 AI 策略复盘，基于真实投递结果给出下一轮投递策略。
+
+## 2026-06-09 更新 2
+
+### Done
+
+- 投递复盘摘要新增“效果归因”区，支持按岗位类型、城市、投递建议和具体简历版本分组查看效果。
+- 归因分组展示该组岗位总数、已投递数量、回复率和面试率。
+- 岗位类型支持基于标题轻量识别 AI / 算法、全栈 / 后端、前端、数据、实习 / 校招和其他。
+- 简历版本归因会按 application 关联的 `resumeVersionId` 分组，未关联简历版本和未生成话术会单独显示。
+- `application-review` 单元测试已覆盖归因排序、回复率、面试率和版本分组口径。
+- 使用手册和迭代计划已同步更新效果归因说明。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/web test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `codegraph sync .`
+
+### Next
+
+- 支持按公司类型做效果归因。
 - 将投递复盘从摘要升级为可筛选的复盘页。
 - 接入 AI 策略复盘，基于真实投递结果给出下一轮投递策略。

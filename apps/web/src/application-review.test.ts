@@ -26,8 +26,8 @@ describe("application review summary", () => {
         "job-3": createAnalysis("job-3", 50, "cautious")
       },
       applicationByJobId: {
-        "job-1": createApplication("app-1", "job-1", "replied"),
-        "job-2": createApplication("app-2", "job-2", "interview"),
+        "job-1": createApplication("app-1", "job-1", "replied", undefined, "resume-2"),
+        "job-2": createApplication("app-2", "job-2", "interview", undefined, "resume-3"),
         "job-3": createApplication("app-3", "job-3", "applied", "2026-06-08T01:00:00.000Z")
       },
       applicationHistoryByJobId: {
@@ -70,6 +70,154 @@ describe("application review summary", () => {
       { count: 2, label: "1 版", rate: 0.5 },
       { count: 1, label: "2 版以上", rate: 0.25 },
       { count: 1, label: "未生成", rate: 0.25 }
+    ]);
+    expect(summary.attributionGroups).toEqual([
+      {
+        title: "岗位类型",
+        items: [
+          {
+            appliedOrBeyond: 1,
+            interviewOrOffer: 1,
+            interviewRate: 1,
+            label: "全栈 / 后端",
+            replyCount: 1,
+            replyRate: 1,
+            totalJobs: 1
+          },
+          {
+            appliedOrBeyond: 1,
+            interviewOrOffer: 0,
+            interviewRate: 0,
+            label: "AI / 算法",
+            replyCount: 1,
+            replyRate: 1,
+            totalJobs: 1
+          },
+          {
+            appliedOrBeyond: 1,
+            interviewOrOffer: 0,
+            interviewRate: 0,
+            label: "前端",
+            replyCount: 0,
+            replyRate: 0,
+            totalJobs: 1
+          },
+          {
+            appliedOrBeyond: 0,
+            interviewOrOffer: 0,
+            interviewRate: 0,
+            label: "数据",
+            replyCount: 0,
+            replyRate: 0,
+            totalJobs: 1
+          }
+        ]
+      },
+      {
+        title: "城市",
+        items: [
+          {
+            appliedOrBeyond: 1,
+            interviewOrOffer: 1,
+            interviewRate: 1,
+            label: "北京",
+            replyCount: 1,
+            replyRate: 1,
+            totalJobs: 1
+          },
+          {
+            appliedOrBeyond: 2,
+            interviewOrOffer: 0,
+            interviewRate: 0,
+            label: "上海",
+            replyCount: 1,
+            replyRate: 0.5,
+            totalJobs: 2
+          },
+          {
+            appliedOrBeyond: 0,
+            interviewOrOffer: 0,
+            interviewRate: 0,
+            label: "未填写城市",
+            replyCount: 0,
+            replyRate: 0,
+            totalJobs: 1
+          }
+        ]
+      },
+      {
+        title: "投递建议",
+        items: [
+          {
+            appliedOrBeyond: 1,
+            interviewOrOffer: 1,
+            interviewRate: 1,
+            label: "可以投递",
+            replyCount: 1,
+            replyRate: 1,
+            totalJobs: 1
+          },
+          {
+            appliedOrBeyond: 1,
+            interviewOrOffer: 0,
+            interviewRate: 0,
+            label: "优先投递",
+            replyCount: 1,
+            replyRate: 1,
+            totalJobs: 1
+          },
+          {
+            appliedOrBeyond: 1,
+            interviewOrOffer: 0,
+            interviewRate: 0,
+            label: "谨慎投递",
+            replyCount: 0,
+            replyRate: 0,
+            totalJobs: 1
+          }
+        ]
+      },
+      {
+        title: "简历版本",
+        items: [
+          {
+            appliedOrBeyond: 1,
+            interviewOrOffer: 1,
+            interviewRate: 1,
+            label: "简历 resume-3",
+            replyCount: 1,
+            replyRate: 1,
+            totalJobs: 1
+          },
+          {
+            appliedOrBeyond: 1,
+            interviewOrOffer: 0,
+            interviewRate: 0,
+            label: "简历 resume-2",
+            replyCount: 1,
+            replyRate: 1,
+            totalJobs: 1
+          },
+          {
+            appliedOrBeyond: 1,
+            interviewOrOffer: 0,
+            interviewRate: 0,
+            label: "未关联简历版本",
+            replyCount: 0,
+            replyRate: 0,
+            totalJobs: 1
+          },
+          {
+            appliedOrBeyond: 0,
+            interviewOrOffer: 0,
+            interviewRate: 0,
+            label: "未生成话术",
+            replyCount: 0,
+            replyRate: 0,
+            totalJobs: 1
+          }
+        ]
+      }
     ]);
   });
 
@@ -117,7 +265,8 @@ function createApplication(
   id: string,
   jobId: string,
   status: Application["status"],
-  nextFollowUpAt?: string
+  nextFollowUpAt?: string,
+  resumeVersionId?: string
 ): Application {
   return {
     createdAt: "2026-06-09T00:00:00.000Z",
@@ -125,6 +274,7 @@ function createApplication(
     id,
     jobId,
     nextFollowUpAt,
+    resumeVersionId,
     status,
     updatedAt: "2026-06-09T00:00:00.000Z"
   };

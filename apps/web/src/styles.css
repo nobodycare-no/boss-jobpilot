@@ -407,6 +407,82 @@ button:disabled {
   background: #0f5d66;
 }
 
+.review-attribution {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  border-top: 1px solid #d8d0c3;
+  padding-top: 12px;
+}
+
+.review-attribution-group {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.review-attribution-group > strong {
+  color: #3e5558;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.review-attribution-group > div {
+  display: grid;
+  gap: 6px;
+}
+
+.review-attribution-group p {
+  margin: 0;
+  color: #607073;
+  font-size: 13px;
+}
+
+.review-attribution-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 48px 48px;
+  gap: 8px;
+  align-items: center;
+  border-left: 2px solid #cbd9d7;
+  padding-left: 9px;
+}
+
+.review-attribution-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 48px 48px;
+  gap: 8px;
+  padding-left: 11px;
+}
+
+.review-attribution-heading span {
+  color: #607073;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.review-attribution-row > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.review-attribution-row span {
+  color: #172126;
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.review-attribution-row strong,
+.review-attribution-row small {
+  color: #526165;
+  font-size: 12px;
+}
+
+.review-attribution-row > strong {
+  color: #0f5d66;
+}
+
 .application-board {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -886,6 +962,7 @@ button:disabled {
   .follow-up-board,
   .review-metrics,
   .review-distributions,
+  .review-attribution,
   .version-pair,
   .analysis-grid {
     grid-template-columns: 1fr;

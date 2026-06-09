@@ -46,6 +46,7 @@ import {
 import {
   buildApplicationReviewSummary,
   formatReviewRate,
+  type ApplicationReviewAttributionGroup,
   type ApplicationReviewDistributionItem,
   type ApplicationReviewSummary
 } from "./application-review";
@@ -976,7 +977,44 @@ function ApplicationReviewPanel({ summary }: { summary: ApplicationReviewSummary
         <ReviewDistribution items={summary.cityDistribution} title="城市分布" />
         <ReviewDistribution items={summary.versionDistribution} title="版本迭代" />
       </div>
+
+      <div className="review-attribution" aria-label="效果归因">
+        {summary.attributionGroups.map((group) => (
+          <ReviewAttributionGroup group={group} key={group.title} />
+        ))}
+      </div>
     </section>
+  );
+}
+
+function ReviewAttributionGroup({ group }: { group: ApplicationReviewAttributionGroup }) {
+  return (
+    <div className="review-attribution-group">
+      <strong>{group.title}</strong>
+      {group.items.length > 0 ? (
+        <div>
+          <div className="review-attribution-heading">
+            <span>分组</span>
+            <span>回复</span>
+            <span>面试</span>
+          </div>
+          {group.items.map((item) => (
+            <article className="review-attribution-row" key={item.label}>
+              <div>
+                <span>{item.label}</span>
+                <small>
+                  {item.appliedOrBeyond}/{item.totalJobs} 已投递
+                </small>
+              </div>
+              <strong>{formatReviewRate(item.replyCount, item.appliedOrBeyond)}</strong>
+              <small>{formatReviewRate(item.interviewOrOffer, item.appliedOrBeyond)}</small>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p>暂无数据</p>
+      )}
+    </div>
   );
 }
 
