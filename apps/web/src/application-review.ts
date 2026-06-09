@@ -94,6 +94,10 @@ export function buildApplicationReviewSummary({
         title: "岗位类型"
       },
       {
+        items: buildAttributionItems(jobs, applicationByJobId, getCompanyTypeLabel),
+        title: "公司类型"
+      },
+      {
         items: buildAttributionItems(
           jobs,
           applicationByJobId,
@@ -277,6 +281,43 @@ function getJobTypeLabel(title: string) {
   }
 
   return "其他";
+}
+
+function getCompanyTypeLabel(job: JobPosting) {
+  const source = job.companyName?.trim() || [job.title, job.jdRaw].filter(Boolean).join(" ");
+  const normalized = source.toLowerCase();
+
+  if (!source.trim()) {
+    return "未填写公司";
+  }
+
+  if (/外包|驻场|人力|咨询|outsourcing|consulting|agency/.test(normalized)) {
+    return "外包 / 服务商";
+  }
+
+  if (/银行|保险|证券|基金|支付|金融|fintech|bank|finance|payment/.test(normalized)) {
+    return "金融";
+  }
+
+  if (/教育|培训|学校|课程|edu|education|training/.test(normalized)) {
+    return "教育";
+  }
+
+  if (/电商|零售|商城|本地生活|commerce|retail|mall/.test(normalized)) {
+    return "电商 / 零售";
+  }
+
+  if (/游戏|game|gaming/.test(normalized)) {
+    return "游戏";
+  }
+
+  if (
+    /科技|技术|智能|数据|云|软件|信息|网络|ai|llm|saas|cloud|software|tech|data/.test(normalized)
+  ) {
+    return "科技产品";
+  }
+
+  return "其他公司";
 }
 
 function shortId(value: string) {

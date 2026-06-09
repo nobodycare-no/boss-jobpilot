@@ -14,10 +14,10 @@ const recommendationLabels: Record<JobAnalysis["recommendation"], string> = {
 describe("application review summary", () => {
   it("calculates conversion, follow-up risk and lightweight distributions", () => {
     const jobs = [
-      createJob("job-1", "AI Frontend Engineer", "上海"),
-      createJob("job-2", "Full Stack Engineer", "北京"),
-      createJob("job-3", "Frontend Intern", "上海"),
-      createJob("job-4", "Data Analyst", undefined)
+      createJob("job-1", "AI Frontend Engineer", "上海", "Alpha 科技"),
+      createJob("job-2", "Full Stack Engineer", "北京", "Beta 金融"),
+      createJob("job-3", "Frontend Intern", "上海", "Gamma 外包咨询"),
+      createJob("job-4", "Data Analyst", undefined, "Example")
     ];
     const summary = buildApplicationReviewSummary({
       analysisByJobId: {
@@ -107,6 +107,47 @@ describe("application review summary", () => {
             interviewOrOffer: 0,
             interviewRate: 0,
             label: "数据",
+            replyCount: 0,
+            replyRate: 0,
+            totalJobs: 1
+          }
+        ]
+      },
+      {
+        title: "公司类型",
+        items: [
+          {
+            appliedOrBeyond: 1,
+            interviewOrOffer: 1,
+            interviewRate: 1,
+            label: "金融",
+            replyCount: 1,
+            replyRate: 1,
+            totalJobs: 1
+          },
+          {
+            appliedOrBeyond: 1,
+            interviewOrOffer: 0,
+            interviewRate: 0,
+            label: "科技产品",
+            replyCount: 1,
+            replyRate: 1,
+            totalJobs: 1
+          },
+          {
+            appliedOrBeyond: 1,
+            interviewOrOffer: 0,
+            interviewRate: 0,
+            label: "外包 / 服务商",
+            replyCount: 0,
+            replyRate: 0,
+            totalJobs: 1
+          },
+          {
+            appliedOrBeyond: 0,
+            interviewOrOffer: 0,
+            interviewRate: 0,
+            label: "其他公司",
             replyCount: 0,
             replyRate: 0,
             totalJobs: 1
@@ -227,11 +268,16 @@ describe("application review summary", () => {
   });
 });
 
-function createJob(id: string, title: string, city: string | undefined): JobPosting {
+function createJob(
+  id: string,
+  title: string,
+  city: string | undefined,
+  companyName: string
+): JobPosting {
   return {
     capturedAt: "2026-06-09T00:00:00.000Z",
     city,
-    companyName: "Example",
+    companyName,
     id,
     jdRaw: "React TypeScript Node.js",
     platform: "boss",

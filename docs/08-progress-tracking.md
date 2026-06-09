@@ -485,3 +485,26 @@ Accepted / Proposed / Rejected
 - 支持按公司类型做效果归因。
 - 将投递复盘从摘要升级为可筛选的复盘页。
 - 接入 AI 策略复盘，基于真实投递结果给出下一轮投递策略。
+
+## 2026-06-09 更新 3
+
+### Done
+
+- 投递复盘效果归因新增“公司类型”分组。
+- 公司类型优先根据公司名归类，支持科技产品、金融、外包 / 服务商、教育、电商 / 零售、游戏、其他公司；公司名缺失时回退使用岗位标题和 JD。
+- `application-review` 单元测试新增公司类型归因覆盖，验证金融、科技产品、外包 / 服务商和其他公司的分组口径。
+- 使用手册和迭代计划已同步更新公司类型归因说明。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/web test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `codegraph sync .`
+
+### Next
+
+- 将投递复盘从摘要升级为可筛选的复盘页。
+- 接入 AI 策略复盘，基于真实投递结果给出下一轮投递策略。
