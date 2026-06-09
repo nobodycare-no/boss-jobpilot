@@ -610,18 +610,52 @@ button:disabled {
 
 .ai-generation-runs {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   border-top: 1px solid #d8d0c3;
   padding-top: 10px;
 }
 
-.ai-generation-runs > strong {
+.ai-generation-runs__header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ai-generation-runs__header strong {
   color: #3e5558;
   font-size: 12px;
   font-weight: 800;
 }
 
-.ai-generation-runs > div {
+.ai-generation-runs__header span {
+  color: #607073;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ai-generation-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.ai-generation-filters label {
+  min-width: 0;
+}
+
+.ai-generation-filters select {
+  height: 34px;
+  font-size: 12px;
+}
+
+.ai-generation-filters .panel-action-button {
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.ai-generation-run-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
@@ -630,11 +664,14 @@ button:disabled {
 .ai-generation-run {
   display: grid;
   gap: 4px;
+  width: 100%;
   min-width: 0;
   border: 1px solid #d8d0c3;
   border-radius: 8px;
   padding: 8px;
+  color: inherit;
   background: #ffffff;
+  text-align: left;
 }
 
 .ai-generation-run > div {
@@ -676,6 +713,65 @@ button:disabled {
 
 .ai-generation-run--rule_based {
   border-color: #d8d0c3;
+}
+
+.ai-generation-run[aria-pressed="true"] {
+  border-color: #0f5d66;
+  box-shadow: 0 0 0 2px rgba(15, 93, 102, 0.12);
+}
+
+.ai-generation-empty {
+  margin: 0;
+  color: #607073;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ai-generation-detail {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d8d0c3;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fbfaf7;
+}
+
+.ai-generation-detail > strong {
+  color: #3e5558;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ai-generation-detail dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.ai-generation-detail dl > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ai-generation-detail dt {
+  color: #607073;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.ai-generation-detail dd {
+  margin: 0;
+  color: #263033;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.ai-generation-more {
+  color: #607073;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .review-distributions {
@@ -1281,7 +1377,9 @@ button:disabled {
   .review-metrics,
   .review-controls,
   .review-strategy > div,
-  .ai-generation-runs > div,
+  .ai-generation-filters,
+  .ai-generation-run-grid,
+  .ai-generation-detail dl,
   .review-ai-recap > div:not(.review-ai-recap__header),
   .review-distributions,
   .review-attribution,

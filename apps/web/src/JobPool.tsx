@@ -826,7 +826,7 @@ export function JobPool({ experiences }: JobPoolProps) {
 
           {jobs.length > 0 ? (
             <ApplicationReviewPanel
-              aiGenerationRuns={aiGenerationRuns.slice(0, 5)}
+              aiGenerationRuns={aiGenerationRuns}
               aiProviderHealth={aiProviderHealth}
               aiProviderHealthError={aiProviderHealthError}
               cityOptions={reviewCityOptions}
@@ -838,6 +838,7 @@ export function JobPool({ experiences }: JobPoolProps) {
               strategyRecap={strategyRecap}
               strategyRecapError={strategyRecapError}
               summary={reviewSummary}
+              jobs={jobs}
               totalJobs={jobs.length}
             />
           ) : null}
@@ -1064,6 +1065,7 @@ function ApplicationReviewPanel({
   strategyRecap,
   strategyRecapError,
   summary,
+  jobs,
   totalJobs
 }: {
   aiGenerationRuns: AiGenerationRun[];
@@ -1078,6 +1080,7 @@ function ApplicationReviewPanel({
   strategyRecap: ApplicationReviewStrategyRecap | null;
   strategyRecapError: string | null;
   summary: ApplicationReviewSummary;
+  jobs: JobPosting[];
   totalJobs: number;
 }) {
   const denominator = summary.statusTotal || summary.totalJobs;
@@ -1139,7 +1142,7 @@ function ApplicationReviewPanel({
         onRefresh={onRefreshAiProviderHealth}
       />
 
-      <AiGenerationRunList runs={aiGenerationRuns} />
+      <AiGenerationRunList jobs={jobs} runs={aiGenerationRuns} />
 
       <div className="review-controls" aria-label="复盘筛选">
         <label>
@@ -1294,31 +1297,207 @@ function AiProviderHealthCard({
   );
 }
 
-function AiGenerationRunList({ runs }: { runs: AiGenerationRun[] }) {
+function AiGenerationRunList({ jobs, runs }: { jobs: JobPosting[]; runs: AiGenerationRun[] }) {
+  const [featureFilter, setFeatureFilter] = useState("all");
+  const [jobFilter, setJobFilter] = useState("all");
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"all" | AiGenerationRun["status"]>("all");
+  const jobById = useMemo(() => new Map(jobs.map((job) => [job.id, job])), [jobs]);
+  const featureOptions = useMemo(
+    () => Array.from(new Set(runs.map((run) => run.feature))).sort(),
+    [runs]
+  );
+  const jobOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          runs
+            .map((run) => run.relatedJobId)
+            .filter((jobId): jobId is string => Boolean(jobId))
+        )
+      ).sort((left, right) =>
+        getAiGenerationJobLabel(left, jobById).localeCompare(getAiGenerationJobLabel(right, jobById))
+      ),
+    [jobById, runs]
+  );
+  const filteredRuns = runs.filter((run) => {
+    if (featureFilter !== "all" && run.feature !== featureFilter) {
+      return false;
+    }
+
+    if (statusFilter !== "all" && run.status !== statusFilter) {
+      return false;
+    }
+
+    if (jobFilter !== "all" && run.relatedJobId !== jobFilter) {
+      return false;
+    }
+
+    return true;
+  });
+  const visibleRuns = filteredRuns.slice(0, 8);
+  const selectedRun =
+    filteredRuns.find((run) => run.id === selectedRunId) ?? filteredRuns[0] ?? null;
+  const isFiltered = featureFilter !== "all" || statusFilter !== "all" || jobFilter !== "all";
+
   if (runs.length === 0) {
     return null;
   }
 
   return (
     <div className="ai-generation-runs" aria-label="最近 AI 生成记录">
-      <strong>最近 AI 生成</strong>
-      <div>
-        {runs.map((run) => (
-          <article className={`ai-generation-run ai-generation-run--${run.status}`} key={run.id}>
-            <div>
-              <span>{formatAiGenerationFeature(run.feature)}</span>
-              <small>{formatAiGenerationStatus(run.status)}</small>
-            </div>
-            <p>
-              {run.providerName ?? run.modelName ?? "rule-based"} · {run.durationMs}ms
-              {run.promptVersion ? ` · ${run.promptVersion}` : ""}
-            </p>
-            {run.errorMessage ? <small>{run.errorMessage}</small> : null}
-          </article>
-        ))}
+      <div className="ai-generation-runs__header">
+        <strong>最近 AI 生成</strong>
+        <span>
+          {filteredRuns.length}/{runs.length}
+        </span>
       </div>
+
+      <div className="ai-generation-filters">
+        <label>
+          能力
+          <select value={featureFilter} onChange={(event) => setFeatureFilter(event.target.value)}>
+            <option value="all">全部能力</option>
+            {featureOptions.map((feature) => (
+              <option key={feature} value={feature}>
+                {formatAiGenerationFeature(feature)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          状态
+          <select
+            value={statusFilter}
+            onChange={(event) =>
+              setStatusFilter(event.target.value as "all" | AiGenerationRun["status"])
+            }
+          >
+            <option value="all">全部状态</option>
+            <option value="provider_success">模型成功</option>
+            <option value="provider_fallback">已降级</option>
+            <option value="rule_based">规则版</option>
+          </select>
+        </label>
+        <label>
+          岗位
+          <select value={jobFilter} onChange={(event) => setJobFilter(event.target.value)}>
+            <option value="all">全部岗位</option>
+            {jobOptions.map((jobId) => (
+              <option key={jobId} value={jobId}>
+                {getAiGenerationJobLabel(jobId, jobById)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          className="panel-action-button"
+          disabled={!isFiltered}
+          onClick={() => {
+            setFeatureFilter("all");
+            setStatusFilter("all");
+            setJobFilter("all");
+            setSelectedRunId(null);
+          }}
+          type="button"
+        >
+          重置
+        </button>
+      </div>
+
+      {visibleRuns.length > 0 ? (
+        <div className="ai-generation-run-grid">
+          {visibleRuns.map((run) => (
+            <button
+              aria-pressed={selectedRun?.id === run.id}
+              className={`ai-generation-run ai-generation-run--${run.status}`}
+              key={run.id}
+              onClick={() => setSelectedRunId(run.id)}
+              type="button"
+            >
+              <div>
+                <span>{formatAiGenerationFeature(run.feature)}</span>
+                <small>{formatAiGenerationStatus(run.status)}</small>
+              </div>
+              <p>
+                {run.providerName ?? run.modelName ?? "rule-based"} · {run.durationMs}ms
+                {run.promptVersion ? ` · ${run.promptVersion}` : ""}
+              </p>
+              <small>{formatHealthCheckedAt(run.createdAt)}</small>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="ai-generation-empty">当前筛选下没有 AI 生成记录。</p>
+      )}
+
+      {selectedRun ? (
+        <div className="ai-generation-detail" aria-label="AI 生成明细">
+          <strong>明细</strong>
+          <dl>
+            <div>
+              <dt>能力</dt>
+              <dd>{formatAiGenerationFeature(selectedRun.feature)}</dd>
+            </div>
+            <div>
+              <dt>状态</dt>
+              <dd>{formatAiGenerationStatus(selectedRun.status)}</dd>
+            </div>
+            <div>
+              <dt>岗位</dt>
+              <dd>{getAiGenerationJobLabel(selectedRun.relatedJobId, jobById)}</dd>
+            </div>
+            <div>
+              <dt>Provider</dt>
+              <dd>{selectedRun.providerName ?? "rule-based"}</dd>
+            </div>
+            <div>
+              <dt>模型</dt>
+              <dd>{selectedRun.modelName ?? "未记录"}</dd>
+            </div>
+            <div>
+              <dt>Prompt</dt>
+              <dd>{selectedRun.promptVersion ?? "未记录"}</dd>
+            </div>
+            <div>
+              <dt>耗时</dt>
+              <dd>{selectedRun.durationMs}ms</dd>
+            </div>
+            <div>
+              <dt>时间</dt>
+              <dd>{formatHealthCheckedAt(selectedRun.createdAt)}</dd>
+            </div>
+            {selectedRun.errorMessage ? (
+              <div>
+                <dt>错误</dt>
+                <dd>{selectedRun.errorMessage}</dd>
+              </div>
+            ) : null}
+          </dl>
+        </div>
+      ) : null}
+      {filteredRuns.length > visibleRuns.length ? (
+        <small className="ai-generation-more">还有 {filteredRuns.length - visibleRuns.length} 条未显示。</small>
+      ) : null}
     </div>
   );
+}
+
+function getAiGenerationJobLabel(
+  jobId: string | undefined,
+  jobById: Map<string, JobPosting>
+) {
+  if (!jobId) {
+    return "未关联岗位";
+  }
+
+  const job = jobById.get(jobId);
+
+  if (!job) {
+    return jobId;
+  }
+
+  return [job.title, job.companyName].filter(Boolean).join(" / ");
 }
 
 function formatAiGenerationFeature(feature: string) {

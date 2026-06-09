@@ -758,3 +758,27 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 增加 AI 生成记录的筛选和明细面板，支持按能力、状态和岗位快速定位异常调用。
+
+## 2026-06-09 更新 14
+
+### Done
+
+- Web 投递复盘区的“最近 AI 生成”新增能力、状态和岗位筛选。
+- AI 生成记录支持点击选中，并在明细面板查看能力、状态、关联岗位、Provider、模型、Prompt 版本、耗时、时间和错误摘要。
+- “最近 AI 生成”从固定展示 5 条升级为接收 API 最近记录后前端筛选展示，便于快速定位降级或规则版调用。
+- 使用手册和迭代计划已同步更新筛选与明细说明。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/web test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+- 浏览器检查 `http://127.0.0.1:5196`，确认“最近 AI 生成”筛选后从 `4/4` 变为 `1/4`，明细切换到测试岗位分析记录。
+- `codegraph sync .`
+
+### Next
+
+- 为 `GET /ai/generation-runs` 增加 API 级查询参数和分页，避免记录增长后前端一次性筛选过多历史数据。
