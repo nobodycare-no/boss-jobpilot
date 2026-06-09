@@ -52,6 +52,16 @@ const providerServer = buildServer({
     }
   }
 });
+const failingProviderDb = openJobpilotDatabase(":memory:");
+const failingProviderServer = buildServer({
+  database: failingProviderDb,
+  aiProvider: {
+    name: "failing-provider",
+    async generateJson<T>(): Promise<T> {
+      throw new Error("provider unavailable");
+    }
+  }
+});
 
 describe("job routes", () => {
   afterAll(async () => {
@@ -59,6 +69,8 @@ describe("job routes", () => {
     db.close();
     await providerServer.close();
     providerDb.close();
+    await failingProviderServer.close();
+    failingProviderDb.close();
   });
 
   it("creates, lists, analyzes and persists jobs", async () => {
@@ -338,5 +350,87 @@ describe("job routes", () => {
       "您好，我基于真实项目经历匹配这个岗位，想进一步沟通。"
     );
     expect(greetingResponse.json().greeting.modelName).toBe("test-provider-model");
+  });
+
+  it("falls back to rule-based generation when the configured AI provider fails", async () => {
+    await failingProviderServer.inject({
+      method: "POST",
+      url: "/experiences",
+      payload: {
+        id: "exp-fallback",
+        type: "project",
+        title: "Fallback workflow",
+        summary: "Built React and TypeScript workflow.",
+        techStack: ["React", "TypeScript"],
+        responsibilities: [],
+        achievements: [],
+        metrics: [],
+        evidenceLevel: "deep_interview_ready",
+        ownershipLevel: "owned"
+      }
+    });
+    const createResponse = await failingProviderServer.inject({
+      method: "POST",
+      url: "/jobs",
+      payload: {
+        platform: "boss",
+        title: "Frontend Engineer",
+        jdRaw: "React TypeScript",
+        companyName: "Example Tech"
+      }
+    });
+    const created = createResponse.json().item;
+
+    const analysisResponse = await failingProviderServer.inject({
+      method: "POST",
+      url: `/jobs/${created.id}/analyze`
+    });
+
+    expect(analysisResponse.statusCode).toBe(200);
+    expect(analysisResponse.json().analysis.modelName).toBe("rule-based");
+    expect(analysisResponse.json().warnings[0]).toMatchObject({
+      code: "AI_PROVIDER_FALLBACK",
+      detail: "provider unavailable"
+    });
+
+    const resumeResponse = await failingProviderServer.inject({
+      method: "POST",
+      url: `/jobs/${created.id}/resumes`
+    });
+
+    expect(resumeResponse.statusCode).toBe(201);
+    expect(resumeResponse.json().item.markdownContent).toContain("Frontend Engineer");
+    expect(resumeResponse.json().warnings[0].code).toBe("AI_PROVIDER_FALLBACK");
+
+    const greetingResponse = await failingProviderServer.inject({
+      method: "POST",
+      url: `/jobs/${created.id}/greetings`
+    });
+
+    expect(greetingResponse.statusCode).toBe(201);
+    expect(greetingResponse.json().greeting.modelName).toBe("rule-based");
+    expect(greetingResponse.json().warnings[0].code).toBe("AI_PROVIDER_FALLBACK");
+
+    const reviewStrategyResponse = await failingProviderServer.inject({
+      method: "POST",
+      url: "/applications/review/strategy",
+      payload: {
+        activeApplications: 1,
+        appliedOrBeyond: 0,
+        generatedPackages: 1,
+        interviewOrOffer: 0,
+        overdueFollowUps: 0,
+        replyCount: 0,
+        staleActiveApplications: 1,
+        totalJobs: 1,
+        scopeLabel: "all jobs",
+        strategySuggestions: [],
+        attributionSignals: []
+      }
+    });
+
+    expect(reviewStrategyResponse.statusCode).toBe(200);
+    expect(reviewStrategyResponse.json().item.modelName).toBe("rule-based");
+    expect(reviewStrategyResponse.json().warnings[0].code).toBe("AI_PROVIDER_FALLBACK");
   });
 });

@@ -5,7 +5,9 @@ import Fastify from "fastify";
 
 import {
   createAiProviderFromEnv,
+  generateApplicationReviewStrategyRecap,
   generateApplicationReviewStrategyRecapWithProvider,
+  generateGreetingDraft,
   generateGreetingDraftWithProvider,
   generateJobAnalysisWithProvider,
   generateResumeVersionWithProvider,
@@ -29,13 +31,20 @@ import {
   JobPostingCreateSchema,
   JobPostingSchema,
   JobPostingUpdateSchema,
-  type CandidatePreference
+  type CandidatePreference,
+  type ResumeVersionCreateInput
 } from "@boss-jobpilot/shared";
 
 type BuildServerOptions = {
   aiProvider?: AiProvider;
   database?: DatabaseSync;
   databasePath?: string;
+};
+
+type AiFallbackWarning = {
+  code: "AI_PROVIDER_FALLBACK";
+  message: string;
+  detail: string;
 };
 
 const defaultCandidatePreference: CandidatePreference = {
@@ -224,20 +233,26 @@ export function buildServer(options: BuildServerOptions = {}) {
 
     const currentExperiences = experiences.list();
     const fallbackAnalysis = analyzeJobPosting(job, defaultCandidatePreference, currentExperiences);
-    const analysis = jobAnalyses.create(
-      await generateJobAnalysisWithProvider({
-        job,
-        preference: defaultCandidatePreference,
-        experiences: currentExperiences,
-        fallbackAnalysis,
-        provider: aiProvider
-      })
-    );
+    const generatedAnalysis = await runWithAiFallback({
+      fallback: fallbackAnalysis,
+      featureLabel: "岗位分析",
+      provider: aiProvider,
+      run: () =>
+        generateJobAnalysisWithProvider({
+          job,
+          preference: defaultCandidatePreference,
+          experiences: currentExperiences,
+          fallbackAnalysis,
+          provider: aiProvider
+        })
+    });
+    const analysis = jobAnalyses.create(generatedAnalysis.value);
 
     return {
       jobId: job.id,
       analysis,
-      score: analysisToLegacyScore(analysis)
+      score: analysisToLegacyScore(analysis),
+      warnings: generatedAnalysis.warnings
     };
   });
 
@@ -285,18 +300,25 @@ export function buildServer(options: BuildServerOptions = {}) {
       defaultCandidatePreference,
       currentExperiences
     );
-    const analysis = await generateJobAnalysisWithProvider({
-      job: parsedJob.data,
-      preference: defaultCandidatePreference,
-      experiences: currentExperiences,
-      fallbackAnalysis,
-      provider: aiProvider
+    const analysis = await runWithAiFallback({
+      fallback: fallbackAnalysis,
+      featureLabel: "岗位分析",
+      provider: aiProvider,
+      run: () =>
+        generateJobAnalysisWithProvider({
+          job: parsedJob.data,
+          preference: defaultCandidatePreference,
+          experiences: currentExperiences,
+          fallbackAnalysis,
+          provider: aiProvider
+        })
     });
 
     return {
       jobId: parsedJob.data.id,
-      analysis,
-      score: analysisToLegacyScore(analysis)
+      analysis: analysis.value,
+      score: analysisToLegacyScore(analysis.value),
+      warnings: analysis.warnings
     };
   });
 
@@ -323,25 +345,33 @@ export function buildServer(options: BuildServerOptions = {}) {
       analysis,
       experiences: currentExperiences
     });
-    const fallbackResume = {
+    const fallbackResume: ResumeVersionCreateInput = {
       jobId: job.id,
       variant: "tailored",
       markdownContent: renderResumeMarkdown(draft),
       selectedExperienceIds: draft.experiences.map((experience) => experience.id),
       changeSummary: draft.changeSummary
     };
+    const resume = await runWithAiFallback({
+      fallback: fallbackResume,
+      featureLabel: "定制简历",
+      provider: aiProvider,
+      run: () =>
+        generateResumeVersionWithProvider({
+          job,
+          analysis,
+          experiences: currentExperiences,
+          fallbackResume,
+          provider: aiProvider
+        })
+    });
     const item = resumeVersions.create({
-      ...(await generateResumeVersionWithProvider({
-        job,
-        analysis,
-        experiences: currentExperiences,
-        fallbackResume,
-        provider: aiProvider
-      }))
+      ...resume.value
     });
 
     return reply.status(201).send({
-      item
+      item,
+      warnings: resume.warnings
     });
   });
 
@@ -390,26 +420,37 @@ export function buildServer(options: BuildServerOptions = {}) {
       });
     }
 
-    const greeting = await generateGreetingDraftWithProvider({
-      job,
-      analysis,
-      experiences: experiences.list(),
-      provider: aiProvider
+    const currentExperiences = experiences.list();
+    const greeting = await runWithAiFallback({
+      fallback: generateGreetingDraft({
+        job,
+        analysis,
+        experiences: currentExperiences
+      }),
+      featureLabel: "打招呼语",
+      provider: aiProvider,
+      run: () =>
+        generateGreetingDraftWithProvider({
+          job,
+          analysis,
+          experiences: currentExperiences,
+          provider: aiProvider
+        })
     });
     const latestResume = resumeVersions.getLatestByJobId(job.id);
     const item = applications.create({
       jobId: job.id,
       resumeVersionId: latestResume?.id,
       status: "draft",
-      greetingMessage: greeting.message
+      greetingMessage: greeting.value.message
     });
 
     return reply.status(201).send({
       item,
-      greeting
+      greeting: greeting.value,
+      warnings: greeting.warnings
     });
   });
-
   server.get<{ Params: { id: string } }>("/jobs/:id/applications", async (request, reply) => {
     const job = jobs.get(request.params.id);
 
@@ -485,11 +526,20 @@ export function buildServer(options: BuildServerOptions = {}) {
       });
     }
 
+    const recap = await runWithAiFallback({
+      fallback: generateApplicationReviewStrategyRecap(parsedReview.data),
+      featureLabel: "AI 策略复盘",
+      provider: aiProvider,
+      run: () =>
+        generateApplicationReviewStrategyRecapWithProvider({
+          input: parsedReview.data,
+          provider: aiProvider
+        })
+    });
+
     return {
-      item: await generateApplicationReviewStrategyRecapWithProvider({
-        input: parsedReview.data,
-        provider: aiProvider
-      })
+      item: recap.value,
+      warnings: recap.warnings
     };
   });
 
@@ -507,6 +557,45 @@ function analysisToLegacyScore(analysis: {
     recommendation: analysis.recommendation,
     matchedKeywords: analysis.matchedKeywords ?? [],
     riskFlags: analysis.riskFlags ?? []
+  };
+}
+
+async function runWithAiFallback<T>({
+  fallback,
+  featureLabel,
+  provider,
+  run
+}: {
+  fallback: T;
+  featureLabel: string;
+  provider?: AiProvider;
+  run: () => Promise<T>;
+}) {
+  if (!provider) {
+    return {
+      value: fallback,
+      warnings: [] satisfies AiFallbackWarning[]
+    };
+  }
+
+  try {
+    return {
+      value: await run(),
+      warnings: [] satisfies AiFallbackWarning[]
+    };
+  } catch (error) {
+    return {
+      value: fallback,
+      warnings: [createAiFallbackWarning(featureLabel, error)]
+    };
+  }
+}
+
+function createAiFallbackWarning(featureLabel: string, error: unknown): AiFallbackWarning {
+  return {
+    code: "AI_PROVIDER_FALLBACK",
+    detail: error instanceof Error ? error.message : "Unknown AI provider error",
+    message: `${featureLabel}调用 AI Provider 失败，已使用本地规则版结果。`
   };
 }
 

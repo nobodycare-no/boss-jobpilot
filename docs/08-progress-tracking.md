@@ -679,3 +679,28 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 为真实 Provider 调用增加失败兜底和用户可见错误提示，避免模型异常中断投递工作流。
+
+## 2026-06-09 更新 11
+
+### Done
+
+- API 新增统一的 Provider 失败兜底逻辑；真实模型调用失败时会继续使用规则版结果。
+- 岗位分析、即时岗位分析、定制简历、打招呼语和 AI 策略复盘响应新增 `warnings`，用于提示本次已降级为规则版。
+- Web 工作台已读取 API warning，并在岗位操作和策略复盘区域显示用户可见提示。
+- API 测试新增失败 Provider 覆盖，确认模型异常不会中断核心投递工作流。
+- 使用手册和迭代计划已同步更新 Provider 失败兜底说明。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/api test`
+- `corepack pnpm --filter @boss-jobpilot/web test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+- `codegraph sync .`
+
+### Next
+
+- 增加 AI Provider 配置健康检查入口，帮助用户在正式投递前确认 PackyAPI 密钥、模型和网络是否可用。

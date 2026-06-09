@@ -43,6 +43,7 @@ import {
   listApplications,
   listJobs,
   listResumes,
+  type ApiWarning,
   updateApplication
 } from "./api";
 import {
@@ -421,6 +422,7 @@ export function JobPool({ experiences }: JobPoolProps) {
       .then((response) => {
         if (!isCancelled) {
           setStrategyRecap(response.item);
+          setStrategyRecapError(formatApiWarnings(response.warnings));
         }
       })
       .catch((caughtError) => {
@@ -514,6 +516,7 @@ export function JobPool({ experiences }: JobPoolProps) {
         ...current,
         [id]: response.analysis
       }));
+      setFeedback(formatApiWarnings(response.warnings));
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "岗位分析失败");
     }
@@ -534,6 +537,7 @@ export function JobPool({ experiences }: JobPoolProps) {
         ...current,
         [id]: history.items
       }));
+      setFeedback(formatApiWarnings(response.warnings));
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "定制简历生成失败");
     }
@@ -559,6 +563,7 @@ export function JobPool({ experiences }: JobPoolProps) {
         ...current,
         [response.item.id]: events.items
       }));
+      setFeedback(formatApiWarnings(response.warnings));
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "打招呼语生成失败");
     }
@@ -1833,6 +1838,14 @@ function formatPackageExperience(id: string, experience?: ExperienceItem) {
 
 function formatList(values: string[]) {
   return values.length > 0 ? values.join("、") : undefined;
+}
+
+function formatApiWarnings(warnings?: ApiWarning[]) {
+  if (!warnings || warnings.length === 0) {
+    return null;
+  }
+
+  return warnings.map((warning) => warning.message).join(" ");
 }
 
 function buildReviewScopeLabel(filters: ApplicationReviewFilters) {

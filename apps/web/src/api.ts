@@ -14,6 +14,12 @@ import type {
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:4000";
 
+export type ApiWarning = {
+  code: string;
+  message: string;
+  detail?: string;
+};
+
 type ExperienceListResponse = {
   items: ExperienceItem[];
 };
@@ -32,6 +38,7 @@ type JobResponse = {
 
 type ResumeVersionResponse = {
   item: ResumeVersion;
+  warnings?: ApiWarning[];
 };
 
 type ResumeVersionListResponse = {
@@ -40,6 +47,7 @@ type ResumeVersionListResponse = {
 
 type ApplicationResponse = {
   item: Application;
+  warnings?: ApiWarning[];
 };
 
 type ApplicationListResponse = {
@@ -52,6 +60,7 @@ type ApplicationEventListResponse = {
 
 type ApplicationReviewStrategyResponse = {
   item: ApplicationReviewStrategyRecap;
+  warnings?: ApiWarning[];
 };
 
 export type JobAnalysisResponse = {
@@ -63,6 +72,7 @@ export type JobAnalysisResponse = {
     matchedKeywords: string[];
     riskFlags: string[];
   };
+  warnings?: ApiWarning[];
 };
 
 export type LatestJobAnalysisResponse = {
