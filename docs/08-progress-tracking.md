@@ -604,3 +604,27 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 将真实 Provider 扩展到岗位分析、简历生成和打招呼语生成。
+
+## 2026-06-09 更新 8
+
+### Done
+
+- `packages/ai` 新增 `generateGreetingDraftWithProvider`，配置 AI Provider 时可用 PackyAPI 生成打招呼语。
+- 打招呼语模型输出使用 Zod 校验，必须包含 message、selectedExperienceIds、highlights、modelName 和 promptVersion。
+- API 的 `POST /jobs/:id/greetings` 已接入可选 Provider；未配置密钥时仍回退规则版。
+- API 测试新增 fake Provider 覆盖，确认打招呼语路由会使用配置的模型输出。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/ai test`
+- `corepack pnpm --filter @boss-jobpilot/api test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+- `codegraph sync .`
+
+### Next
+
+- 将真实 Provider 扩展到岗位分析和简历生成。

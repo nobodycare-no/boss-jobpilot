@@ -6,7 +6,7 @@ import Fastify from "fastify";
 import {
   createAiProviderFromEnv,
   generateApplicationReviewStrategyRecapWithProvider,
-  generateGreetingDraft,
+  generateGreetingDraftWithProvider,
   type AiProvider
 } from "@boss-jobpilot/ai";
 import {
@@ -363,10 +363,11 @@ export function buildServer(options: BuildServerOptions = {}) {
       });
     }
 
-    const greeting = generateGreetingDraft({
+    const greeting = await generateGreetingDraftWithProvider({
       job,
       analysis,
-      experiences: experiences.list()
+      experiences: experiences.list(),
+      provider: aiProvider
     });
     const latestResume = resumeVersions.getLatestByJobId(job.id);
     const item = applications.create({

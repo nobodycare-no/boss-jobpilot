@@ -6,11 +6,29 @@ import { buildServer } from "./index";
 
 const db = openJobpilotDatabase(":memory:");
 const server = buildServer({ database: db });
+const providerDb = openJobpilotDatabase(":memory:");
+const providerServer = buildServer({
+  database: providerDb,
+  aiProvider: {
+    name: "test-provider",
+    async generateJson<T>() {
+      return {
+        message: "您好，我基于真实项目经历匹配这个岗位，想进一步沟通。",
+        selectedExperienceIds: ["exp-provider"],
+        highlights: ["React"],
+        modelName: "test-provider-model",
+        promptVersion: "test-greeting"
+      } as T;
+    }
+  }
+});
 
 describe("job routes", () => {
   afterAll(async () => {
     await server.close();
     db.close();
+    await providerServer.close();
+    providerDb.close();
   });
 
   it("creates, lists, analyzes and persists jobs", async () => {
@@ -229,5 +247,50 @@ describe("job routes", () => {
 
     expect(listAfterDeleteResponse.statusCode).toBe(200);
     expect(listAfterDeleteResponse.json().items).toHaveLength(0);
+  });
+
+  it("uses the configured AI provider for greeting generation", async () => {
+    await providerServer.inject({
+      method: "POST",
+      url: "/experiences",
+      payload: {
+        id: "exp-provider",
+        type: "project",
+        title: "Provider backed greeting",
+        summary: "Built React workflow.",
+        techStack: ["React"],
+        responsibilities: [],
+        achievements: [],
+        metrics: [],
+        evidenceLevel: "deep_interview_ready",
+        ownershipLevel: "owned"
+      }
+    });
+    const createResponse = await providerServer.inject({
+      method: "POST",
+      url: "/jobs",
+      payload: {
+        platform: "boss",
+        title: "Frontend Engineer",
+        jdRaw: "React TypeScript",
+        companyName: "Example Tech"
+      }
+    });
+    const created = createResponse.json().item;
+
+    await providerServer.inject({
+      method: "POST",
+      url: `/jobs/${created.id}/analyze`
+    });
+    const greetingResponse = await providerServer.inject({
+      method: "POST",
+      url: `/jobs/${created.id}/greetings`
+    });
+
+    expect(greetingResponse.statusCode).toBe(201);
+    expect(greetingResponse.json().item.greetingMessage).toBe(
+      "您好，我基于真实项目经历匹配这个岗位，想进一步沟通。"
+    );
+    expect(greetingResponse.json().greeting.modelName).toBe("test-provider-model");
   });
 });

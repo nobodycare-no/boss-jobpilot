@@ -6,6 +6,7 @@ import type {
   JobPosting
 } from "@boss-jobpilot/shared";
 import { ApplicationReviewStrategyRecapSchema } from "@boss-jobpilot/shared";
+import { z } from "zod";
 
 export type AiMessage = {
   role: "system" | "user" | "assistant";
@@ -126,6 +127,14 @@ export type GreetingDraft = {
   promptVersion: string;
 };
 
+const GreetingDraftSchema = z.object({
+  message: z.string().min(1),
+  selectedExperienceIds: z.array(z.string()).default([]),
+  highlights: z.array(z.string()).default([]),
+  modelName: z.string().min(1),
+  promptVersion: z.string().min(1)
+}) satisfies z.ZodType<GreetingDraft>;
+
 export function generateGreetingDraft({ job, analysis, experiences }: GreetingDraftInput) {
   const selectedExperiences = selectExperiences(experiences, analysis.matchedExperienceIds);
   const highlightSkills = unique([
@@ -152,6 +161,51 @@ export function generateGreetingDraft({ job, analysis, experiences }: GreetingDr
     modelName: "rule-based",
     promptVersion: promptVersions.greetingWriter
   } satisfies GreetingDraft;
+}
+
+export async function generateGreetingDraftWithProvider({
+  analysis,
+  experiences,
+  job,
+  provider
+}: GreetingDraftInput & {
+  provider?: AiProvider;
+}): Promise<GreetingDraft> {
+  if (!provider) {
+    return generateGreetingDraft({
+      analysis,
+      experiences,
+      job
+    });
+  }
+
+  const selectedExperiences = selectExperiences(experiences, analysis.matchedExperienceIds);
+  const generated = await provider.generateJson<GreetingDraft>({
+    messages: [
+      {
+        role: "system",
+        content:
+          "你是求职打招呼语助手。只输出 JSON，字段为 message、selectedExperienceIds、highlights、modelName、promptVersion。不要输出 Markdown。"
+      },
+      {
+        role: "user",
+        content: JSON.stringify({
+          instruction:
+            "为 Boss 直聘岗位生成一句自然、克制、具体的中文打招呼语。必须基于给定真实经历，不编造经历、学历、公司或指标。message 控制在 120 字以内。",
+          job,
+          analysis,
+          candidateExperiences: selectedExperiences
+        })
+      }
+    ],
+    temperature: 0.3
+  });
+
+  return GreetingDraftSchema.parse({
+    ...generated,
+    modelName: generated.modelName || provider.name,
+    promptVersion: generated.promptVersion || promptVersions.greetingWriter
+  });
 }
 
 export function generateApplicationReviewStrategyRecap(
