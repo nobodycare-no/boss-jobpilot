@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import Fastify from "fastify";
 
 import {
+  checkAiProviderHealth,
   createAiProviderFromEnv,
   generateApplicationReviewStrategyRecap,
   generateApplicationReviewStrategyRecapWithProvider,
@@ -81,6 +82,8 @@ export function buildServer(options: BuildServerOptions = {}) {
     service: "boss-jobpilot-api",
     version: "0.1.0"
   }));
+
+  server.get("/ai/provider/health", async () => checkAiProviderHealth(aiProvider));
 
   server.get("/experiences", async () => ({
     items: experiences.list()

@@ -36,6 +36,7 @@ import {
   generateApplicationReviewStrategy,
   generateGreeting,
   generateResume,
+  getAiProviderHealth,
   getApplicationEvents,
   getLatestApplication,
   getLatestJobAnalysis,
@@ -43,6 +44,7 @@ import {
   listApplications,
   listJobs,
   listResumes,
+  type AiProviderHealth,
   type ApiWarning,
   updateApplication
 } from "./api";
@@ -177,6 +179,9 @@ export function JobPool({ experiences }: JobPoolProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [aiProviderHealth, setAiProviderHealth] = useState<AiProviderHealth | null>(null);
+  const [aiProviderHealthError, setAiProviderHealthError] = useState<string | null>(null);
+  const [isAiProviderHealthLoading, setIsAiProviderHealthLoading] = useState(false);
   const [activeBoardFilter, setActiveBoardFilter] = useState<JobBoardFilter>("all");
   const [reviewFilters, setReviewFilters] = useState<ApplicationReviewFilters>(
     defaultApplicationReviewFilters
@@ -401,6 +406,25 @@ export function JobPool({ experiences }: JobPoolProps) {
 
   useEffect(() => {
     void refreshJobs();
+  }, []);
+
+  async function refreshAiProviderHealth() {
+    setIsAiProviderHealthLoading(true);
+    setAiProviderHealthError(null);
+
+    try {
+      setAiProviderHealth(await getAiProviderHealth());
+    } catch (caughtError) {
+      setAiProviderHealthError(
+        caughtError instanceof Error ? caughtError.message : "无法检查 AI Provider 状态"
+      );
+    } finally {
+      setIsAiProviderHealthLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void refreshAiProviderHealth();
   }, []);
 
   useEffect(() => {
@@ -785,10 +809,14 @@ export function JobPool({ experiences }: JobPoolProps) {
 
           {jobs.length > 0 ? (
             <ApplicationReviewPanel
+              aiProviderHealth={aiProviderHealth}
+              aiProviderHealthError={aiProviderHealthError}
               cityOptions={reviewCityOptions}
               filters={reviewFilters}
+              isAiProviderHealthLoading={isAiProviderHealthLoading}
               isStrategyRecapLoading={isStrategyRecapLoading}
               onFiltersChange={setReviewFilters}
+              onRefreshAiProviderHealth={refreshAiProviderHealth}
               strategyRecap={strategyRecap}
               strategyRecapError={strategyRecapError}
               summary={reviewSummary}
@@ -1006,19 +1034,27 @@ function JobCard({
 }
 
 function ApplicationReviewPanel({
+  aiProviderHealth,
+  aiProviderHealthError,
   cityOptions,
   filters,
+  isAiProviderHealthLoading,
   isStrategyRecapLoading,
   onFiltersChange,
+  onRefreshAiProviderHealth,
   strategyRecap,
   strategyRecapError,
   summary,
   totalJobs
 }: {
+  aiProviderHealth: AiProviderHealth | null;
+  aiProviderHealthError: string | null;
   cityOptions: string[];
   filters: ApplicationReviewFilters;
+  isAiProviderHealthLoading: boolean;
   isStrategyRecapLoading: boolean;
   onFiltersChange: (filters: ApplicationReviewFilters) => void;
+  onRefreshAiProviderHealth: () => void;
   strategyRecap: ApplicationReviewStrategyRecap | null;
   strategyRecapError: string | null;
   summary: ApplicationReviewSummary;
@@ -1075,6 +1111,13 @@ function ApplicationReviewPanel({
           {summary.totalJobs}/{totalJobs} 个岗位纳入复盘 · {summary.activeApplications} 个已生成话术
         </span>
       </div>
+
+      <AiProviderHealthCard
+        error={aiProviderHealthError}
+        health={aiProviderHealth}
+        isLoading={isAiProviderHealthLoading}
+        onRefresh={onRefreshAiProviderHealth}
+      />
 
       <div className="review-controls" aria-label="复盘筛选">
         <label>
@@ -1191,6 +1234,66 @@ function ApplicationReviewPanel({
       </div>
     </section>
   );
+}
+
+function AiProviderHealthCard({
+  error,
+  health,
+  isLoading,
+  onRefresh
+}: {
+  error: string | null;
+  health: AiProviderHealth | null;
+  isLoading: boolean;
+  onRefresh: () => void;
+}) {
+  const status = error ? "failed" : (health?.status ?? "not_configured");
+  const title = getAiProviderHealthTitle(status);
+  const meta = health?.providerName
+    ? `${health.providerName} · ${formatHealthCheckedAt(health.checkedAt)}`
+    : formatHealthCheckedAt(health?.checkedAt);
+  const detail = error ?? health?.detail;
+
+  return (
+    <div className={`ai-provider-health ai-provider-health--${status}`}>
+      <div>
+        <div>
+          <strong>{title}</strong>
+          <span>{meta}</span>
+        </div>
+        <p>{error ?? health?.message ?? "正在检查 AI Provider 状态"}</p>
+        {detail ? <small>{detail}</small> : null}
+      </div>
+      <button className="panel-action-button" disabled={isLoading} onClick={onRefresh} type="button">
+        <RefreshCw size={14} />
+        {isLoading ? "检查中" : "刷新"}
+      </button>
+    </div>
+  );
+}
+
+function getAiProviderHealthTitle(status: AiProviderHealth["status"]) {
+  if (status === "ok") {
+    return "AI Provider 可用";
+  }
+
+  if (status === "failed") {
+    return "AI Provider 验证失败";
+  }
+
+  return "AI Provider 未配置";
+}
+
+function formatHealthCheckedAt(value?: string) {
+  if (!value) {
+    return "尚未检查";
+  }
+
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  }).format(new Date(value));
 }
 
 function ReviewStrategySuggestionItem({

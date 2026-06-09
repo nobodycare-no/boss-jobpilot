@@ -20,6 +20,15 @@ export type ApiWarning = {
   detail?: string;
 };
 
+export type AiProviderHealth = {
+  checkedAt: string;
+  configured: boolean;
+  detail?: string;
+  message: string;
+  providerName?: string;
+  status: "failed" | "not_configured" | "ok";
+};
+
 type ExperienceListResponse = {
   items: ExperienceItem[];
 };
@@ -95,6 +104,16 @@ export async function listExperiences() {
   }
 
   return (await response.json()) as ExperienceListResponse;
+}
+
+export async function getAiProviderHealth() {
+  const response = await fetch(`${apiBaseUrl}/ai/provider/health`);
+
+  if (!response.ok) {
+    throw new Error("无法检查 AI Provider 状态");
+  }
+
+  return (await response.json()) as AiProviderHealth;
 }
 
 export async function createExperience(input: ExperienceItemCreateInput) {

@@ -541,6 +541,73 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.ai-provider-health {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  border: 1px solid #d8d0c3;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fbfaf7;
+}
+
+.ai-provider-health > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ai-provider-health > div > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.ai-provider-health strong {
+  color: #263033;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ai-provider-health span,
+.ai-provider-health small {
+  color: #607073;
+  font-size: 11px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.ai-provider-health p {
+  margin: 0;
+  color: #526165;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.ai-provider-health button {
+  flex-shrink: 0;
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.ai-provider-health--ok {
+  border-color: #b7d4c4;
+  background: #f5fbf7;
+}
+
+.ai-provider-health--failed {
+  border-color: #e0bdba;
+  background: #fff7f5;
+}
+
+.ai-provider-health--not_configured {
+  border-color: #d8d0c3;
+  background: #fbfaf7;
+}
+
 .review-distributions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1150,6 +1217,15 @@ button:disabled {
   .version-pair,
   .analysis-grid {
     grid-template-columns: 1fr;
+  }
+
+  .ai-provider-health {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ai-provider-health button {
+    justify-content: center;
   }
 
   h1 {

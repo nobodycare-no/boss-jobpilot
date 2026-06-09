@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  checkAiProviderHealth,
   createAiProviderFromEnv,
   createOpenAiCompatibleProvider,
   generateApplicationReviewStrategyRecap,
@@ -341,6 +342,60 @@ describe("application review strategy recap", () => {
 });
 
 describe("OpenAI compatible provider", () => {
+  it("reports an unconfigured provider health state", async () => {
+    await expect(checkAiProviderHealth(undefined, new Date("2026-06-09T00:00:00.000Z"))).resolves.toEqual({
+      checkedAt: "2026-06-09T00:00:00.000Z",
+      configured: false,
+      message: "AI Provider 未配置，将使用本地规则版生成。",
+      status: "not_configured"
+    });
+  });
+
+  it("checks a configured provider with a minimal JSON probe", async () => {
+    const health = await checkAiProviderHealth(
+      {
+        name: "test-provider",
+        async generateJson<T>() {
+          return {
+            message: "ready",
+            ok: true
+          } as T;
+        }
+      },
+      new Date("2026-06-09T00:00:00.000Z")
+    );
+
+    expect(health).toEqual({
+      checkedAt: "2026-06-09T00:00:00.000Z",
+      configured: true,
+      detail: "ready",
+      message: "AI Provider 可用。",
+      providerName: "test-provider",
+      status: "ok"
+    });
+  });
+
+  it("reports provider probe failures without throwing", async () => {
+    const health = await checkAiProviderHealth(
+      {
+        name: "failing-provider",
+        async generateJson<T>(): Promise<T> {
+          throw new Error("network unavailable");
+        }
+      },
+      new Date("2026-06-09T00:00:00.000Z")
+    );
+
+    expect(health).toMatchObject({
+      checkedAt: "2026-06-09T00:00:00.000Z",
+      configured: true,
+      detail: "network unavailable",
+      message: "AI Provider 验证失败，将使用本地规则版兜底。",
+      providerName: "failing-provider",
+      status: "failed"
+    });
+  });
+
   it("creates a PackyAPI provider from environment variables", () => {
     const provider = createAiProviderFromEnv({
       AI_API_KEY: "test-key",

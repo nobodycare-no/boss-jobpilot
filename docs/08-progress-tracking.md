@@ -704,3 +704,30 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 增加 AI Provider 配置健康检查入口，帮助用户在正式投递前确认 PackyAPI 密钥、模型和网络是否可用。
+
+## 2026-06-09 更新 12
+
+### Done
+
+- `packages/ai` 新增 `checkAiProviderHealth`，支持未配置、可用和失败三类健康状态。
+- API 新增 `GET /ai/provider/health`，不会返回密钥，只返回 Provider 名称、检查时间、状态和错误摘要。
+- Web 投递复盘区新增 AI Provider 状态条和手动刷新按钮，用于正式投递前检查 PackyAPI 配置。
+- AI 和 API 测试新增健康检查覆盖，确认 Provider 探测失败时不会抛出到调用方。
+- 使用手册和迭代计划已同步更新 AI Provider 健康检查说明。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/ai test`
+- `corepack pnpm --filter @boss-jobpilot/api test`
+- `corepack pnpm --filter @boss-jobpilot/web test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- 浏览器检查 `http://127.0.0.1:5173`，确认 AI Provider 状态条显示正常且未覆盖复盘内容。
+- `git diff --check`
+- `codegraph sync .`
+
+### Next
+
+- 增加 AI 生成请求的可观测记录，保存模型名、提示词版本、降级原因和生成耗时，方便后续排查和优化。

@@ -15,6 +15,13 @@ const providerServer = buildServer({
     async generateJson<T>(request: AiJsonRequest) {
       const promptText = request.messages.map((message) => message.content).join("\n");
 
+      if (promptText.includes("validate an AI provider connection")) {
+        return {
+          message: "ready",
+          ok: true
+        } as T;
+      }
+
       if (promptText.includes("job application analyst")) {
         return {
           jobId: "provider-job",
@@ -289,6 +296,45 @@ describe("job routes", () => {
 
     expect(listAfterDeleteResponse.statusCode).toBe(200);
     expect(listAfterDeleteResponse.json().items).toHaveLength(0);
+  });
+
+  it("reports AI provider health states", async () => {
+    const unconfiguredHealthResponse = await server.inject({
+      method: "GET",
+      url: "/ai/provider/health"
+    });
+
+    expect(unconfiguredHealthResponse.statusCode).toBe(200);
+    expect(unconfiguredHealthResponse.json()).toMatchObject({
+      configured: false,
+      status: "not_configured"
+    });
+
+    const configuredHealthResponse = await providerServer.inject({
+      method: "GET",
+      url: "/ai/provider/health"
+    });
+
+    expect(configuredHealthResponse.statusCode).toBe(200);
+    expect(configuredHealthResponse.json()).toMatchObject({
+      configured: true,
+      detail: "ready",
+      providerName: "test-provider",
+      status: "ok"
+    });
+
+    const failedHealthResponse = await failingProviderServer.inject({
+      method: "GET",
+      url: "/ai/provider/health"
+    });
+
+    expect(failedHealthResponse.statusCode).toBe(200);
+    expect(failedHealthResponse.json()).toMatchObject({
+      configured: true,
+      detail: "provider unavailable",
+      providerName: "failing-provider",
+      status: "failed"
+    });
   });
 
   it("uses the configured AI provider for analysis, resume and greeting generation", async () => {

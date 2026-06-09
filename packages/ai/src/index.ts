@@ -31,6 +31,17 @@ export type AiProvider = {
   generateJson<T>(request: AiJsonRequest): Promise<T>;
 };
 
+export type AiProviderHealthStatus = "failed" | "not_configured" | "ok";
+
+export type AiProviderHealth = {
+  checkedAt: string;
+  configured: boolean;
+  detail?: string;
+  message: string;
+  providerName?: string;
+  status: AiProviderHealthStatus;
+};
+
 export type OpenAiCompatibleProviderOptions = {
   apiKey: string;
   baseUrl?: string;
@@ -51,6 +62,10 @@ export const promptVersions = {
 
 const defaultPackyApiBaseUrl = "https://www.packyapi.com/v1";
 const defaultPackyApiModel = "gpt-5";
+const AiProviderHealthProbeSchema = z.object({
+  message: z.string().optional(),
+  ok: z.boolean()
+});
 
 export function createOpenAiCompatibleProvider({
   apiKey,
@@ -119,6 +134,70 @@ export function createAiProviderFromEnv(env: Record<string, string | undefined>)
     model: env.AI_MODEL ?? env.PACKY_API_MODEL ?? defaultPackyApiModel,
     name: env.AI_PROVIDER_NAME ?? env.AI_PROVIDER ?? "packyapi"
   });
+}
+
+export async function checkAiProviderHealth(
+  provider?: AiProvider,
+  checkedAt = new Date()
+): Promise<AiProviderHealth> {
+  const checkedAtIso = checkedAt.toISOString();
+
+  if (!provider) {
+    return {
+      checkedAt: checkedAtIso,
+      configured: false,
+      message: "AI Provider 未配置，将使用本地规则版生成。",
+      status: "not_configured"
+    };
+  }
+
+  try {
+    const probe = await provider.generateJson<unknown>({
+      messages: [
+        {
+          role: "system",
+          content: "You validate an AI provider connection. Return only JSON."
+        },
+        {
+          role: "user",
+          content: 'Return {"ok":true,"message":"ready"} as JSON.'
+        }
+      ],
+      temperature: 0
+    });
+    const parsedProbe = AiProviderHealthProbeSchema.safeParse(probe);
+
+    if (!parsedProbe.success || !parsedProbe.data.ok) {
+      return {
+        checkedAt: checkedAtIso,
+        configured: true,
+        detail: parsedProbe.success
+          ? (parsedProbe.data.message ?? "AI provider probe returned ok=false")
+          : "AI provider probe returned an invalid JSON shape",
+        message: "AI Provider 验证失败，将使用本地规则版兜底。",
+        providerName: provider.name,
+        status: "failed"
+      };
+    }
+
+    return {
+      checkedAt: checkedAtIso,
+      configured: true,
+      detail: parsedProbe.data.message,
+      message: "AI Provider 可用。",
+      providerName: provider.name,
+      status: "ok"
+    };
+  } catch (error) {
+    return {
+      checkedAt: checkedAtIso,
+      configured: true,
+      detail: error instanceof Error ? error.message : "Unknown AI provider error",
+      message: "AI Provider 验证失败，将使用本地规则版兜底。",
+      providerName: provider.name,
+      status: "failed"
+    };
+  }
 }
 
 export type GreetingDraftInput = {

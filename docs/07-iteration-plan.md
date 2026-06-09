@@ -163,3 +163,4 @@
 - 已预留 OpenAI-compatible AI Provider，默认配置面向 PackyAPI，可通过环境变量启用。
 - 策略复盘、岗位分析、简历生成和打招呼语已支持在配置 Provider 后走真实模型；未配置密钥时仍回退规则版。
 - Provider 调用失败时，API 会回退到规则版结果并返回用户可见的降级提示。
+- Web 投递复盘区已提供 AI Provider 健康检查入口，可确认 PackyAPI 配置、模型调用和网络状态。
