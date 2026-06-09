@@ -1,4 +1,10 @@
-import type { Application, JobAnalysis, JobPosting, ResumeVersion } from "@boss-jobpilot/shared";
+import type {
+  Application,
+  ApplicationReviewStrategyRequest,
+  JobAnalysis,
+  JobPosting,
+  ResumeVersion
+} from "@boss-jobpilot/shared";
 
 export type ApplicationReviewDistributionItem = {
   count: number;
@@ -241,6 +247,36 @@ export function filterApplicationReviewJobs({
 
 export function getApplicationReviewCityLabel(job: JobPosting) {
   return job.city?.trim() || "未填写城市";
+}
+
+export function buildApplicationReviewStrategyRequest(
+  summary: ApplicationReviewSummary,
+  scopeLabel: string
+): ApplicationReviewStrategyRequest {
+  return {
+    activeApplications: summary.activeApplications,
+    appliedOrBeyond: summary.appliedOrBeyond,
+    averageMatchScore: summary.averageMatchScore,
+    generatedPackages: summary.generatedPackages,
+    interviewOrOffer: summary.interviewOrOffer,
+    overdueFollowUps: summary.overdueFollowUps,
+    replyCount: summary.replyCount,
+    scopeLabel,
+    staleActiveApplications: summary.staleActiveApplications,
+    strategySuggestions: summary.strategySuggestions,
+    totalJobs: summary.totalJobs,
+    attributionSignals: summary.attributionGroups.flatMap((group) =>
+      group.items
+        .filter((item) => item.appliedOrBeyond > 0)
+        .map((item) => ({
+          appliedOrBeyond: item.appliedOrBeyond,
+          groupTitle: group.title,
+          interviewOrOffer: item.interviewOrOffer,
+          label: item.label,
+          replyCount: item.replyCount
+        }))
+    )
+  };
 }
 
 export function formatReviewRate(numerator: number, denominator: number) {

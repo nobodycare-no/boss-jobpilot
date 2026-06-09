@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Application, JobAnalysis, JobPosting, ResumeVersion } from "@boss-jobpilot/shared";
 
 import {
+  buildApplicationReviewStrategyRequest,
   buildApplicationReviewSummary,
   filterApplicationReviewJobs,
   formatReviewRate
@@ -84,6 +85,21 @@ describe("application review summary", () => {
     expect(summary.strategySuggestions[3]).toMatchObject({
       priority: "low",
       title: "放大有效信号"
+    });
+    expect(buildApplicationReviewStrategyRequest(summary, "全部岗位")).toMatchObject({
+      activeApplications: 3,
+      appliedOrBeyond: 3,
+      scopeLabel: "全部岗位",
+      strategySuggestions: summary.strategySuggestions,
+      attributionSignals: expect.arrayContaining([
+        {
+          appliedOrBeyond: 1,
+          groupTitle: "公司类型",
+          interviewOrOffer: 1,
+          label: "金融",
+          replyCount: 1
+        }
+      ])
     });
     expect(summary.cityDistribution).toEqual([
       { count: 2, label: "上海", rate: 0.5 },

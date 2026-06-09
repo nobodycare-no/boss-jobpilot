@@ -1,6 +1,8 @@
 import type {
   Application,
   ApplicationEvent,
+  ApplicationReviewStrategyRecap,
+  ApplicationReviewStrategyRequest,
   ApplicationUpdateInput,
   ExperienceItem,
   ExperienceItemCreateInput,
@@ -46,6 +48,10 @@ type ApplicationListResponse = {
 
 type ApplicationEventListResponse = {
   items: ApplicationEvent[];
+};
+
+type ApplicationReviewStrategyResponse = {
+  item: ApplicationReviewStrategyRecap;
 };
 
 export type JobAnalysisResponse = {
@@ -277,4 +283,20 @@ export async function getApplicationEvents(id: string) {
   }
 
   return (await response.json()) as ApplicationEventListResponse;
+}
+
+export async function generateApplicationReviewStrategy(input: ApplicationReviewStrategyRequest) {
+  const response = await fetch(`${apiBaseUrl}/applications/review/strategy`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(input)
+  });
+
+  if (!response.ok) {
+    throw new Error("无法生成 AI 策略复盘");
+  }
+
+  return (await response.json()) as ApplicationReviewStrategyResponse;
 }

@@ -176,6 +176,45 @@ describe("job routes", () => {
     expect(applicationEventsResponse.json().items).toHaveLength(1);
     expect(applicationEventsResponse.json().items[0].type).toBe("status_changed");
 
+    const reviewStrategyResponse = await server.inject({
+      method: "POST",
+      url: "/applications/review/strategy",
+      payload: {
+        activeApplications: 1,
+        appliedOrBeyond: 1,
+        averageMatchScore: 88,
+        generatedPackages: 1,
+        interviewOrOffer: 0,
+        overdueFollowUps: 0,
+        replyCount: 0,
+        staleActiveApplications: 1,
+        totalJobs: 1,
+        scopeLabel: "全部岗位",
+        strategySuggestions: [
+          {
+            action: "为推进中的岗位补上明确的下次跟进时间。",
+            detail: "1 个岗位没有跟进提醒。",
+            priority: "high",
+            title: "补齐下次跟进"
+          }
+        ],
+        attributionSignals: [
+          {
+            appliedOrBeyond: 1,
+            groupTitle: "岗位类型",
+            interviewOrOffer: 0,
+            label: "AI / 算法",
+            replyCount: 0
+          }
+        ]
+      }
+    });
+
+    expect(reviewStrategyResponse.statusCode).toBe(200);
+    expect(reviewStrategyResponse.json().item.summary).toContain("全部岗位");
+    expect(reviewStrategyResponse.json().item.focus[0]).toContain("补上明确的下次跟进");
+    expect(reviewStrategyResponse.json().item.modelName).toBe("rule-based");
+
     const deleteResponse = await server.inject({
       method: "DELETE",
       url: `/jobs/${created.id}`

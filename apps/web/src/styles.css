@@ -479,6 +479,68 @@ button:disabled {
   color: #3e5558;
 }
 
+.review-ai-recap {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid #d8d0c3;
+  padding-top: 12px;
+}
+
+.review-ai-recap__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.review-ai-recap strong,
+.review-ai-recap__header strong {
+  color: #3e5558;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.review-ai-recap__header span {
+  color: #607073;
+  font-size: 11px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.review-ai-recap p {
+  margin: 0;
+  color: #263033;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.review-ai-recap > div:not(.review-ai-recap__header) {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.review-ai-recap section {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.review-ai-recap ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.review-ai-recap li {
+  color: #526165;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .review-distributions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1082,6 +1144,7 @@ button:disabled {
   .review-metrics,
   .review-controls,
   .review-strategy > div,
+  .review-ai-recap > div:not(.review-ai-recap__header),
   .review-distributions,
   .review-attribution,
   .version-pair,

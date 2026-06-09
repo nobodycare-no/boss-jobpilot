@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { generateGreetingDraft, promptVersions } from "./index";
+import {
+  generateApplicationReviewStrategyRecap,
+  generateGreetingDraft,
+  promptVersions
+} from "./index";
 
 describe("greeting draft generation", () => {
   it("generates a personalized greeting from job analysis and matched experience", () => {
@@ -49,5 +53,46 @@ describe("greeting draft generation", () => {
     expect(draft.message).toContain("AI resume tailoring workspace");
     expect(draft.selectedExperienceIds).toEqual(["exp-1"]);
     expect(draft.promptVersion).toBe(promptVersions.greetingWriter);
+  });
+});
+
+describe("application review strategy recap", () => {
+  it("generates a structured recap from review metrics and signals", () => {
+    const recap = generateApplicationReviewStrategyRecap({
+      activeApplications: 4,
+      appliedOrBeyond: 3,
+      averageMatchScore: 72,
+      generatedPackages: 2,
+      interviewOrOffer: 1,
+      overdueFollowUps: 1,
+      replyCount: 2,
+      staleActiveApplications: 1,
+      totalJobs: 5,
+      scopeLabel: "上海 / 优先投递",
+      strategySuggestions: [
+        {
+          action: "先处理逾期跟进。",
+          detail: "1 个岗位已经逾期。",
+          priority: "high",
+          title: "先处理逾期跟进"
+        }
+      ],
+      attributionSignals: [
+        {
+          appliedOrBeyond: 2,
+          groupTitle: "公司类型",
+          interviewOrOffer: 1,
+          label: "科技产品",
+          replyCount: 2
+        }
+      ]
+    });
+
+    expect(recap.summary).toContain("上海 / 优先投递");
+    expect(recap.summary).toContain("回复率 67%");
+    expect(recap.focus).toContain("先处理逾期跟进。");
+    expect(recap.experiments.join(" ")).toContain("补生成简历");
+    expect(recap.modelName).toBe("rule-based");
+    expect(recap.promptVersion).toBe(promptVersions.applicationReviewStrategist);
   });
 });

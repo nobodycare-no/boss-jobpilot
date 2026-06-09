@@ -3,6 +3,8 @@ import type { z } from "zod";
 import type {
   ApplicationCreateSchema,
   ApplicationEventSchema,
+  ApplicationReviewStrategyRecapSchema,
+  ApplicationReviewStrategyRequestSchema,
   ApplicationSchema,
   ApplicationUpdateSchema,
   ExperienceItemCreateSchema,
@@ -21,6 +23,10 @@ export type Application = z.infer<typeof ApplicationSchema>;
 export type ApplicationEvent = z.infer<typeof ApplicationEventSchema>;
 export type ApplicationCreateInput = z.input<typeof ApplicationCreateSchema>;
 export type ApplicationUpdateInput = z.input<typeof ApplicationUpdateSchema>;
+export type ApplicationReviewStrategyRequest = z.infer<
+  typeof ApplicationReviewStrategyRequestSchema
+>;
+export type ApplicationReviewStrategyRecap = z.infer<typeof ApplicationReviewStrategyRecapSchema>;
 export type ExperienceItem = z.infer<typeof ExperienceItemSchema>;
 export type ExperienceItemCreateInput = z.input<typeof ExperienceItemCreateSchema>;
 export type ExperienceItemUpdateInput = z.input<typeof ExperienceItemUpdateSchema>;

@@ -168,3 +168,42 @@ export const ApplicationUpdateSchema = z
   })
   .partial()
   .refine((value) => Object.keys(value).length > 0, "At least one field is required");
+
+export const ApplicationReviewStrategySuggestionSchema = z.object({
+  title: z.string().min(1),
+  detail: z.string().min(1),
+  action: z.string().min(1),
+  priority: z.enum(["high", "medium", "low"])
+});
+
+export const ApplicationReviewAttributionSignalSchema = z.object({
+  groupTitle: z.string().min(1),
+  label: z.string().min(1),
+  appliedOrBeyond: z.number().int().min(0),
+  replyCount: z.number().int().min(0),
+  interviewOrOffer: z.number().int().min(0)
+});
+
+export const ApplicationReviewStrategyRequestSchema = z.object({
+  activeApplications: z.number().int().min(0),
+  appliedOrBeyond: z.number().int().min(0),
+  averageMatchScore: z.number().int().min(0).max(100).optional(),
+  generatedPackages: z.number().int().min(0),
+  interviewOrOffer: z.number().int().min(0),
+  overdueFollowUps: z.number().int().min(0),
+  replyCount: z.number().int().min(0),
+  staleActiveApplications: z.number().int().min(0),
+  totalJobs: z.number().int().min(0),
+  scopeLabel: z.string().min(1).default("当前复盘范围"),
+  strategySuggestions: z.array(ApplicationReviewStrategySuggestionSchema).default([]),
+  attributionSignals: z.array(ApplicationReviewAttributionSignalSchema).default([])
+});
+
+export const ApplicationReviewStrategyRecapSchema = z.object({
+  summary: z.string().min(1),
+  focus: z.array(z.string()).default([]),
+  experiments: z.array(z.string()).default([]),
+  risks: z.array(z.string()).default([]),
+  modelName: z.string().min(1),
+  promptVersion: z.string().min(1)
+});

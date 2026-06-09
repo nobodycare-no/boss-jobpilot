@@ -21,6 +21,7 @@ import {
 import type {
   Application,
   ApplicationEvent,
+  ApplicationReviewStrategyRecap,
   ExperienceItem,
   JobAnalysis,
   JobPosting,
@@ -32,6 +33,7 @@ import {
   analyzeJob,
   createJob,
   deleteJob,
+  generateApplicationReviewStrategy,
   generateGreeting,
   generateResume,
   getApplicationEvents,
@@ -44,6 +46,7 @@ import {
   updateApplication
 } from "./api";
 import {
+  buildApplicationReviewStrategyRequest,
   buildApplicationReviewSummary,
   defaultApplicationReviewFilters,
   filterApplicationReviewJobs,
@@ -177,6 +180,9 @@ export function JobPool({ experiences }: JobPoolProps) {
   const [reviewFilters, setReviewFilters] = useState<ApplicationReviewFilters>(
     defaultApplicationReviewFilters
   );
+  const [strategyRecap, setStrategyRecap] = useState<ApplicationReviewStrategyRecap | null>(null);
+  const [isStrategyRecapLoading, setIsStrategyRecapLoading] = useState(false);
+  const [strategyRecapError, setStrategyRecapError] = useState<string | null>(null);
 
   const jobKeywords = useMemo(
     () =>
@@ -284,6 +290,7 @@ export function JobPool({ experiences }: JobPoolProps) {
       reviewJobs
     ]
   );
+  const reviewScopeLabel = useMemo(() => buildReviewScopeLabel(reviewFilters), [reviewFilters]);
   const visibleJobs = useMemo(
     () =>
       jobs.filter((job) => {
@@ -394,6 +401,46 @@ export function JobPool({ experiences }: JobPoolProps) {
   useEffect(() => {
     void refreshJobs();
   }, []);
+
+  useEffect(() => {
+    if (jobs.length === 0) {
+      setStrategyRecap(null);
+      setStrategyRecapError(null);
+      setIsStrategyRecapLoading(false);
+      return;
+    }
+
+    let isCancelled = false;
+
+    setIsStrategyRecapLoading(true);
+    setStrategyRecapError(null);
+
+    void generateApplicationReviewStrategy(
+      buildApplicationReviewStrategyRequest(reviewSummary, reviewScopeLabel)
+    )
+      .then((response) => {
+        if (!isCancelled) {
+          setStrategyRecap(response.item);
+        }
+      })
+      .catch((caughtError) => {
+        if (!isCancelled) {
+          setStrategyRecap(null);
+          setStrategyRecapError(
+            caughtError instanceof Error ? caughtError.message : "无法生成 AI 策略复盘"
+          );
+        }
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setIsStrategyRecapLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [jobs.length, reviewScopeLabel, reviewSummary]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -735,7 +782,10 @@ export function JobPool({ experiences }: JobPoolProps) {
             <ApplicationReviewPanel
               cityOptions={reviewCityOptions}
               filters={reviewFilters}
+              isStrategyRecapLoading={isStrategyRecapLoading}
               onFiltersChange={setReviewFilters}
+              strategyRecap={strategyRecap}
+              strategyRecapError={strategyRecapError}
               summary={reviewSummary}
               totalJobs={jobs.length}
             />
@@ -953,13 +1003,19 @@ function JobCard({
 function ApplicationReviewPanel({
   cityOptions,
   filters,
+  isStrategyRecapLoading,
   onFiltersChange,
+  strategyRecap,
+  strategyRecapError,
   summary,
   totalJobs
 }: {
   cityOptions: string[];
   filters: ApplicationReviewFilters;
+  isStrategyRecapLoading: boolean;
   onFiltersChange: (filters: ApplicationReviewFilters) => void;
+  strategyRecap: ApplicationReviewStrategyRecap | null;
+  strategyRecapError: string | null;
   summary: ApplicationReviewSummary;
   totalJobs: number;
 }) {
@@ -1111,6 +1167,12 @@ function ApplicationReviewPanel({
         </div>
       </div>
 
+      <ReviewStrategyRecapPanel
+        error={strategyRecapError}
+        isLoading={isStrategyRecapLoading}
+        recap={strategyRecap}
+      />
+
       <div className="review-distributions">
         <ReviewDistribution items={summary.recommendationDistribution} title="投递建议分布" />
         <ReviewDistribution items={summary.cityDistribution} title="城市分布" />
@@ -1146,6 +1208,68 @@ function ReviewStrategySuggestionItem({
       <p>{suggestion.detail}</p>
       <small>{suggestion.action}</small>
     </article>
+  );
+}
+
+function ReviewStrategyRecapPanel({
+  error,
+  isLoading,
+  recap
+}: {
+  error: string | null;
+  isLoading: boolean;
+  recap: ApplicationReviewStrategyRecap | null;
+}) {
+  if (isLoading && !recap) {
+    return (
+      <div className="review-ai-recap" aria-label="AI 策略复盘">
+        <strong>AI 策略复盘</strong>
+        <p>正在生成复盘摘要...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="review-ai-recap" aria-label="AI 策略复盘">
+        <strong>AI 策略复盘</strong>
+        <p>{error}</p>
+      </div>
+    );
+  }
+
+  if (!recap) {
+    return null;
+  }
+
+  return (
+    <div className="review-ai-recap" aria-label="AI 策略复盘">
+      <div className="review-ai-recap__header">
+        <strong>AI 策略复盘</strong>
+        <span>
+          {recap.modelName} · {recap.promptVersion}
+        </span>
+      </div>
+      <p>{recap.summary}</p>
+      <div>
+        <ReviewStrategyRecapList items={recap.focus} title="下一步重点" />
+        <ReviewStrategyRecapList items={recap.experiments} title="建议实验" />
+        <ReviewStrategyRecapList items={recap.risks} title="风险提醒" />
+      </div>
+    </div>
+  );
+}
+
+function ReviewStrategyRecapList({ items, title }: { items: string[]; title: string }) {
+  return (
+    <section>
+      <strong>{title}</strong>
+      <ul>
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -1709,6 +1833,28 @@ function formatPackageExperience(id: string, experience?: ExperienceItem) {
 
 function formatList(values: string[]) {
   return values.length > 0 ? values.join("、") : undefined;
+}
+
+function buildReviewScopeLabel(filters: ApplicationReviewFilters) {
+  const parts = [
+    filters.status === "all" ? undefined : boardStageLabels[filters.status],
+    getRecommendationScopeLabel(filters.recommendation),
+    filters.city === "all" ? undefined : filters.city
+  ].filter((part): part is string => Boolean(part));
+
+  return parts.length > 0 ? parts.join(" / ") : "全部岗位";
+}
+
+function getRecommendationScopeLabel(recommendation: ApplicationReviewRecommendationFilter) {
+  if (recommendation === "all") {
+    return undefined;
+  }
+
+  if (recommendation === "unanalyzed") {
+    return "未分析";
+  }
+
+  return recommendationLabels[recommendation];
 }
 
 function compactText(value: string, maxLength = 120) {

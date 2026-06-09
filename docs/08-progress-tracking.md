@@ -159,10 +159,6 @@ Accepted / Proposed / Rejected
 - `npm run build`
 - `git diff --check`
 - `codegraph sync .`
-- `git diff --check`
-- `codegraph sync .`
-- `git diff --check`
-- `codegraph sync .`
 
 ### Next
 
@@ -280,11 +276,6 @@ Accepted / Proposed / Rejected
 
 - `corepack pnpm --filter @boss-jobpilot/db test`
 - `corepack pnpm --filter @boss-jobpilot/api test`
-- `npm run typecheck`
-- `npm run test`
-- `npm run lint`
-- `npm run build`
-- `codegraph sync .`
 - `npm run typecheck`
 - `npm run test`
 - `npm run lint`
@@ -561,3 +552,30 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 接入 AI 策略复盘，基于真实投递结果给出下一轮投递策略。
+
+## 2026-06-09 更新 6
+
+### Done
+
+- `shared` 新增投递复盘策略请求和响应 schema，统一前后端数据结构。
+- `packages/ai` 新增 `generateApplicationReviewStrategyRecap`，可以基于复盘指标、规则建议和归因信号生成结构化策略复盘。
+- API 新增 `POST /applications/review/strategy`，返回复盘摘要、下一步重点、建议实验和风险提醒。
+- Web 投递复盘面板新增“AI 策略复盘”区域，会随当前复盘筛选范围自动刷新。
+- 当前模型名仍为 `rule-based`，真实 AI Provider 尚未接入。
+- 使用手册和迭代计划已同步更新 AI 策略复盘状态。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/ai test`
+- `corepack pnpm --filter @boss-jobpilot/web test`
+- `corepack pnpm --filter @boss-jobpilot/api test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+- `codegraph sync .`
+
+### Next
+
+- 接入真实 AI Provider，让岗位分析、简历生成、打招呼语和策略复盘都能切换到真实模型。

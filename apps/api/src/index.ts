@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 
 import Fastify from "fastify";
 
-import { generateGreetingDraft } from "@boss-jobpilot/ai";
+import { generateApplicationReviewStrategyRecap, generateGreetingDraft } from "@boss-jobpilot/ai";
 import {
   createApplicationRepository,
   createExperienceRepository,
@@ -18,6 +18,7 @@ import {
   ExperienceItemCreateSchema,
   ExperienceItemUpdateSchema,
   ApplicationUpdateSchema,
+  ApplicationReviewStrategyRequestSchema,
   JobPostingCreateSchema,
   JobPostingSchema,
   JobPostingUpdateSchema,
@@ -436,6 +437,21 @@ export function buildServer(options: BuildServerOptions = {}) {
 
     return {
       items: applications.listEventsByApplicationId(item.id)
+    };
+  });
+
+  server.post("/applications/review/strategy", async (request, reply) => {
+    const parsedReview = ApplicationReviewStrategyRequestSchema.safeParse(request.body);
+
+    if (!parsedReview.success) {
+      return reply.status(400).send({
+        error: "INVALID_APPLICATION_REVIEW",
+        details: parsedReview.error.flatten()
+      });
+    }
+
+    return {
+      item: generateApplicationReviewStrategyRecap(parsedReview.data)
     };
   });
 
