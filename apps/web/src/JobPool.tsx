@@ -11,6 +11,7 @@ import type {
   JobAnalysis,
   JobPosting,
   JobPostingCreateInput,
+  ResumeVariant,
   ResumeVersion
 } from "@boss-jobpilot/shared";
 
@@ -493,12 +494,12 @@ export function JobPool({ experiences }: JobPoolProps) {
     }
   }
 
-  async function handleGenerateResume(id: string) {
+  async function handleGenerateResume(id: string, variant: ResumeVariant) {
     setError(null);
     setFeedback(null);
 
     try {
-      const response = await generateResume(id);
+      const response = await generateResume(id, variant);
       setResumeByJobId((current) => ({
         ...current,
         [id]: response.item

@@ -130,7 +130,8 @@ export function createAiProviderFromEnv(env: Record<string, string | undefined>)
 
   return createOpenAiCompatibleProvider({
     apiKey,
-    baseUrl: env.AI_API_BASE_URL ?? env.AI_BASE_URL ?? env.PACKY_API_BASE_URL ?? defaultPackyApiBaseUrl,
+    baseUrl:
+      env.AI_API_BASE_URL ?? env.AI_BASE_URL ?? env.PACKY_API_BASE_URL ?? defaultPackyApiBaseUrl,
     model: env.AI_MODEL ?? env.PACKY_API_MODEL ?? defaultPackyApiModel,
     name: env.AI_PROVIDER_NAME ?? env.AI_PROVIDER ?? "packyapi"
   });
@@ -309,7 +310,7 @@ export async function generateResumeVersionWithProvider({
         role: "user",
         content: JSON.stringify({
           instruction:
-            "Write a tailored Chinese Markdown resume for this job. Use only the provided real candidate experiences. Do not invent education, employer names, project names, metrics, or experience ids. Keep the Markdown concise but not limited to one page when more relevant evidence is useful.",
+            "Write a tailored Chinese Markdown resume for this job and requested variant. Use only the provided real candidate experiences. Do not invent education, employer names, project names, metrics, or experience ids. Keep quick concise, formal complete, and technical focused on implementation evidence.",
           job,
           analysis,
           candidateExperiences: selectedExperiences,
@@ -324,7 +325,7 @@ export async function generateResumeVersionWithProvider({
     ...fallbackResume,
     ...generated,
     jobId: job.id,
-    variant: "tailored",
+    variant: fallbackResume.variant,
     selectedExperienceIds: sanitizeExperienceIds(
       generated.selectedExperienceIds ?? fallbackResume.selectedExperienceIds ?? [],
       experiences
@@ -412,7 +413,9 @@ export function generateApplicationReviewStrategyRecap(
   const replyRate = formatRate(input.replyCount, input.appliedOrBeyond);
   const interviewRate = formatRate(input.interviewOrOffer, input.appliedOrBeyond);
   const matchText =
-    input.averageMatchScore === undefined ? "暂无匹配分样本" : `平均匹配分 ${input.averageMatchScore}/100`;
+    input.averageMatchScore === undefined
+      ? "暂无匹配分样本"
+      : `平均匹配分 ${input.averageMatchScore}/100`;
   const strongestSignal = input.attributionSignals[0];
   const primarySuggestion = input.strategySuggestions[0];
   const focus = [
@@ -449,7 +452,10 @@ export function generateApplicationReviewStrategyRecap(
 
   return {
     summary: `${input.scopeLabel}包含 ${input.totalJobs} 个岗位，${input.appliedOrBeyond} 个已投递及以后，回复率 ${replyRate}，面试转化 ${interviewRate}，${matchText}。`,
-    focus: focus.length > 0 ? focus.slice(0, 4) : ["先积累岗位分析、定制简历和投递状态，再进行下一轮策略判断。"],
+    focus:
+      focus.length > 0
+        ? focus.slice(0, 4)
+        : ["先积累岗位分析、定制简历和投递状态，再进行下一轮策略判断。"],
     experiments:
       experiments.length > 0
         ? experiments.slice(0, 3)
@@ -516,7 +522,9 @@ function selectExperiences(experiences: ExperienceItem[], matchedExperienceIds: 
 function sanitizeExperienceIds(ids: string[], experiences: ExperienceItem[]) {
   const availableIds = new Set(experiences.map((experience) => experience.id));
 
-  return unique(ids).filter((id) => availableIds.has(id)).slice(0, 5);
+  return unique(ids)
+    .filter((id) => availableIds.has(id))
+    .slice(0, 5);
 }
 
 function summarizeExperience(experience: ExperienceItem) {

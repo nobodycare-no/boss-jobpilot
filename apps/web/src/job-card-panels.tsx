@@ -170,6 +170,7 @@ export function VersionComparePanel({
               </button>
             ),
             body: [
+              latestResume.variant,
               latestResume.changeSummary,
               `${latestResume.markdownContent.length} 字符`,
               `经历：${latestResume.selectedExperienceIds.length}`
@@ -192,6 +193,7 @@ export function VersionComparePanel({
               </button>
             ),
             body: [
+              previousResume.variant,
               previousResume.changeSummary,
               `${previousResume.markdownContent.length} 字符`,
               `经历：${previousResume.selectedExperienceIds.length}`

@@ -6,6 +6,7 @@ import type {
   ExperienceItem,
   JobAnalysis,
   JobPosting,
+  ResumeVariant,
   ResumeVersion
 } from "@boss-jobpilot/shared";
 
@@ -27,7 +28,7 @@ export type JobCardProps = {
   onAnalyze: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onGenerateGreeting: (id: string) => Promise<void>;
-  onGenerateResume: (id: string) => Promise<void>;
+  onGenerateResume: (id: string, variant: ResumeVariant) => Promise<void>;
   onCopyText: (label: string, value: string) => Promise<void>;
   onUpdateFollowUp: (applicationId: string, nextFollowUpAt: string | null) => Promise<void>;
   onUpdateApplicationStatus: (
@@ -71,14 +72,7 @@ export function JobCard({
           >
             <BarChart3 size={17} />
           </button>
-          <button
-            type="button"
-            className="icon-button"
-            onClick={() => void onGenerateResume(job.id)}
-            title="生成定制简历"
-          >
-            <FileText size={17} />
-          </button>
+          <ResumeVariantActions jobId={job.id} onGenerateResume={onGenerateResume} />
           <button
             type="button"
             className="icon-button"
@@ -140,5 +134,40 @@ export function JobCard({
         resumes={resumeHistory}
       />
     </article>
+  );
+}
+
+function ResumeVariantActions({
+  jobId,
+  onGenerateResume
+}: {
+  jobId: string;
+  onGenerateResume: (id: string, variant: ResumeVariant) => Promise<void>;
+}) {
+  const variants = [
+    { label: "快", title: "生成快投版简历", variant: "quick" },
+    { label: "正", title: "生成正式版简历", variant: "formal" },
+    { label: "技", title: "生成技术版简历", variant: "technical" }
+  ] satisfies Array<{
+    label: string;
+    title: string;
+    variant: ResumeVariant;
+  }>;
+
+  return (
+    <div className="resume-variant-actions" aria-label="生成简历版本">
+      {variants.map((item) => (
+        <button
+          type="button"
+          className="icon-button"
+          key={item.variant}
+          onClick={() => void onGenerateResume(jobId, item.variant)}
+          title={item.title}
+        >
+          <FileText size={15} />
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </div>
   );
 }

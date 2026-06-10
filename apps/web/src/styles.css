@@ -1004,6 +1004,17 @@ button:disabled {
   flex: 0 0 auto;
 }
 
+.resume-variant-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.resume-variant-actions .icon-button {
+  width: 42px;
+  gap: 2px;
+  font-size: 12px;
+}
+
 .experience-card h3 {
   margin: 10px 0 0;
   font-size: 20px;
@@ -1406,6 +1417,7 @@ button:disabled {
   }
 
   .card-actions {
+    flex-wrap: wrap;
     justify-content: flex-end;
   }
 }

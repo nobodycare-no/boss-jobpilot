@@ -10,6 +10,7 @@ import type {
   JobAnalysis,
   JobPosting,
   JobPostingCreateInput,
+  ResumeVariant,
   ResumeVersion
 } from "@boss-jobpilot/shared";
 
@@ -231,9 +232,13 @@ export async function getLatestJobAnalysis(id: string) {
   return (await response.json()) as LatestJobAnalysisResponse;
 }
 
-export async function generateResume(id: string) {
+export async function generateResume(id: string, variant: ResumeVariant = "formal") {
   const response = await fetch(`${apiBaseUrl}/jobs/${id}/resumes`, {
-    method: "POST"
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ variant })
   });
 
   if (!response.ok) {

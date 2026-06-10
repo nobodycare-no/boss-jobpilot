@@ -16,6 +16,7 @@ export const EvidenceLevelSchema = z.enum([
 ]);
 
 export const OwnershipLevelSchema = z.enum(["led", "owned", "participated", "assisted"]);
+export const ResumeVariantSchema = z.enum(["quick", "formal", "technical"]);
 
 export const ExperienceItemSchema = z.object({
   id: z.string().min(1),

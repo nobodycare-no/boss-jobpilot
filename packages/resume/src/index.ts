@@ -1,4 +1,4 @@
-import type { ExperienceItem, JobAnalysis, JobPosting } from "@boss-jobpilot/shared";
+import type { ExperienceItem, JobAnalysis, JobPosting, ResumeVariant } from "@boss-jobpilot/shared";
 
 export type ResumeDraft = {
   headline: string;
@@ -6,25 +6,50 @@ export type ResumeDraft = {
   skills: string[];
   experiences: ExperienceItem[];
   changeSummary: string;
+  variant: ResumeVariant;
 };
 
 export type TailoredResumeInput = {
   job: JobPosting;
   analysis: JobAnalysis;
   experiences: ExperienceItem[];
+  variant?: ResumeVariant;
 };
 
-export function generateTailoredResumeDraft({ job, analysis, experiences }: TailoredResumeInput) {
-  const selectedExperiences = selectExperiences(experiences, analysis.matchedExperienceIds);
+const variantLabels = {
+  formal: "正式版",
+  quick: "快投版",
+  technical: "技术版"
+} satisfies Record<ResumeVariant, string>;
+
+const variantLimits = {
+  formal: { experienceCount: 4, skillCount: 16 },
+  quick: { experienceCount: 2, skillCount: 10 },
+  technical: { experienceCount: 3, skillCount: 18 }
+} satisfies Record<ResumeVariant, { experienceCount: number; skillCount: number }>;
+
+export function generateTailoredResumeDraft({
+  job,
+  analysis,
+  experiences,
+  variant = "formal"
+}: TailoredResumeInput) {
+  const variantLimit = variantLimits[variant];
+  const selectedExperiences = selectExperiences(
+    experiences,
+    analysis.matchedExperienceIds,
+    variantLimit.experienceCount
+  );
   const skills = unique([
     ...analysis.requiredSkills,
     ...analysis.bonusSkills,
     ...analysis.matchedKeywords,
     ...selectedExperiences.flatMap((experience) => experience.techStack)
-  ]).slice(0, 16);
+  ]).slice(0, variantLimit.skillCount);
   const companyText = job.companyName ? `${job.companyName} ` : "";
   const roleText = `${companyText}${job.title}`.trim();
   const summaryParts = [
+    buildVariantSummary(variant),
     `面向 ${roleText} 定制，重点突出与岗位要求直接相关的项目证据。`,
     analysis.resumeStrategy,
     selectedExperiences.length > 0
@@ -33,11 +58,12 @@ export function generateTailoredResumeDraft({ job, analysis, experiences }: Tail
   ];
 
   return {
-    headline: `${job.title} - 定制简历草稿`,
+    headline: `${job.title} - ${variantLabels[variant]}简历草稿`,
     summary: summaryParts.filter(Boolean).join(" "),
     skills,
     experiences: selectedExperiences,
-    changeSummary: buildChangeSummary(job, analysis, selectedExperiences)
+    changeSummary: buildChangeSummary(job, analysis, selectedExperiences, variant),
+    variant
   } satisfies ResumeDraft;
 }
 
@@ -67,26 +93,33 @@ function renderExperience(experience: ExperienceItem) {
   return lines.filter(Boolean).join("\n");
 }
 
-function selectExperiences(experiences: ExperienceItem[], matchedExperienceIds: string[]) {
+function selectExperiences(
+  experiences: ExperienceItem[],
+  matchedExperienceIds: string[],
+  limit: number
+) {
   const experienceById = new Map(experiences.map((experience) => [experience.id, experience]));
   const matched = matchedExperienceIds
     .map((id) => experienceById.get(id))
     .filter((experience): experience is ExperienceItem => Boolean(experience));
 
   if (matched.length > 0) {
-    return matched;
+    return matched.slice(0, limit);
   }
 
-  return experiences.filter((experience) => experience.evidenceLevel !== "do_not_use").slice(0, 3);
+  return experiences
+    .filter((experience) => experience.evidenceLevel !== "do_not_use")
+    .slice(0, limit);
 }
 
 function buildChangeSummary(
   job: JobPosting,
   analysis: JobAnalysis,
-  selectedExperiences: ExperienceItem[]
+  selectedExperiences: ExperienceItem[],
+  variant: ResumeVariant
 ) {
   const parts = [
-    `围绕 ${job.title} 调整标题和摘要。`,
+    `生成${variantLabels[variant]}，围绕 ${job.title} 调整标题和摘要。`,
     analysis.requiredSkills.length > 0
       ? `强化 ${analysis.requiredSkills.slice(0, 6).join("、")} 等必需技能。`
       : "",
@@ -96,6 +129,18 @@ function buildChangeSummary(
   ];
 
   return parts.filter(Boolean).join(" ");
+}
+
+function buildVariantSummary(variant: ResumeVariant) {
+  if (variant === "quick") {
+    return "快投版控制内容密度，适合快速粘贴到招聘平台或作为一页简历基础。";
+  }
+
+  if (variant === "technical") {
+    return "技术版强化技术栈、职责和可面试追问的项目证据。";
+  }
+
+  return "正式版保留更完整的项目证据，适合导出为两页左右的正式投递简历。";
 }
 
 function unique(values: string[]) {

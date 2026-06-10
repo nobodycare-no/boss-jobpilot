@@ -900,3 +900,34 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 继续完善插件侧边栏/投递包展示，或补齐里程碑 4 的多版本打招呼语与简历 variant 选择。
+
+## 2026-06-10 更新 20
+
+### Done
+
+- 里程碑 4 补齐简历 variant：共享类型新增 `ResumeVariant`，支持 `quick`、`formal`、`technical`。
+- `packages/resume` 会根据 variant 生成不同定位的 Markdown 简历草稿：快投版更短，正式版更完整，技术版突出实现证据。
+- API `POST /jobs/:id/resumes` 支持请求体 `{ "variant": "quick" | "formal" | "technical" }`，未传时默认生成正式版。
+- AI Provider 简历生成保留用户选择的 variant，防止模型覆盖版本类型。
+- Web 岗位卡片的简历入口升级为“快 / 正 / 技”三个版本按钮，分别生成快投版、正式版和技术版。
+- API、AI 和 resume 单元测试已覆盖 variant 生成与 Provider 兜底。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/shared typecheck`
+- `corepack pnpm --filter @boss-jobpilot/resume test`
+- `corepack pnpm --filter @boss-jobpilot/ai test`
+- `corepack pnpm --filter @boss-jobpilot/api test`
+- `corepack pnpm --filter @boss-jobpilot/api typecheck`
+- `corepack pnpm --filter @boss-jobpilot/web typecheck`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+- `codegraph sync .`
+- `codegraph status .`
+
+### Next
+
+- 继续补齐里程碑 4 的“至少 3 个打招呼语版本”，或完善简历在线编辑和导出。

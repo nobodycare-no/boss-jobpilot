@@ -158,6 +158,19 @@ describe("job routes", () => {
     expect(resumeResponse.statusCode).toBe(201);
     expect(resumeResponse.json().item.markdownContent).toContain("AI Frontend Engineer");
     expect(resumeResponse.json().item.selectedExperienceIds).toEqual(["exp-ai-frontend"]);
+    expect(resumeResponse.json().item.variant).toBe("formal");
+
+    const quickResumeResponse = await server.inject({
+      method: "POST",
+      url: `/jobs/${created.id}/resumes`,
+      payload: {
+        variant: "quick"
+      }
+    });
+
+    expect(quickResumeResponse.statusCode).toBe(201);
+    expect(quickResumeResponse.json().item.variant).toBe("quick");
+    expect(quickResumeResponse.json().item.markdownContent).toContain("快投版");
 
     const latestResumeResponse = await server.inject({
       method: "GET",
@@ -165,7 +178,7 @@ describe("job routes", () => {
     });
 
     expect(latestResumeResponse.statusCode).toBe(200);
-    expect(latestResumeResponse.json().item.id).toBe(resumeResponse.json().item.id);
+    expect(latestResumeResponse.json().item.id).toBe(quickResumeResponse.json().item.id);
 
     const resumeListResponse = await server.inject({
       method: "GET",
@@ -173,7 +186,7 @@ describe("job routes", () => {
     });
 
     expect(resumeListResponse.statusCode).toBe(200);
-    expect(resumeListResponse.json().items).toHaveLength(1);
+    expect(resumeListResponse.json().items).toHaveLength(2);
 
     const greetingResponse = await server.inject({
       method: "POST",
@@ -183,7 +196,7 @@ describe("job routes", () => {
     expect(greetingResponse.statusCode).toBe(201);
     expect(greetingResponse.json().item.status).toBe("draft");
     expect(greetingResponse.json().item.greetingMessage).toContain("AI Frontend Engineer");
-    expect(greetingResponse.json().item.resumeVersionId).toBe(resumeResponse.json().item.id);
+    expect(greetingResponse.json().item.resumeVersionId).toBe(quickResumeResponse.json().item.id);
 
     const latestApplicationResponse = await server.inject({
       method: "GET",
@@ -383,7 +396,7 @@ describe("job routes", () => {
     expect(resumeResponse.statusCode).toBe(201);
     expect(resumeResponse.json().item.markdownContent).toContain("Provider generated resume");
     expect(resumeResponse.json().item.selectedExperienceIds).toEqual(["exp-provider"]);
-    expect(resumeResponse.json().item.variant).toBe("tailored");
+    expect(resumeResponse.json().item.variant).toBe("formal");
 
     const greetingResponse = await providerServer.inject({
       method: "POST",

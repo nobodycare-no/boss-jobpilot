@@ -33,8 +33,10 @@ import {
   JobPostingCreateSchema,
   JobPostingSchema,
   JobPostingUpdateSchema,
+  ResumeVariantSchema,
   type AiGenerationRunCreateInput,
   type CandidatePreference,
+  type ResumeVariant,
   type ResumeVersionCreateInput
 } from "@boss-jobpilot/shared";
 
@@ -341,6 +343,7 @@ export function buildServer(options: BuildServerOptions = {}) {
   });
 
   server.post<{ Params: { id: string } }>("/jobs/:id/resumes", async (request, reply) => {
+    const variant = parseResumeVariant(request.body);
     const job = jobs.get(request.params.id);
 
     if (!job) {
@@ -361,11 +364,12 @@ export function buildServer(options: BuildServerOptions = {}) {
     const draft = generateTailoredResumeDraft({
       job,
       analysis,
-      experiences: currentExperiences
+      experiences: currentExperiences,
+      variant
     });
     const fallbackResume: ResumeVersionCreateInput = {
       jobId: job.id,
-      variant: "tailored",
+      variant,
       markdownContent: renderResumeMarkdown(draft),
       selectedExperienceIds: draft.experiences.map((experience) => experience.id),
       changeSummary: draft.changeSummary
@@ -575,6 +579,14 @@ export function buildServer(options: BuildServerOptions = {}) {
   return server;
 }
 
+function parseResumeVariant(body: unknown): ResumeVariant {
+  if (typeof body !== "object" || body === null || !("variant" in body)) {
+    return "formal";
+  }
+
+  return ResumeVariantSchema.catch("formal").parse((body as { variant?: unknown }).variant);
+}
+
 function analysisToLegacyScore(analysis: {
   matchScore: number;
   recommendation: "prioritize" | "apply" | "cautious" | "skip";
@@ -678,7 +690,8 @@ function getAiGenerationMetadata(
   const maybeMetadata = value as { modelName?: unknown; promptVersion?: unknown };
 
   return {
-    modelName: typeof maybeMetadata.modelName === "string" ? maybeMetadata.modelName : fallback.modelName,
+    modelName:
+      typeof maybeMetadata.modelName === "string" ? maybeMetadata.modelName : fallback.modelName,
     promptVersion:
       typeof maybeMetadata.promptVersion === "string"
         ? maybeMetadata.promptVersion

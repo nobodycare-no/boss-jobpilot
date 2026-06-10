@@ -129,7 +129,7 @@ describe("resume version generation", () => {
       ],
       fallbackResume: {
         jobId: "job-1",
-        variant: "tailored",
+        variant: "technical",
         markdownContent: "# Rule based resume",
         selectedExperienceIds: ["exp-1"],
         changeSummary: "Rule based change summary."
@@ -150,7 +150,7 @@ describe("resume version generation", () => {
     });
 
     expect(resume.jobId).toBe("job-1");
-    expect(resume.variant).toBe("tailored");
+    expect(resume.variant).toBe("technical");
     expect(resume.markdownContent).toContain("Provider generated resume");
     expect(resume.selectedExperienceIds).toEqual(["exp-1"]);
     expect(resume.changeSummary).toContain("Provider emphasized");
@@ -250,7 +250,8 @@ describe("greeting draft generation", () => {
         name: "test-provider",
         async generateJson<T>() {
           return {
-            message: "您好，我做过 AI resume tailoring workspace，和岗位 React、TypeScript 要求匹配，想进一步沟通。",
+            message:
+              "您好，我做过 AI resume tailoring workspace，和岗位 React、TypeScript 要求匹配，想进一步沟通。",
             selectedExperienceIds: ["exp-1"],
             highlights: ["React", "TypeScript"],
             modelName: "test-model",
@@ -343,7 +344,9 @@ describe("application review strategy recap", () => {
 
 describe("OpenAI compatible provider", () => {
   it("reports an unconfigured provider health state", async () => {
-    await expect(checkAiProviderHealth(undefined, new Date("2026-06-09T00:00:00.000Z"))).resolves.toEqual({
+    await expect(
+      checkAiProviderHealth(undefined, new Date("2026-06-09T00:00:00.000Z"))
+    ).resolves.toEqual({
       checkedAt: "2026-06-09T00:00:00.000Z",
       configured: false,
       message: "AI Provider 未配置，将使用本地规则版生成。",
