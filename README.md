@@ -35,7 +35,7 @@
 - [Codex 开发说明](docs/10-dev-notes-for-codex.md)
 - [当前软件使用手册](docs/11-user-guide.md)
 
-## Target MVP
+## MVP Roadmap
 
 第一版目标：
 
@@ -122,7 +122,7 @@ corepack pnpm build
 - `apps/api`：本地 Fastify API。
 - `apps/extension`：Chrome 插件骨架。
 - `packages/shared`：共享 Zod schema 和类型。
-- `packages/db`：Drizzle SQLite schema。
+- `packages/db`：SQLite schema、初始化和仓储层。
 - `packages/ai`：AI Provider 和 Prompt 版本骨架。
 - `packages/resume`：简历 Markdown 生成逻辑。
 - `packages/scoring`：岗位匹配评分逻辑。

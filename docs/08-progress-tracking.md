@@ -782,3 +782,24 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 为 `GET /ai/generation-runs` 增加 API 级查询参数和分页，避免记录增长后前端一次性筛选过多历史数据。
+
+## 2026-06-10 更新 15
+
+### Done
+
+- 完成一次项目架构和范围审查，确认当前实现仍保持本地优先 monorepo 架构：Web 工作台、Chrome 插件、本地 API、SQLite 仓储、共享类型和 AI Provider 层边界清晰。
+- 确认近期 AI Provider 健康检查和 AI 生成运行记录服务于 PackyAPI 接入、降级排查和 Prompt 版本追踪，不属于偏离主线的低价值功能。
+- 清理 `.tmp` 验证残留，保持工作区不受临时日志和 SQLite 文件干扰。
+- 收敛技术栈、数据模型、README 和产品需求文档，区分“当前已落地实现”和“后续路线图”，避免后续误以为 Tailwind/shadcn、FTS/向量检索、用户偏好表、技能证据表已经落地。
+
+### Verification
+
+- `git status --short`
+- `rg --files`
+- `rg -n "Tailwind|shadcn|Drizzle|FTS5|sqlite-vec|user_profile|skill_evidence|完整投递复盘 UI|Drizzle SQLite schema|Target MVP|用户求职目标和偏好配置" README.md docs package.json apps packages`
+- `git diff --check`
+- `codegraph sync .`
+
+### Next
+
+- 优先把 `apps/web/src/JobPool.tsx` 中稳定的面板组件拆出为独立文件，降低单文件维护风险；该任务应作为专门重构进行，避免和业务功能迭代混在一起。
