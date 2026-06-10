@@ -19,6 +19,14 @@ type LatestApplicationResponse = {
   item: Application | null;
 };
 
+type ApplicationPackageResponse = {
+  item: {
+    generatedAt: string;
+    jobId: string;
+    markdownContent: string;
+  };
+};
+
 type MatchedApplicationPackage = {
   application: Application;
   job: JobPosting;
@@ -28,6 +36,9 @@ export default function Popup() {
   const [state, setState] = useState<PopupState>("idle");
   const [message, setMessage] = useState("打开 Boss 岗位页后，可保存岗位或读取本地打招呼语。");
   const [matchedPackage, setMatchedPackage] = useState<MatchedApplicationPackage | null>(null);
+  const [applicationPackage, setApplicationPackage] = useState<ApplicationPackageResponse["item"] | null>(
+    null
+  );
 
   async function captureCurrentJob() {
     setState("loading");
@@ -44,6 +55,7 @@ export default function Popup() {
       }
 
       setMatchedPackage(null);
+      setApplicationPackage(null);
       setState("saved");
       setMessage("岗位已保存到本地岗位池。回到 Web 工作台生成简历和打招呼语后，可在这里读取。");
     } catch (error) {
@@ -77,6 +89,7 @@ export default function Popup() {
         application: latestApplication.item,
         job: matchedJob
       });
+      setApplicationPackage(null);
       setState("ready");
       setMessage(`已找到：${matchedJob.title} · ${matchedJob.companyName ?? "未填写公司"}`);
     } catch (error) {
@@ -96,6 +109,47 @@ export default function Popup() {
       setMessage("打招呼语已复制。");
     } catch (error) {
       showError(error, "复制失败，请在 Web 工作台手动复制");
+    }
+  }
+
+  async function loadApplicationPackage() {
+    setState("loading");
+    setMessage("正在匹配本地岗位并生成投递包...");
+
+    try {
+      const tabId = await getActiveTabId();
+      const currentJob = await extractCurrentJob(tabId);
+      const jobs = await fetchJson<JobListResponse>("/jobs");
+      const matchedJob = findMatchingJob(currentJob, jobs.items);
+
+      if (!matchedJob) {
+        throw new Error("本地岗位池还没有匹配当前页面的岗位，请先保存当前岗位。");
+      }
+
+      const response = await fetchJson<ApplicationPackageResponse>(
+        `/jobs/${matchedJob.id}/application-package`
+      );
+
+      setApplicationPackage(response.item);
+      setState("ready");
+      setMessage(`投递包已准备：${matchedJob.title} · ${matchedJob.companyName ?? "未填写公司"}`);
+    } catch (error) {
+      setApplicationPackage(null);
+      showError(error, "读取投递包失败");
+    }
+  }
+
+  async function copyApplicationPackage() {
+    if (!applicationPackage) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(applicationPackage.markdownContent);
+      setState("copied");
+      setMessage("投递包已复制。");
+    } catch (error) {
+      showError(error, "复制投递包失败，请回到 Web 工作台手动复制。");
     }
   }
 
@@ -154,6 +208,24 @@ export default function Popup() {
         </section>
       ) : null}
 
+      {applicationPackage ? (
+        <section
+          style={{
+            marginTop: 12,
+            padding: 10,
+            border: "1px solid #d8e3e5",
+            borderRadius: 6,
+            background: "#f7faf9"
+          }}
+        >
+          <strong style={{ display: "block", marginBottom: 6 }}>投递包</strong>
+          <p style={{ margin: 0, maxHeight: 96, overflow: "auto", lineHeight: 1.55 }}>
+            {applicationPackage.markdownContent.slice(0, 240)}
+            {applicationPackage.markdownContent.length > 240 ? "..." : ""}
+          </p>
+        </section>
+      ) : null}
+
       <div style={{ display: "grid", gap: 8, marginTop: 14 }}>
         <button
           type="button"
@@ -170,6 +242,14 @@ export default function Popup() {
           style={secondaryButtonStyle}
         >
           读取本地打招呼语
+        </button>
+        <button
+          type="button"
+          onClick={() => void loadApplicationPackage()}
+          disabled={state === "loading"}
+          style={secondaryButtonStyle}
+        >
+          读取本地投递包
         </button>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           <button
@@ -189,6 +269,14 @@ export default function Popup() {
             填入页面
           </button>
         </div>
+        <button
+          type="button"
+          onClick={() => void copyApplicationPackage()}
+          disabled={!applicationPackage || state === "loading"}
+          style={secondaryButtonStyle}
+        >
+          复制投递包
+        </button>
       </div>
     </main>
   );

@@ -35,10 +35,16 @@ import {
   JobPostingUpdateSchema,
   GreetingVariantSchema,
   ResumeVariantSchema,
+  type Application,
+  type ApplicationEvent,
   type AiGenerationRunCreateInput,
   type CandidatePreference,
+  type ExperienceItem,
   type GreetingVariant,
+  type JobAnalysis,
+  type JobPosting,
   type ResumeVariant,
+  type ResumeVersion,
   type ResumeVersionCreateInput
 } from "@boss-jobpilot/shared";
 
@@ -59,6 +65,30 @@ const defaultCandidatePreference: CandidatePreference = {
   targetCities: [],
   preferredKeywords: ["React", "TypeScript", "AI", "Node.js"],
   blockedKeywords: ["外包", "驻场", "培训"]
+};
+
+const applicationStatusLabels: Record<Application["status"], string> = {
+  applied: "已投递",
+  closed: "已关闭",
+  draft: "草稿",
+  greeted: "已打招呼",
+  interview: "面试中",
+  offer: "Offer",
+  rejected: "已拒绝",
+  replied: "已回复"
+};
+
+const greetingVariantLabels: Record<GreetingVariant, string> = {
+  direct: "主动版",
+  evidence: "证据版",
+  polite: "礼貌版"
+};
+
+const recommendationLabels: Record<JobAnalysis["recommendation"], string> = {
+  apply: "可以投递",
+  cautious: "谨慎投递",
+  prioritize: "优先投递",
+  skip: "跳过"
 };
 
 export function buildServer(options: BuildServerOptions = {}) {
@@ -515,6 +545,39 @@ export function buildServer(options: BuildServerOptions = {}) {
     };
   });
 
+  server.get<{ Params: { id: string } }>("/jobs/:id/application-package", async (request, reply) => {
+    const job = jobs.get(request.params.id);
+
+    if (!job) {
+      return reply.status(404).send({
+        error: "JOB_NOT_FOUND"
+      });
+    }
+
+    const analysis = jobAnalyses.getLatestByJobId(job.id);
+    const resume = resumeVersions.getLatestByJobId(job.id);
+    const application = applications.getLatestByJobId(job.id);
+    const events = application ? applications.listEventsByApplicationId(application.id) : [];
+    const experienceById = new Map(
+      experiences.list().map((experience) => [experience.id, experience])
+    );
+
+    return {
+      item: {
+        generatedAt: new Date().toISOString(),
+        jobId: job.id,
+        markdownContent: buildApplicationPackageMarkdown({
+          analysis,
+          application,
+          events,
+          experienceById,
+          job,
+          resume
+        })
+      }
+    };
+  });
+
   server.patch<{ Params: { id: string } }>("/applications/:id", async (request, reply) => {
     const parsedApplication = ApplicationUpdateSchema.safeParse(request.body);
 
@@ -599,6 +662,168 @@ function parseGreetingVariant(body: unknown): GreetingVariant {
   }
 
   return GreetingVariantSchema.catch("evidence").parse((body as { variant?: unknown }).variant);
+}
+
+function buildApplicationPackageMarkdown({
+  analysis,
+  application,
+  events,
+  experienceById,
+  job,
+  resume
+}: {
+  analysis?: JobAnalysis;
+  application?: Application;
+  events: ApplicationEvent[];
+  experienceById: Map<string, ExperienceItem>;
+  job: JobPosting;
+  resume?: ResumeVersion;
+}) {
+  const sections = [
+    `# ${job.title} - 投递包`,
+    formatPackageSection("岗位信息", [
+      ["平台", job.platform],
+      ["公司", job.companyName],
+      ["城市", job.city],
+      ["薪资", job.salaryText],
+      ["经验", job.experienceRequirement],
+      ["学历", job.educationRequirement],
+      ["链接", job.url],
+      ["采集时间", formatDateTime(job.capturedAt)]
+    ]),
+    `## JD\n\n${job.jdRaw || "未填写"}`
+  ];
+
+  if (analysis) {
+    sections.push(
+      formatPackageSection("岗位分析", [
+        ["匹配分", `${analysis.matchScore}/100`],
+        ["投递建议", recommendationLabels[analysis.recommendation]],
+        ["匹配关键词", formatList(analysis.matchedKeywords)],
+        ["必需技能", formatList(analysis.requiredSkills)],
+        ["加分技能", formatList(analysis.bonusSkills)],
+        ["风险信号", formatList(analysis.riskFlags)],
+        ["简历策略", analysis.resumeStrategy],
+        ["分析时间", formatDateTime(analysis.createdAt)]
+      ])
+    );
+
+    const matchedExperiences = analysis.matchedExperienceIds
+      .map((id) => formatPackageExperience(id, experienceById.get(id)))
+      .join("\n\n");
+
+    sections.push(`## 匹配经历\n\n${matchedExperiences || "暂无匹配经历"}`);
+  } else {
+    sections.push("## 岗位分析\n\n尚未生成岗位分析。");
+  }
+
+  if (resume) {
+    sections.push(
+      formatPackageSection("定制简历元信息", [
+        ["版本", resume.variant],
+        ["生成时间", formatDateTime(resume.createdAt)],
+        ["选用经历", formatList(resume.selectedExperienceIds)],
+        ["变更摘要", resume.changeSummary]
+      ]),
+      `## Markdown 简历\n\n${resume.markdownContent}`
+    );
+  } else {
+    sections.push("## Markdown 简历\n\n尚未生成定制简历。");
+  }
+
+  if (application) {
+    sections.push(
+      formatPackageSection("打招呼语与投递状态", [
+        ["话术版本", greetingVariantLabels[application.greetingVariant]],
+        ["状态", applicationStatusLabels[application.status]],
+        ["创建时间", formatDateTime(application.createdAt)],
+        ["更新时间", formatDateTime(application.updatedAt)],
+        ["投递时间", application.appliedAt ? formatDateTime(application.appliedAt) : undefined],
+        [
+          "下次跟进",
+          application.nextFollowUpAt ? formatDateTime(application.nextFollowUpAt) : undefined
+        ],
+        ["结果", application.outcome],
+        ["关联简历版本", application.resumeVersionId]
+      ]),
+      `## 打招呼语\n\n${application.greetingMessage || "暂无打招呼语"}`
+    );
+
+    if (events.length > 0) {
+      sections.push(
+        `## 状态时间线\n\n${events
+          .map((event) => `- ${formatDateTime(event.occurredAt)}：${formatApplicationEvent(event)}`)
+          .join("\n")}`
+      );
+    }
+  } else {
+    sections.push("## 打招呼语与投递状态\n\n尚未生成打招呼语草稿。");
+  }
+
+  return sections.join("\n\n");
+}
+
+function formatPackageSection(title: string, rows: Array<[string, string | undefined]>) {
+  const body = rows
+    .filter(([, value]) => Boolean(value))
+    .map(([label, value]) => `- ${label}：${value}`)
+    .join("\n");
+
+  return `## ${title}\n\n${body || "暂无信息"}`;
+}
+
+function formatPackageExperience(id: string, experience?: ExperienceItem) {
+  if (!experience) {
+    return `### ${id}\n\n素材已不存在。`;
+  }
+
+  return [
+    `### ${experience.title}`,
+    formatPackageSection("经历详情", [
+      ["类型", experience.type],
+      ["组织", experience.organization],
+      ["角色", experience.role],
+      ["时间", [experience.startDate, experience.endDate].filter(Boolean).join(" - ")],
+      ["负责程度", experience.ownershipLevel],
+      ["真实性", experience.evidenceLevel],
+      ["技术栈", formatList(experience.techStack)],
+      ["摘要", experience.summary],
+      ["职责", formatList(experience.responsibilities)],
+      ["成果", formatList(experience.achievements)]
+    ])
+  ].join("\n\n");
+}
+
+function formatApplicationEvent(event: ApplicationEvent) {
+  if (event.type === "status_changed" && event.content) {
+    try {
+      const payload = JSON.parse(event.content) as Partial<{
+        from: Application["status"];
+        to: Application["status"];
+      }>;
+
+      if (payload.from && payload.to) {
+        return `状态从 ${applicationStatusLabels[payload.from]} 更新为 ${
+          applicationStatusLabels[payload.to]
+        }`;
+      }
+    } catch {
+      return event.content;
+    }
+  }
+
+  return event.content || event.type;
+}
+
+function formatList(values: string[]) {
+  return values.length > 0 ? values.join("、") : undefined;
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(new Date(value));
 }
 
 function analysisToLegacyScore(analysis: {

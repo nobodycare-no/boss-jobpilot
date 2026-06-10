@@ -962,3 +962,33 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 继续完善简历在线编辑、导出，或把插件侧边栏扩展为完整投递包视图。
+
+## 2026-06-10 更新 22
+
+### Done
+
+- API 新增 `GET /jobs/:id/application-package`，可返回当前岗位最新投递包 Markdown。
+- 投递包端点聚合岗位信息、JD、最新分析、匹配经历、最新简历、最新打招呼语、投递状态和状态时间线。
+- Chrome 插件 popup 新增“读取本地投递包”和“复制投递包”，可在 Boss 岗位页匹配本地岗位后直接复制完整 Markdown 留档。
+- 插件仍只负责复制和填入，不会自动发送 Boss 消息。
+- 使用文档、架构文档和迭代计划已同步更新。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/api typecheck`
+- `corepack pnpm --filter @boss-jobpilot/api test`
+- `corepack pnpm --filter @boss-jobpilot/extension typecheck`
+- `corepack pnpm --filter @boss-jobpilot/web test`
+- `corepack pnpm --filter @boss-jobpilot/db test`
+- `corepack pnpm --filter @boss-jobpilot/ai test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+- `codegraph sync .`
+- `codegraph status .`
+
+### Next
+
+- 继续完善插件侧边栏完整视图、简历在线编辑或导出能力。

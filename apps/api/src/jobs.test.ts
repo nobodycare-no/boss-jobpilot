@@ -259,6 +259,20 @@ describe("job routes", () => {
     expect(applicationEventsResponse.json().items).toHaveLength(1);
     expect(applicationEventsResponse.json().items[0].type).toBe("status_changed");
 
+    const applicationPackageResponse = await server.inject({
+      method: "GET",
+      url: `/jobs/${created.id}/application-package`
+    });
+
+    expect(applicationPackageResponse.statusCode).toBe(200);
+    expect(applicationPackageResponse.json().item.markdownContent).toContain(
+      "# AI Frontend Engineer - 投递包"
+    );
+    expect(applicationPackageResponse.json().item.markdownContent).toContain("## 岗位分析");
+    expect(applicationPackageResponse.json().item.markdownContent).toContain("## Markdown 简历");
+    expect(applicationPackageResponse.json().item.markdownContent).toContain("话术版本：证据版");
+    expect(applicationPackageResponse.json().item.markdownContent).toContain("## 状态时间线");
+
     const reviewStrategyResponse = await server.inject({
       method: "POST",
       url: "/applications/review/strategy",
