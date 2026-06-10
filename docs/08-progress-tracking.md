@@ -159,6 +159,8 @@ Accepted / Proposed / Rejected
 - `npm run build`
 - `git diff --check`
 - `codegraph sync .`
+- `codegraph status .`
+- `codegraph sync .`
 
 ### Next
 
@@ -850,3 +852,25 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 如继续代码健康迭代，优先评估拆分岗位卡片外壳、岗位表单和筛选控制，避免与业务功能混改。
+
+## 2026-06-10 更新 18
+
+### Done
+
+- 将岗位卡片外壳、卡片头部操作按钮和子面板组合从 `apps/web/src/JobPool.tsx` 拆到 `apps/web/src/job-card.tsx`。
+- `JobPool.tsx` 继续负责岗位池状态、API 动作、列表筛选和回调传递；`job-card.tsx` 负责单个岗位卡片的展示和局部操作入口。
+- 保持岗位卡片现有按钮、投递包复制、分析/简历/话术/版本面板展示行为不变。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/web typecheck`
+- `corepack pnpm --filter @boss-jobpilot/web test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+
+### Next
+
+- 后续代码健康迭代可继续拆分岗位表单、投递看板和跟进队列控制。
