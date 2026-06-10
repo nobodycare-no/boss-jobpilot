@@ -247,10 +247,22 @@ export default function Popup() {
           }}
         >
           <strong style={{ display: "block", marginBottom: 6 }}>投递包</strong>
-          <p style={{ margin: 0, maxHeight: 96, overflow: "auto", lineHeight: 1.55 }}>
-            {applicationPackage.markdownContent.slice(0, 240)}
-            {applicationPackage.markdownContent.length > 240 ? "..." : ""}
+          <p style={{ margin: "0 0 8px", color: "#5d6b70", fontSize: 12 }}>
+            生成时间：{formatPackageTime(applicationPackage.generatedAt)}
           </p>
+          <pre
+            style={{
+              margin: 0,
+              maxHeight: 260,
+              overflow: "auto",
+              whiteSpace: "pre-wrap",
+              lineHeight: 1.55,
+              fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace",
+              fontSize: 12
+            }}
+          >
+            {applicationPackage.markdownContent}
+          </pre>
         </section>
       ) : null}
 
@@ -398,4 +410,14 @@ async function readApiError(response: Response, fallback: string) {
   } catch {
     return fallback;
   }
+}
+
+function formatPackageTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString();
 }

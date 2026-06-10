@@ -160,6 +160,9 @@ Accepted / Proposed / Rejected
 - `git diff --check`
 - `codegraph sync .`
 - `codegraph status .`
+- `git diff --check`
+- `codegraph sync .`
+- `codegraph status .`
 - `codegraph sync .`
 - `codegraph status .`
 - `codegraph sync .`
@@ -1066,6 +1069,10 @@ Accepted / Proposed / Rejected
 - `npm run test`
 - `npm run lint`
 - `npm run build`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
 - `git diff --check`
 - `codegraph sync .`
 - `codegraph status .`
@@ -1073,3 +1080,23 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 下一轮优先复验里程碑 6：插件读取本地投递包、复制/填入话术，并确认 Boss 页面填入路径仍可用。
+
+## 2026-06-10 更新 26
+
+### Done
+
+- 补齐里程碑 6 的插件辅助填写验收：投递包读取后会在 popup 内显示完整可滚动 Markdown 预览，并可复制到剪贴板。
+- 将 Boss 页面打招呼语填写逻辑拆为独立模块，content script 复用该模块。
+- 新增填写逻辑单元测试，覆盖 textarea、input、contenteditable、只读/隐藏输入框和找不到输入框的错误提示。
+- 明确 V1 中插件辅助填写的边界：插件只复制或填入内容，不自动发送；常驻侧边栏视图放到 V2 增强，不再阻塞 V1 Functional Complete。
+- 使用手册和 V1 验收矩阵已同步更新。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/extension test`
+- `corepack pnpm --filter @boss-jobpilot/extension typecheck`
+- `corepack pnpm --filter @boss-jobpilot/extension build`
+
+### Next
+
+- 下一轮开始 V1 端到端验收：复查里程碑 0-7 的启动、核心用户路径和验证命令，确认是否可以正式标记 V1 Functional Complete。
