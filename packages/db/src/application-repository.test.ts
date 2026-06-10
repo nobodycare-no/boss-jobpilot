@@ -32,6 +32,7 @@ describe("application repository", () => {
     });
 
     expect(first.id).toBeTruthy();
+    expect(first.greetingVariant).toBe("evidence");
     expect(applications.listByJobId(job.id)).toHaveLength(2);
     expect(applications.getLatestByJobId(job.id)?.id).toBe(second.id);
 
@@ -64,6 +65,35 @@ describe("application repository", () => {
     });
 
     expect(clearedFollowUp?.nextFollowUpAt).toBeUndefined();
+
+    db.close();
+  });
+
+  it("stores greeting variants for application drafts", () => {
+    const db = openJobpilotDatabase(":memory:");
+    const jobs = createJobRepository(db);
+    const applications = createApplicationRepository(db);
+
+    const job = jobs.create({
+      platform: "boss",
+      title: "AI Frontend Engineer",
+      jdRaw: "React and TypeScript"
+    });
+    const application = applications.create({
+      jobId: job.id,
+      greetingVariant: "direct",
+      status: "draft",
+      greetingMessage: "Hello, can we chat about this role?"
+    });
+
+    expect(application.greetingVariant).toBe("direct");
+    expect(applications.get(application.id)?.greetingVariant).toBe("direct");
+
+    const updated = applications.update(application.id, {
+      greetingVariant: "polite"
+    });
+
+    expect(updated?.greetingVariant).toBe("polite");
 
     db.close();
   });

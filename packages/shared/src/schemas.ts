@@ -17,6 +17,7 @@ export const EvidenceLevelSchema = z.enum([
 
 export const OwnershipLevelSchema = z.enum(["led", "owned", "participated", "assisted"]);
 export const ResumeVariantSchema = z.enum(["quick", "formal", "technical"]);
+export const GreetingVariantSchema = z.enum(["polite", "evidence", "direct"]);
 
 export const ExperienceItemSchema = z.object({
   id: z.string().min(1),
@@ -131,6 +132,7 @@ export const ApplicationSchema = z.object({
   id: z.string().min(1),
   jobId: z.string().min(1),
   resumeVersionId: z.string().min(1).optional(),
+  greetingVariant: GreetingVariantSchema.default("evidence"),
   status: ApplicationStatusSchema.default("draft"),
   greetingMessage: z.string().default(""),
   appliedAt: z.string().datetime().optional(),
@@ -161,6 +163,7 @@ export const ApplicationCreateSchema = ApplicationSchema.omit({
 export const ApplicationUpdateSchema = z
   .object({
     resumeVersionId: ApplicationSchema.shape.resumeVersionId,
+    greetingVariant: GreetingVariantSchema,
     status: ApplicationStatusSchema,
     greetingMessage: z.string(),
     appliedAt: ApplicationSchema.shape.appliedAt,

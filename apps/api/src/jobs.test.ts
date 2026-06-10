@@ -51,6 +51,7 @@ const providerServer = buildServer({
 
       return {
         message: "您好，我基于真实项目经历匹配这个岗位，想进一步沟通。",
+        variant: "polite",
         selectedExperienceIds: ["exp-provider"],
         highlights: ["React"],
         modelName: "test-provider-model",
@@ -195,6 +196,8 @@ describe("job routes", () => {
 
     expect(greetingResponse.statusCode).toBe(201);
     expect(greetingResponse.json().item.status).toBe("draft");
+    expect(greetingResponse.json().item.greetingVariant).toBe("evidence");
+    expect(greetingResponse.json().greeting.variant).toBe("evidence");
     expect(greetingResponse.json().item.greetingMessage).toContain("AI Frontend Engineer");
     expect(greetingResponse.json().item.resumeVersionId).toBe(quickResumeResponse.json().item.id);
 
@@ -400,11 +403,16 @@ describe("job routes", () => {
 
     const greetingResponse = await providerServer.inject({
       method: "POST",
-      url: `/jobs/${created.id}/greetings`
+      url: `/jobs/${created.id}/greetings`,
+      payload: {
+        variant: "direct"
+      }
     });
 
     expect(greetingResponse.statusCode).toBe(201);
     expect(greetingResponse.json().item.resumeVersionId).toBe(resumeResponse.json().item.id);
+    expect(greetingResponse.json().item.greetingVariant).toBe("direct");
+    expect(greetingResponse.json().greeting.variant).toBe("direct");
     expect(greetingResponse.json().item.greetingMessage).toBe(
       "您好，我基于真实项目经历匹配这个岗位，想进一步沟通。"
     );

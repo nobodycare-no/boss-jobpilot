@@ -425,6 +425,7 @@ function createApplication(
 ): Application {
   return {
     createdAt: "2026-06-09T00:00:00.000Z",
+    greetingVariant: "evidence",
     greetingMessage: "你好，我对这个岗位很感兴趣。",
     id,
     jobId,

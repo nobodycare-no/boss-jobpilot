@@ -107,6 +107,7 @@ export function openJobpilotDatabase(path = "data/jobpilot.sqlite") {
       id TEXT PRIMARY KEY,
       job_id TEXT NOT NULL,
       resume_version_id TEXT,
+      greeting_variant TEXT NOT NULL DEFAULT 'evidence',
       status TEXT NOT NULL,
       greeting_message TEXT,
       applied_at TEXT,
@@ -142,7 +143,19 @@ export function openJobpilotDatabase(path = "data/jobpilot.sqlite") {
     );
   `);
 
+  ensureColumn(db, "applications", "greeting_variant", "TEXT NOT NULL DEFAULT 'evidence'");
+
   return db;
+}
+
+function ensureColumn(db: DatabaseSync, tableName: string, columnName: string, columnType: string) {
+  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
+
+  if (columns.some((column) => column.name === columnName)) {
+    return;
+  }
+
+  db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnType}`);
 }
 
 export function createExperienceRepository(db: DatabaseSync) {

@@ -8,6 +8,7 @@ import type {
   ApplicationReviewStrategyRecap,
   AiGenerationRun,
   ExperienceItem,
+  GreetingVariant,
   JobAnalysis,
   JobPosting,
   JobPostingCreateInput,
@@ -516,12 +517,12 @@ export function JobPool({ experiences }: JobPoolProps) {
     }
   }
 
-  async function handleGenerateGreeting(id: string) {
+  async function handleGenerateGreeting(id: string, variant: GreetingVariant) {
     setError(null);
     setFeedback(null);
 
     try {
-      const response = await generateGreeting(id);
+      const response = await generateGreeting(id, variant);
       setApplicationByJobId((current) => ({
         ...current,
         [id]: response.item

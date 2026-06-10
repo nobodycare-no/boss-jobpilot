@@ -15,6 +15,7 @@ import type {
   Application,
   ApplicationEvent,
   ExperienceItem,
+  GreetingVariant,
   JobAnalysis,
   JobPosting,
   ResumeVersion
@@ -73,7 +74,10 @@ export function ApplicationPanel({
             <Copy size={15} />
             复制
           </button>
-          <span>{applicationStatusLabels[application.status]}</span>
+          <span>
+            {formatGreetingVariant(application.greetingVariant)} ·{" "}
+            {applicationStatusLabels[application.status]}
+          </span>
         </div>
       </div>
       <p>{application.greetingMessage}</p>
@@ -218,7 +222,10 @@ export function VersionComparePanel({
                 复制
               </button>
             ),
-            body: compactText(latestApplication.greetingMessage),
+            body: [
+              formatGreetingVariant(latestApplication.greetingVariant),
+              compactText(latestApplication.greetingMessage)
+            ].join(" · "),
             title: `最新话术 · ${applicationStatusLabels[latestApplication.status]} · ${formatDateTime(
               latestApplication.updatedAt
             )}`
@@ -236,7 +243,10 @@ export function VersionComparePanel({
                 复制
               </button>
             ),
-            body: compactText(previousApplication.greetingMessage),
+            body: [
+              formatGreetingVariant(previousApplication.greetingVariant),
+              compactText(previousApplication.greetingMessage)
+            ].join(" · "),
             title: `上一版话术 · ${
               applicationStatusLabels[previousApplication.status]
             } · ${formatDateTime(previousApplication.updatedAt)}`
@@ -543,6 +553,16 @@ function compactText(value: string, maxLength = 120) {
   }
 
   return `${normalized.slice(0, maxLength)}...`;
+}
+
+function formatGreetingVariant(variant: GreetingVariant) {
+  const labels = {
+    direct: "主动版",
+    evidence: "证据版",
+    polite: "礼貌版"
+  } satisfies Record<GreetingVariant, string>;
+
+  return labels[variant];
 }
 
 function formatDateTime(value: string) {

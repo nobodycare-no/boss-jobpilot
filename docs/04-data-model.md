@@ -121,6 +121,7 @@
 | job_id            | 岗位     |
 | status            | 状态     |
 | resume_version_id | 使用简历 |
+| greeting_variant  | 打招呼语版本：polite / evidence / direct |
 | greeting_message  | 打招呼语 |
 | applied_at        | 投递时间 |
 | next_follow_up_at | 下次跟进 |

@@ -7,6 +7,7 @@ import type {
   AiGenerationRun,
   ExperienceItem,
   ExperienceItemCreateInput,
+  GreetingVariant,
   JobAnalysis,
   JobPosting,
   JobPostingCreateInput,
@@ -272,9 +273,13 @@ export async function listResumes(id: string) {
   return (await response.json()) as ResumeVersionListResponse;
 }
 
-export async function generateGreeting(id: string) {
+export async function generateGreeting(id: string, variant: GreetingVariant = "evidence") {
   const response = await fetch(`${apiBaseUrl}/jobs/${id}/greetings`, {
-    method: "POST"
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ variant })
   });
 
   if (!response.ok) {

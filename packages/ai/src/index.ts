@@ -3,6 +3,7 @@ import type {
   ApplicationReviewStrategyRequest,
   CandidatePreference,
   ExperienceItem,
+  GreetingVariant,
   JobAnalysis,
   JobAnalysisCreateInput,
   JobPosting,
@@ -205,6 +206,7 @@ export type GreetingDraftInput = {
   job: JobPosting;
   analysis: JobAnalysis;
   experiences: ExperienceItem[];
+  variant?: GreetingVariant;
 };
 
 export type JobAnalysisGenerationInput = {
@@ -223,6 +225,7 @@ export type ResumeVersionGenerationInput = {
 
 export type GreetingDraft = {
   message: string;
+  variant: GreetingVariant;
   selectedExperienceIds: string[];
   highlights: string[];
   modelName: string;
@@ -231,6 +234,7 @@ export type GreetingDraft = {
 
 const GreetingDraftSchema = z.object({
   message: z.string().min(1),
+  variant: z.enum(["polite", "evidence", "direct"]),
   selectedExperienceIds: z.array(z.string()).default([]),
   highlights: z.array(z.string()).default([]),
   modelName: z.string().min(1),
@@ -334,7 +338,18 @@ export async function generateResumeVersionWithProvider({
   });
 }
 
-export function generateGreetingDraft({ job, analysis, experiences }: GreetingDraftInput) {
+const greetingVariantLabels = {
+  direct: "主动版",
+  evidence: "证据版",
+  polite: "礼貌版"
+} satisfies Record<GreetingVariant, string>;
+
+export function generateGreetingDraft({
+  job,
+  analysis,
+  experiences,
+  variant = "evidence"
+}: GreetingDraftInput) {
   const selectedExperiences = selectExperiences(experiences, analysis.matchedExperienceIds);
   const highlightSkills = unique([
     ...analysis.requiredSkills,
@@ -348,13 +363,19 @@ export function generateGreetingDraft({ job, analysis, experiences }: GreetingDr
   const experienceText = primaryExperience
     ? `我做过「${primaryExperience.title}」，${summarizeExperience(primaryExperience)}`
     : "我已经根据岗位 JD 整理了相关项目和能力证明";
-  const intentText =
-    analysis.recommendation === "skip"
-      ? "想先了解一下岗位实际职责和团队情况"
-      : "希望有机会进一步沟通";
+  const intentText = getGreetingIntentText(variant, analysis.recommendation);
+  const openingText = getGreetingOpeningText(variant);
+  const evidenceText = buildGreetingEvidenceText(variant, primaryExperience);
+  const suffixText =
+    variant === "direct" ? "如果方便，期待约个时间简单聊聊，谢谢。" : `${intentText}，谢谢。`;
 
   return {
-    message: `您好，我关注到${companyText}${job.title}岗位${skillText}。${experienceText}。${intentText}，谢谢。`,
+    message: uniqueSentences([
+      `${openingText}我关注到${companyText}${job.title}岗位${skillText}`,
+      evidenceText ?? experienceText,
+      suffixText
+    ]).join("。"),
+    variant,
     selectedExperienceIds: selectedExperiences.map((experience) => experience.id),
     highlights: highlightSkills,
     modelName: "rule-based",
@@ -366,6 +387,7 @@ export async function generateGreetingDraftWithProvider({
   analysis,
   experiences,
   job,
+  variant = "evidence",
   provider
 }: GreetingDraftInput & {
   provider?: AiProvider;
@@ -374,7 +396,8 @@ export async function generateGreetingDraftWithProvider({
     return generateGreetingDraft({
       analysis,
       experiences,
-      job
+      job,
+      variant
     });
   }
 
@@ -384,13 +407,15 @@ export async function generateGreetingDraftWithProvider({
       {
         role: "system",
         content:
-          "你是求职打招呼语助手。只输出 JSON，字段为 message、selectedExperienceIds、highlights、modelName、promptVersion。不要输出 Markdown。"
+          "你是求职打招呼语助手。只输出 JSON，字段为 message、variant、selectedExperienceIds、highlights、modelName、promptVersion。不要输出 Markdown。"
       },
       {
         role: "user",
         content: JSON.stringify({
           instruction:
-            "为 Boss 直聘岗位生成一句自然、克制、具体的中文打招呼语。必须基于给定真实经历，不编造经历、学历、公司或指标。message 控制在 120 字以内。",
+            "为 Boss 直聘岗位生成一句自然、具体的中文打招呼语。必须基于给定真实经历，不编造经历、学历、公司或指标。polite 要克制礼貌，evidence 要突出项目证据，direct 要更主动地请求沟通。message 控制在 120 字以内。",
+          variant,
+          variantLabel: greetingVariantLabels[variant],
           job,
           analysis,
           candidateExperiences: selectedExperiences
@@ -402,9 +427,58 @@ export async function generateGreetingDraftWithProvider({
 
   return GreetingDraftSchema.parse({
     ...generated,
+    variant,
     modelName: generated.modelName || provider.name,
     promptVersion: generated.promptVersion || promptVersions.greetingWriter
   });
+}
+
+function getGreetingOpeningText(variant: GreetingVariant) {
+  if (variant === "polite") {
+    return "您好，打扰了，";
+  }
+
+  if (variant === "direct") {
+    return "您好，看到岗位后想主动沟通一下，";
+  }
+
+  return "您好，";
+}
+
+function getGreetingIntentText(
+  variant: GreetingVariant,
+  recommendation: JobAnalysis["recommendation"]
+) {
+  if (recommendation === "skip") {
+    return "想先了解一下岗位实际职责和团队情况";
+  }
+
+  if (variant === "polite") {
+    return "如果岗位方向合适，希望有机会进一步沟通";
+  }
+
+  if (variant === "direct") {
+    return "希望能进一步沟通岗位匹配度";
+  }
+
+  return "希望有机会进一步沟通";
+}
+
+function buildGreetingEvidenceText(
+  variant: GreetingVariant,
+  experience: ExperienceItem | undefined
+) {
+  if (!experience || variant === "polite") {
+    return undefined;
+  }
+
+  const summary = summarizeExperience(experience);
+
+  if (variant === "direct") {
+    return `我有「${experience.title}」相关经验，${summary}`;
+  }
+
+  return `核心匹配点是「${experience.title}」，${summary}`;
 }
 
 export function generateApplicationReviewStrategyRecap(
@@ -548,4 +622,8 @@ function formatRate(numerator: number, denominator: number) {
 
 function unique(values: string[]) {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+
+function uniqueSentences(values: string[]) {
+  return unique(values).map((value) => value.replace(/[。！？!?，,]+$/u, ""));
 }

@@ -1004,11 +1004,13 @@ button:disabled {
   flex: 0 0 auto;
 }
 
+.greeting-variant-actions,
 .resume-variant-actions {
   display: flex;
   gap: 6px;
 }
 
+.greeting-variant-actions .icon-button,
 .resume-variant-actions .icon-button {
   width: 42px;
   gap: 2px;

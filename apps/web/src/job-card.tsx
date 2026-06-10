@@ -4,6 +4,7 @@ import type {
   Application,
   ApplicationEvent,
   ExperienceItem,
+  GreetingVariant,
   JobAnalysis,
   JobPosting,
   ResumeVariant,
@@ -27,7 +28,7 @@ export type JobCardProps = {
   job: JobPosting;
   onAnalyze: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-  onGenerateGreeting: (id: string) => Promise<void>;
+  onGenerateGreeting: (id: string, variant: GreetingVariant) => Promise<void>;
   onGenerateResume: (id: string, variant: ResumeVariant) => Promise<void>;
   onCopyText: (label: string, value: string) => Promise<void>;
   onUpdateFollowUp: (applicationId: string, nextFollowUpAt: string | null) => Promise<void>;
@@ -73,14 +74,7 @@ export function JobCard({
             <BarChart3 size={17} />
           </button>
           <ResumeVariantActions jobId={job.id} onGenerateResume={onGenerateResume} />
-          <button
-            type="button"
-            className="icon-button"
-            onClick={() => void onGenerateGreeting(job.id)}
-            title="生成打招呼语"
-          >
-            <MessageSquareText size={17} />
-          </button>
+          <GreetingVariantActions jobId={job.id} onGenerateGreeting={onGenerateGreeting} />
           <button
             type="button"
             className="icon-button"
@@ -165,6 +159,41 @@ function ResumeVariantActions({
           title={item.title}
         >
           <FileText size={15} />
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function GreetingVariantActions({
+  jobId,
+  onGenerateGreeting
+}: {
+  jobId: string;
+  onGenerateGreeting: (id: string, variant: GreetingVariant) => Promise<void>;
+}) {
+  const variants = [
+    { label: "礼", title: "生成礼貌版打招呼语", variant: "polite" },
+    { label: "证", title: "生成证据版打招呼语", variant: "evidence" },
+    { label: "直", title: "生成主动版打招呼语", variant: "direct" }
+  ] satisfies Array<{
+    label: string;
+    title: string;
+    variant: GreetingVariant;
+  }>;
+
+  return (
+    <div className="greeting-variant-actions" aria-label="生成打招呼语版本">
+      {variants.map((item) => (
+        <button
+          type="button"
+          className="icon-button"
+          key={item.variant}
+          onClick={() => void onGenerateGreeting(jobId, item.variant)}
+          title={item.title}
+        >
+          <MessageSquareText size={15} />
           <span>{item.label}</span>
         </button>
       ))}

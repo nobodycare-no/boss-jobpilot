@@ -931,3 +931,34 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 继续补齐里程碑 4 的“至少 3 个打招呼语版本”，或完善简历在线编辑和导出。
+
+## 2026-06-10 更新 21
+
+### Done
+
+- 里程碑 4 补齐打招呼语 variant：共享类型新增 `GreetingVariant`，支持 `polite`、`evidence`、`direct`。
+- `applications` 新增 `greeting_variant` 字段，旧本地库启动时会自动补列，默认值为 `evidence`。
+- `packages/ai` 的规则版 Greeting Writer 会根据礼貌版、证据版和主动版生成不同语气的话术；Provider 生成时保留用户选择的 variant。
+- API `POST /jobs/:id/greetings` 支持请求体 `{ "variant": "polite" | "evidence" | "direct" }`，未传时默认生成证据版。
+- Web 岗位卡片的打招呼语入口升级为“礼 / 证 / 直”三个版本按钮，草稿面板和版本对比会显示话术版本。
+- 使用文档、数据模型和迭代计划已同步更新。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/shared typecheck`
+- `corepack pnpm --filter @boss-jobpilot/db test`
+- `corepack pnpm --filter @boss-jobpilot/ai test`
+- `corepack pnpm --filter @boss-jobpilot/api typecheck`
+- `corepack pnpm --filter @boss-jobpilot/api test`
+- `corepack pnpm --filter @boss-jobpilot/web typecheck`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+- `codegraph sync .`
+- `codegraph status .`
+
+### Next
+
+- 继续完善简历在线编辑、导出，或把插件侧边栏扩展为完整投递包视图。

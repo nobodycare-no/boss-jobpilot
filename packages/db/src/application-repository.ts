@@ -14,6 +14,7 @@ type ApplicationRow = {
   id: string;
   job_id: string;
   resume_version_id: string | null;
+  greeting_variant: string;
   status: string;
   greeting_message: string | null;
   applied_at: string | null;
@@ -110,6 +111,7 @@ export function createApplicationRepository(db: DatabaseSync) {
           id,
           job_id,
           resume_version_id,
+          greeting_variant,
           status,
           greeting_message,
           applied_at,
@@ -118,12 +120,13 @@ export function createApplicationRepository(db: DatabaseSync) {
           created_at,
           updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `
       ).run(
         item.id,
         item.jobId,
         item.resumeVersionId ?? null,
+        item.greetingVariant,
         item.status,
         item.greetingMessage,
         item.appliedAt ?? null,
@@ -172,6 +175,7 @@ export function createApplicationRepository(db: DatabaseSync) {
         UPDATE applications
         SET
           resume_version_id = ?,
+          greeting_variant = ?,
           status = ?,
           greeting_message = ?,
           applied_at = ?,
@@ -182,6 +186,7 @@ export function createApplicationRepository(db: DatabaseSync) {
       `
       ).run(
         next.resumeVersionId ?? null,
+        next.greetingVariant,
         next.status,
         next.greetingMessage,
         next.appliedAt ?? null,
@@ -213,6 +218,7 @@ function rowToApplication(row: ApplicationRow): Application {
     id: row.id,
     jobId: row.job_id,
     resumeVersionId: row.resume_version_id ?? undefined,
+    greetingVariant: row.greeting_variant,
     status: row.status,
     greetingMessage: row.greeting_message ?? "",
     appliedAt: row.applied_at ?? undefined,

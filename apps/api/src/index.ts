@@ -33,9 +33,11 @@ import {
   JobPostingCreateSchema,
   JobPostingSchema,
   JobPostingUpdateSchema,
+  GreetingVariantSchema,
   ResumeVariantSchema,
   type AiGenerationRunCreateInput,
   type CandidatePreference,
+  type GreetingVariant,
   type ResumeVariant,
   type ResumeVersionCreateInput
 } from "@boss-jobpilot/shared";
@@ -430,6 +432,7 @@ export function buildServer(options: BuildServerOptions = {}) {
   });
 
   server.post<{ Params: { id: string } }>("/jobs/:id/greetings", async (request, reply) => {
+    const variant = parseGreetingVariant(request.body);
     const job = jobs.get(request.params.id);
 
     if (!job) {
@@ -451,7 +454,8 @@ export function buildServer(options: BuildServerOptions = {}) {
       fallback: generateGreetingDraft({
         job,
         analysis,
-        experiences: currentExperiences
+        experiences: currentExperiences,
+        variant
       }),
       feature: "greeting-generation",
       featureLabel: "打招呼语",
@@ -464,6 +468,7 @@ export function buildServer(options: BuildServerOptions = {}) {
           job,
           analysis,
           experiences: currentExperiences,
+          variant,
           provider: aiProvider
         })
     });
@@ -471,6 +476,7 @@ export function buildServer(options: BuildServerOptions = {}) {
     const item = applications.create({
       jobId: job.id,
       resumeVersionId: latestResume?.id,
+      greetingVariant: variant,
       status: "draft",
       greetingMessage: greeting.value.message
     });
@@ -585,6 +591,14 @@ function parseResumeVariant(body: unknown): ResumeVariant {
   }
 
   return ResumeVariantSchema.catch("formal").parse((body as { variant?: unknown }).variant);
+}
+
+function parseGreetingVariant(body: unknown): GreetingVariant {
+  if (typeof body !== "object" || body === null || !("variant" in body)) {
+    return "evidence";
+  }
+
+  return GreetingVariantSchema.catch("evidence").parse((body as { variant?: unknown }).variant);
 }
 
 function analysisToLegacyScore(analysis: {
