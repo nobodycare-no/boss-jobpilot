@@ -2,9 +2,19 @@ import { useState } from "react";
 
 import type { Application, JobPosting, JobPostingInput } from "@boss-jobpilot/shared";
 
+import { findMatchingJob } from "./job-matching";
+
 const apiBaseUrl = "http://127.0.0.1:4000";
 
-type PopupState = "idle" | "loading" | "ready" | "saved" | "filled" | "copied" | "error";
+type PopupState =
+  | "idle"
+  | "loading"
+  | "ready"
+  | "saved"
+  | "duplicate"
+  | "filled"
+  | "copied"
+  | "error";
 
 type ContentResult<T> = {
   error?: string;
@@ -13,6 +23,10 @@ type ContentResult<T> = {
 
 type JobListResponse = {
   items: JobPosting[];
+};
+
+type JobCreateResponse = {
+  item: JobPosting;
 };
 
 type LatestApplicationResponse = {
@@ -34,7 +48,9 @@ type MatchedApplicationPackage = {
 
 export default function Popup() {
   const [state, setState] = useState<PopupState>("idle");
-  const [message, setMessage] = useState("打开 Boss 岗位页后，可保存岗位或读取本地打招呼语。");
+  const [message, setMessage] = useState(
+    "打开 Boss 岗位页后，可以保存岗位、读取本地打招呼语或复制投递包。"
+  );
   const [matchedPackage, setMatchedPackage] = useState<MatchedApplicationPackage | null>(null);
   const [applicationPackage, setApplicationPackage] = useState<ApplicationPackageResponse["item"] | null>(
     null
@@ -46,18 +62,30 @@ export default function Popup() {
 
     try {
       const tabId = await getActiveTabId();
-      const result = await sendTabMessage<ContentResult<{ job?: JobPostingInput }>>(tabId, {
-        type: "boss-jobpilot:capture-current-job"
-      });
-
-      if (!result.ok) {
-        throw new Error(result.error ?? "岗位保存失败");
-      }
+      const currentJob = await extractCurrentJob(tabId);
+      const jobs = await fetchJson<JobListResponse>("/jobs");
+      const matchedJob = findMatchingJob(currentJob, jobs.items);
 
       setMatchedPackage(null);
       setApplicationPackage(null);
+
+      if (matchedJob) {
+        setState("duplicate");
+        setMessage(
+          `岗位已在本地岗位池中，无需重复保存：${matchedJob.title} · ${
+            matchedJob.companyName ?? "未填写公司"
+          }`
+        );
+        return;
+      }
+
+      const response = await postJson<JobCreateResponse>("/jobs", currentJob);
       setState("saved");
-      setMessage("岗位已保存到本地岗位池。回到 Web 工作台生成简历和打招呼语后，可在这里读取。");
+      setMessage(
+        `岗位已保存到本地岗位池：${response.item.title} · ${
+          response.item.companyName ?? "未填写公司"
+        }。回到 Web 工作台生成简历和打招呼语后，可以在这里读取。`
+      );
     } catch (error) {
       showError(error, "岗位采集失败");
     }
@@ -108,7 +136,7 @@ export default function Popup() {
       setState("copied");
       setMessage("打招呼语已复制。");
     } catch (error) {
-      showError(error, "复制失败，请在 Web 工作台手动复制");
+      showError(error, "复制失败，请在 Web 工作台手动复制。");
     }
   }
 
@@ -175,7 +203,7 @@ export default function Popup() {
       setState("filled");
       setMessage("打招呼语已填入页面输入框，请检查内容后手动发送。");
     } catch (error) {
-      showError(error, "填入失败，请复制后手动粘贴");
+      showError(error, "填入失败，请复制后手动粘贴。");
     }
   }
 
@@ -336,46 +364,38 @@ async function sendTabMessage<T>(tabId: number, message: Record<string, unknown>
   return (await chrome.tabs.sendMessage(tabId, message)) as T;
 }
 
-async function fetchJson<T>(path: string) {
-  const response = await fetch(`${apiBaseUrl}${path}`);
+async function fetchJson<T>(path: string, init?: RequestInit) {
+  let response: Response;
+
+  try {
+    response = await fetch(`${apiBaseUrl}${path}`, init);
+  } catch {
+    throw new Error("本地 API 不可用，请先启动 boss-jobpilot。");
+  }
 
   if (!response.ok) {
-    throw new Error("本地 API 不可用，请先启动 boss-jobpilot。");
+    throw new Error(await readApiError(response, "本地 API 未完成请求，请确认 boss-jobpilot 已启动。"));
   }
 
   return (await response.json()) as T;
 }
 
-function findMatchingJob(currentJob: JobPostingInput, jobs: JobPosting[]) {
-  const currentUrl = normalizeUrl(currentJob.url);
-  const currentTitle = normalizeText(currentJob.title);
-  const currentCompany = normalizeText(currentJob.companyName);
-
-  return (
-    jobs.find((job) => normalizeUrl(job.url) === currentUrl) ??
-    jobs.find(
-      (job) =>
-        normalizeText(job.title) === currentTitle &&
-        (!currentCompany || normalizeText(job.companyName) === currentCompany)
-    )
-  );
+async function postJson<T>(path: string, payload: unknown) {
+  return fetchJson<T>(path, {
+    body: JSON.stringify(payload),
+    headers: {
+      "Content-Type": "application/json"
+    },
+    method: "POST"
+  });
 }
 
-function normalizeUrl(value?: string) {
-  if (!value) {
-    return "";
-  }
-
+async function readApiError(response: Response, fallback: string) {
   try {
-    const url = new URL(value);
-    url.hash = "";
-    url.search = "";
-    return url.toString();
-  } catch {
-    return value.trim();
-  }
-}
+    const body = (await response.json()) as { error?: string };
 
-function normalizeText(value?: string) {
-  return value?.replace(/\s+/g, " ").trim().toLowerCase() ?? "";
+    return body.error ? `${fallback}（${body.error}）` : fallback;
+  } catch {
+    return fallback;
+  }
 }

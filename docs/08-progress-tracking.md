@@ -1045,3 +1045,31 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 下一轮优先复验并补齐里程碑 2：插件采集、重复岗位识别和采集失败提示。
+
+## 2026-06-10 更新 25
+
+### Done
+
+- 补齐里程碑 2 的重复岗位识别：插件 popup 保存当前 Boss 岗位前，会先读取本地岗位池，并按稳定 URL 或“岗位标题 + 公司名”匹配已有岗位。
+- 命中已有岗位时，popup 会提示“无需重复保存”，不再向本地 API 写入重复岗位。
+- popup 的采集失败提示已明确区分本地 API 不可用、当前页面不可识别和 API 请求失败。
+- content script 旧采集消息路径也复用同一套查重逻辑，避免绕过 popup 时产生重复岗位。
+- 新增插件侧岗位匹配单元测试，覆盖 URL 去参数/锚点匹配、标题公司匹配和空 URL 边界。
+- 使用手册和 V1 验收矩阵已同步更新。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/extension test`
+- `corepack pnpm --filter @boss-jobpilot/extension typecheck`
+- `corepack pnpm --filter @boss-jobpilot/extension build`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+- `codegraph sync .`
+- `codegraph status .`
+
+### Next
+
+- 下一轮优先复验里程碑 6：插件读取本地投递包、复制/填入话术，并确认 Boss 页面填入路径仍可用。
