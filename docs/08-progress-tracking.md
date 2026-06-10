@@ -826,3 +826,27 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 继续把岗位卡片下的分析、简历、打招呼语和版本对比面板按稳定边界拆分，优先保持无行为变更的小步重构。
+
+## 2026-06-10 更新 17
+
+### Done
+
+- 将岗位卡片下的投递、版本对比、简历草稿、岗位分析和投递包 Markdown 组装逻辑从 `apps/web/src/JobPool.tsx` 拆到 `apps/web/src/job-card-panels.tsx`。
+- `JobPool.tsx` 继续负责岗位池数据加载、筛选、动作编排和岗位卡片外壳，子面板只负责展示与局部交互。
+- 保持现有用户行为不变，降低后续继续迭代岗位卡片和投递工作流时的单文件维护风险。
+- `.gitignore` 补充 `.tmp/`，避免本地验证产生的临时 PID、日志或 SQLite 文件污染工作区状态。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/web typecheck`
+- `corepack pnpm --filter @boss-jobpilot/web test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+- `codegraph sync .`
+
+### Next
+
+- 如继续代码健康迭代，优先评估拆分岗位卡片外壳、岗位表单和筛选控制，避免与业务功能混改。
