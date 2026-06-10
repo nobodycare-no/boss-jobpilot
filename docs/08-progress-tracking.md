@@ -161,6 +161,8 @@ Accepted / Proposed / Rejected
 - `codegraph sync .`
 - `codegraph status .`
 - `codegraph sync .`
+- `codegraph status .`
+- `codegraph sync .`
 
 ### Next
 
@@ -874,3 +876,27 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 后续代码健康迭代可继续拆分岗位表单、投递看板和跟进队列控制。
+
+## 2026-06-10 更新 19
+
+### Done
+
+- 回到原始里程碑验收口径，确认里程碑 6“插件辅助填写”仍是核心缺口，暂停纯代码健康拆分优先级。
+- 插件 content script 新增当前岗位提取消息和打招呼语填入消息，支持 textarea、input、contenteditable 和 textbox 的通用填写。
+- 插件 popup 新增“读取本地打招呼语”“复制话术”“填入页面”流程：基于当前 Boss 页面岗位匹配本地岗位池，读取最新 application draft 的打招呼语。
+- 插件增加 `clipboardWrite` 权限，用于 popup 复制话术。
+- 填入动作只写入页面输入框，不自动发送消息，保留用户确认。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/extension typecheck`
+- `corepack pnpm --filter @boss-jobpilot/extension build`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+
+### Next
+
+- 继续完善插件侧边栏/投递包展示，或补齐里程碑 4 的多版本打招呼语与简历 variant 选择。
