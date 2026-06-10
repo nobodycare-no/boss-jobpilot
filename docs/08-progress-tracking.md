@@ -803,3 +803,26 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 优先把 `apps/web/src/JobPool.tsx` 中稳定的面板组件拆出为独立文件，降低单文件维护风险；该任务应作为专门重构进行，避免和业务功能迭代混在一起。
+
+## 2026-06-10 更新 16
+
+### Done
+
+- 将投递复盘面板从 `apps/web/src/JobPool.tsx` 拆到 `apps/web/src/application-review-panel.tsx`，降低岗位池主文件复杂度。
+- 新增 `apps/web/src/job-labels.ts` 统一维护投递状态和投递建议标签，避免复盘面板与岗位卡片重复定义。
+- 保持现有用户行为不变：岗位池仍负责数据加载、筛选和动作编排，复盘面板只负责展示、复盘筛选和 AI 运行记录筛选。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/web typecheck`
+- `corepack pnpm --filter @boss-jobpilot/web test`
+- `npm run typecheck`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+- 浏览器检查 `http://127.0.0.1:5198`，确认拆分后的投递复盘面板、AI Provider 状态、AI 生成记录和测试岗位正常渲染。
+- `codegraph sync .`
+
+### Next
+
+- 继续把岗位卡片下的分析、简历、打招呼语和版本对比面板按稳定边界拆分，优先保持无行为变更的小步重构。
