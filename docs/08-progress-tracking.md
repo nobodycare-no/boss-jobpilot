@@ -1100,3 +1100,30 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 下一轮开始 V1 端到端验收：复查里程碑 0-7 的启动、核心用户路径和验证命令，确认是否可以正式标记 V1 Functional Complete。
+
+## 2026-06-10 更新 27
+
+### Done
+
+- 完成 V1 Functional Complete 端到端验收，并在迭代计划中写入验收记录。
+- 验收覆盖启动脚本、插件构建、全量类型检查、测试、lint、build、临时 API/Web 服务、经历库 CRUD、岗位保存、岗位分析、简历和话术多版本生成、手动编辑、状态流转、跟进时间、状态时间线、投递包、投递复盘和插件填写逻辑测试。
+- 使用临时数据库 `.tmp/v1-acceptance.sqlite` 完成验收，未污染正式本地数据。
+- Web 浏览器快照确认页面成功渲染 2 条经历、1 个岗位、匹配分、匹配经历、简历草稿、打招呼语、状态时间线、版本对比和复盘统计。
+
+### Verification
+
+- `start.bat --check`
+- `corepack pnpm --filter @boss-jobpilot/extension build`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- 临时 API 端到端验收：经历 CRUD、岗位保存、分析、3 类简历、手动编辑、3 类话术、投递状态、跟进时间、事件、投递包、策略复盘全部断言通过。
+- Chrome DevTools 浏览器快照验收：`http://127.0.0.1:5199` 页面显示 V1 验收数据和核心 UI。
+- `git diff --check`
+- `codegraph sync .`
+- `codegraph status .`
+
+### Next
+
+- V1 已通过 Functional Complete 验收。下一轮进入 V2 规划：优先考虑真实 Boss 页面兼容性复验、导入器、导出 PDF/DOCX、侧边栏常驻视图或真实投递后的策略复盘增强。
