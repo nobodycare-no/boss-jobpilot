@@ -992,3 +992,32 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 继续完善插件侧边栏完整视图、简历在线编辑或导出能力。
+
+## 2026-06-10 更新 23
+
+### Done
+
+- API 新增 `POST /jobs/:id/resumes/edits`，可将手动编辑后的 Markdown 简历保存为新版本。
+- 连续编辑简历时会沿用已有 `edited-*` variant，不再叠加成 `edited-edited-*`。
+- Web 简历草稿面板新增 Markdown 编辑框和“保存为新版本”，保存后刷新最新简历和版本历史。
+- 如果岗位已有投递草稿，保存编辑后的简历会同步把草稿关联到新简历版本，避免投递包显示旧关联。
+- Web 打招呼语草稿面板新增编辑框和“保存话术”，复用 `PATCH /applications/:id` 更新当前投递草稿。
+- 前端保存时会阻止空简历和空话术，避免误清空草稿。
+- 使用文档和迭代计划已同步更新。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/api typecheck`
+- `corepack pnpm --filter @boss-jobpilot/web typecheck`
+- `corepack pnpm --filter @boss-jobpilot/api test`
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+- Browser verification on `http://127.0.0.1:5190`: saved Markdown resume edits as new versions, updated the current greeting draft, confirmed the application draft relinks to the latest edited resume, confirmed visible success messages and persisted API state.
+
+### Next
+
+- 运行 `codegraph sync .` 并提交推送本次改动。
+- 继续完善完整 diff、导出 PDF/DOCX，或插件侧边栏完整视图。

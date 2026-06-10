@@ -189,6 +189,32 @@ describe("job routes", () => {
     expect(resumeListResponse.statusCode).toBe(200);
     expect(resumeListResponse.json().items).toHaveLength(2);
 
+    const editedResumeResponse = await server.inject({
+      method: "POST",
+      url: `/jobs/${created.id}/resumes/edits`,
+      payload: {
+        markdownContent: "# Edited Resume\n\nManual refinement.",
+        selectedExperienceIds: ["exp-ai-frontend"],
+        variant: "edited-quick"
+      }
+    });
+
+    expect(editedResumeResponse.statusCode).toBe(201);
+    expect(editedResumeResponse.json().item.variant).toBe("edited-quick");
+    expect(editedResumeResponse.json().item.markdownContent).toContain("Manual refinement");
+
+    const reeditedResumeResponse = await server.inject({
+      method: "POST",
+      url: `/jobs/${created.id}/resumes/edits`,
+      payload: {
+        markdownContent: "# Re-edited Resume\n\nManual refinement without nested variant."
+      }
+    });
+
+    expect(reeditedResumeResponse.statusCode).toBe(201);
+    expect(reeditedResumeResponse.json().item.variant).toBe("edited-quick");
+    expect(reeditedResumeResponse.json().item.markdownContent).toContain("without nested variant");
+
     const greetingResponse = await server.inject({
       method: "POST",
       url: `/jobs/${created.id}/greetings`
@@ -199,7 +225,9 @@ describe("job routes", () => {
     expect(greetingResponse.json().item.greetingVariant).toBe("evidence");
     expect(greetingResponse.json().greeting.variant).toBe("evidence");
     expect(greetingResponse.json().item.greetingMessage).toContain("AI Frontend Engineer");
-    expect(greetingResponse.json().item.resumeVersionId).toBe(quickResumeResponse.json().item.id);
+    expect(greetingResponse.json().item.resumeVersionId).toBe(
+      reeditedResumeResponse.json().item.id
+    );
 
     const latestApplicationResponse = await server.inject({
       method: "GET",

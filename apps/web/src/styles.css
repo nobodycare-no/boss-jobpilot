@@ -1145,6 +1145,36 @@ button:disabled {
   gap: 8px;
 }
 
+.draft-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.draft-editor label {
+  display: grid;
+  gap: 6px;
+  color: #526165;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.draft-editor textarea {
+  min-height: 112px;
+  max-height: 360px;
+  resize: vertical;
+  border-color: #cad8da;
+  color: #263033;
+  background: #ffffff;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.draft-editor__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .follow-up-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

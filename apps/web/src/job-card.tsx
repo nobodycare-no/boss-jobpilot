@@ -31,6 +31,8 @@ export type JobCardProps = {
   onGenerateGreeting: (id: string, variant: GreetingVariant) => Promise<void>;
   onGenerateResume: (id: string, variant: ResumeVariant) => Promise<void>;
   onCopyText: (label: string, value: string) => Promise<void>;
+  onSaveGreetingEdit: (applicationId: string, greetingMessage: string) => Promise<void>;
+  onSaveResumeEdit: (resume: ResumeVersion, markdownContent: string) => Promise<void>;
   onUpdateFollowUp: (applicationId: string, nextFollowUpAt: string | null) => Promise<void>;
   onUpdateApplicationStatus: (
     applicationId: string,
@@ -52,6 +54,8 @@ export function JobCard({
   onGenerateGreeting,
   onGenerateResume,
   onCopyText,
+  onSaveGreetingEdit,
+  onSaveResumeEdit,
   onUpdateFollowUp,
   onUpdateApplicationStatus,
   resume,
@@ -112,12 +116,15 @@ export function JobCard({
       </p>
       <p>{job.jdRaw}</p>
       {analysis ? <AnalysisPanel analysis={analysis} experienceById={experienceById} /> : null}
-      {resume ? <ResumePanel resume={resume} onCopyText={onCopyText} /> : null}
+      {resume ? (
+        <ResumePanel resume={resume} onCopyText={onCopyText} onSaveEdit={onSaveResumeEdit} />
+      ) : null}
       {application ? (
         <ApplicationPanel
           application={application}
           events={applicationEvents}
           onCopyText={onCopyText}
+          onSaveEdit={onSaveGreetingEdit}
           onUpdateFollowUp={onUpdateFollowUp}
           onUpdateStatus={onUpdateApplicationStatus}
         />

@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 
 import Fastify from "fastify";
+import { z } from "zod";
 
 import {
   checkAiProviderHealth,
@@ -90,6 +91,21 @@ const recommendationLabels: Record<JobAnalysis["recommendation"], string> = {
   prioritize: "优先投递",
   skip: "跳过"
 };
+
+const ResumeEditSchema = z.object({
+  changeSummary: z.string().optional(),
+  markdownContent: z.string().min(1),
+  selectedExperienceIds: z.array(z.string()).optional(),
+  variant: z.string().min(1).optional()
+});
+
+function toEditedResumeVariant(variant?: string) {
+  if (!variant) {
+    return "edited-manual";
+  }
+
+  return `edited-${variant.replace(/^(edited-)+/, "")}`;
+}
 
 export function buildServer(options: BuildServerOptions = {}) {
   const database = options.database ?? openJobpilotDatabase(options.databasePath);
@@ -430,6 +446,39 @@ export function buildServer(options: BuildServerOptions = {}) {
     return reply.status(201).send({
       item,
       warnings: resume.warnings
+    });
+  });
+
+  server.post<{ Params: { id: string } }>("/jobs/:id/resumes/edits", async (request, reply) => {
+    const job = jobs.get(request.params.id);
+
+    if (!job) {
+      return reply.status(404).send({
+        error: "JOB_NOT_FOUND"
+      });
+    }
+
+    const parsedEdit = ResumeEditSchema.safeParse(request.body);
+
+    if (!parsedEdit.success) {
+      return reply.status(400).send({
+        error: "INVALID_RESUME_EDIT",
+        issues: parsedEdit.error.issues
+      });
+    }
+
+      const latestResume = resumeVersions.getLatestByJobId(job.id);
+      const item = resumeVersions.create({
+        jobId: job.id,
+        variant: parsedEdit.data.variant ?? toEditedResumeVariant(latestResume?.variant),
+        markdownContent: parsedEdit.data.markdownContent,
+      selectedExperienceIds:
+        parsedEdit.data.selectedExperienceIds ?? latestResume?.selectedExperienceIds ?? [],
+      changeSummary: parsedEdit.data.changeSummary ?? "手动编辑 Markdown 简历。"
+    });
+
+    return reply.status(201).send({
+      item
     });
   });
 

@@ -253,6 +253,30 @@ export async function generateResume(id: string, variant: ResumeVariant = "forma
   return (await response.json()) as ResumeVersionResponse;
 }
 
+export async function saveEditedResume(
+  id: string,
+  input: {
+    changeSummary?: string;
+    markdownContent: string;
+    selectedExperienceIds?: string[];
+    variant?: string;
+  }
+) {
+  const response = await fetch(`${apiBaseUrl}/jobs/${id}/resumes/edits`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(input)
+  });
+
+  if (!response.ok) {
+    throw new Error("无法保存编辑后的简历");
+  }
+
+  return (await response.json()) as ResumeVersionResponse;
+}
+
 export async function getLatestResume(id: string) {
   const response = await fetch(`${apiBaseUrl}/jobs/${id}/resume/latest`);
 

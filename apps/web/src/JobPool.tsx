@@ -32,6 +32,7 @@ import {
   listAiGenerationRuns,
   listJobs,
   listResumes,
+  saveEditedResume,
   type AiProviderHealth,
   type ApiWarning,
   updateApplication
@@ -574,6 +575,81 @@ export function JobPool({ experiences }: JobPoolProps) {
     }
   }
 
+  async function handleSaveResumeEdit(resume: ResumeVersion, markdownContent: string) {
+    setError(null);
+    setFeedback(null);
+
+    if (!markdownContent.trim()) {
+      setError("编辑后的简历不能为空");
+      return;
+    }
+
+    try {
+      const response = await saveEditedResume(resume.jobId, {
+        changeSummary: "基于当前版本手动编辑保存。",
+        markdownContent,
+        selectedExperienceIds: resume.selectedExperienceIds,
+        variant: toEditedResumeVariant(resume.variant)
+      });
+      setResumeByJobId((current) => ({
+        ...current,
+        [response.item.jobId]: response.item
+      }));
+      const history = await listResumes(response.item.jobId);
+      setResumeHistoryByJobId((current) => ({
+        ...current,
+        [response.item.jobId]: history.items
+      }));
+      const currentApplication = applicationByJobId[response.item.jobId];
+
+      if (currentApplication) {
+        const applicationResponse = await updateApplication(currentApplication.id, {
+          resumeVersionId: response.item.id
+        });
+        setApplicationByJobId((current) => ({
+          ...current,
+          [applicationResponse.item.jobId]: applicationResponse.item
+        }));
+        const applicationHistory = await listApplications(applicationResponse.item.jobId);
+        setApplicationHistoryByJobId((current) => ({
+          ...current,
+          [applicationResponse.item.jobId]: applicationHistory.items
+        }));
+      }
+      setFeedback("编辑后的简历已保存为新版本");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "编辑后的简历保存失败");
+    }
+  }
+
+  async function handleSaveGreetingEdit(applicationId: string, greetingMessage: string) {
+    setError(null);
+    setFeedback(null);
+
+    if (!greetingMessage.trim()) {
+      setError("打招呼语不能为空");
+      return;
+    }
+
+    try {
+      const response = await updateApplication(applicationId, {
+        greetingMessage
+      });
+      setApplicationByJobId((current) => ({
+        ...current,
+        [response.item.jobId]: response.item
+      }));
+      const history = await listApplications(response.item.jobId);
+      setApplicationHistoryByJobId((current) => ({
+        ...current,
+        [response.item.jobId]: history.items
+      }));
+      setFeedback("打招呼语已保存");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "打招呼语保存失败");
+    }
+  }
+
   async function handleUpdateApplicationFollowUp(
     applicationId: string,
     nextFollowUpAt: string | null
@@ -846,6 +922,8 @@ export function JobPool({ experiences }: JobPoolProps) {
                   onGenerateGreeting={handleGenerateGreeting}
                   onGenerateResume={handleGenerateResume}
                   onCopyText={handleCopyText}
+                  onSaveGreetingEdit={handleSaveGreetingEdit}
+                  onSaveResumeEdit={handleSaveResumeEdit}
                   onUpdateFollowUp={handleUpdateApplicationFollowUp}
                   onUpdateApplicationStatus={handleUpdateApplicationStatus}
                   resume={resumeByJobId[job.id]}
@@ -866,6 +944,10 @@ function formatApiWarnings(warnings?: ApiWarning[]) {
   }
 
   return warnings.map((warning) => warning.message).join(" ");
+}
+
+function toEditedResumeVariant(variant: string) {
+  return `edited-${variant.replace(/^(edited-)+/, "")}`;
 }
 
 function buildReviewScopeLabel(filters: ApplicationReviewFilters) {

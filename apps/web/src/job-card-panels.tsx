@@ -41,12 +41,14 @@ export function ApplicationPanel({
   application,
   events,
   onCopyText,
+  onSaveEdit,
   onUpdateFollowUp,
   onUpdateStatus
 }: {
   application: Application;
   events: ApplicationEvent[];
   onCopyText: (label: string, value: string) => Promise<void>;
+  onSaveEdit: (applicationId: string, greetingMessage: string) => Promise<void>;
   onUpdateFollowUp: (applicationId: string, nextFollowUpAt: string | null) => Promise<void>;
   onUpdateStatus: (applicationId: string, status: Application["status"]) => Promise<void>;
 }) {
@@ -54,12 +56,19 @@ export function ApplicationPanel({
     ? toDateTimeLocalValue(application.nextFollowUpAt)
     : "";
   const followUpInputRef = useRef<HTMLInputElement>(null);
+  const greetingInputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (followUpInputRef.current) {
       followUpInputRef.current.value = followUpInputValue;
     }
   }, [followUpInputValue]);
+
+  useEffect(() => {
+    if (greetingInputRef.current) {
+      greetingInputRef.current.value = application.greetingMessage;
+    }
+  }, [application.greetingMessage]);
 
   return (
     <div className="application-box">
@@ -81,6 +90,23 @@ export function ApplicationPanel({
         </div>
       </div>
       <p>{application.greetingMessage}</p>
+      <div className="draft-editor">
+        <label>
+          编辑打招呼语
+          <textarea defaultValue={application.greetingMessage} ref={greetingInputRef} rows={4} />
+        </label>
+        <div className="draft-editor__actions">
+          <button
+            type="button"
+            className="panel-action-button"
+            onClick={() =>
+              void onSaveEdit(application.id, greetingInputRef.current?.value.trim() ?? "")
+            }
+          >
+            保存话术
+          </button>
+        </div>
+      </div>
       <div className="application-actions">
         {applicationStatusActions.map(({ status, label, Icon }) => (
           <button
@@ -310,11 +336,21 @@ function ApplicationTimeline({ events }: { events: ApplicationEvent[] }) {
 
 export function ResumePanel({
   resume,
-  onCopyText
+  onCopyText,
+  onSaveEdit
 }: {
   resume: ResumeVersion;
   onCopyText: (label: string, value: string) => Promise<void>;
+  onSaveEdit: (resume: ResumeVersion, markdownContent: string) => Promise<void>;
 }) {
+  const markdownInputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (markdownInputRef.current) {
+      markdownInputRef.current.value = resume.markdownContent;
+    }
+  }, [resume.markdownContent]);
+
   return (
     <div className="resume-box">
       <div className="resume-box__header">
@@ -333,6 +369,23 @@ export function ResumePanel({
       </div>
       {resume.changeSummary ? <p>{resume.changeSummary}</p> : null}
       <pre>{resume.markdownContent}</pre>
+      <div className="draft-editor">
+        <label>
+          编辑 Markdown 简历
+          <textarea defaultValue={resume.markdownContent} ref={markdownInputRef} rows={10} />
+        </label>
+        <div className="draft-editor__actions">
+          <button
+            type="button"
+            className="panel-action-button"
+            onClick={() =>
+              void onSaveEdit(resume, markdownInputRef.current?.value.trim() ?? "")
+            }
+          >
+            保存为新版本
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
