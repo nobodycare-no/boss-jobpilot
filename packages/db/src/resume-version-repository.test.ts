@@ -30,11 +30,14 @@ describe("resume version repository", () => {
       markdownContent: "# Second",
       selectedExperienceIds: ["exp-1", "exp-2"],
       changeSummary: "Second draft.",
-      createdAt: "2026-01-02T00:00:00.000Z"
+      createdAt: "2026-01-01T00:00:00.000Z"
     });
 
     expect(first.id).toBeTruthy();
-    expect(resumes.listByJobId(job.id)).toHaveLength(2);
+    const versions = resumes.listByJobId(job.id);
+
+    expect(versions).toHaveLength(2);
+    expect(versions[0]?.id).toBe(second.id);
     expect(resumes.getLatestByJobId(job.id)?.id).toBe(second.id);
 
     db.close();

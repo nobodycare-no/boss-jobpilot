@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
-import { Edit3, LibraryBig, Plus, Radar, RefreshCw, Save, Trash2, X } from "lucide-react";
+import { Edit3, LibraryBig, Plus, Radar, RefreshCw, Save, Search, Trash2, X } from "lucide-react";
 
 import type { ExperienceItem, ExperienceItemCreateInput } from "@boss-jobpilot/shared";
 
@@ -67,6 +67,9 @@ export function App() {
   const [items, setItems] = useState<ExperienceItem[]>([]);
   const [form, setForm] = useState<ExperienceFormState>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [experienceQuery, setExperienceQuery] = useState("");
+  const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +78,23 @@ export function App() {
     () => Array.from(new Set(items.flatMap((item) => item.techStack))).slice(0, 12),
     [items]
   );
+  const activeTags = useMemo(
+    () => Array.from(new Set(items.flatMap((item) => item.tags))).slice(0, 12),
+    [items]
+  );
+  const visibleItems = useMemo(
+    () =>
+      items.filter((item) =>
+        matchesExperienceFilters({
+          item,
+          query: experienceQuery,
+          selectedSkill,
+          selectedTag
+        })
+      ),
+    [experienceQuery, items, selectedSkill, selectedTag]
+  );
+  const hasExperienceFilters = Boolean(experienceQuery.trim() || selectedSkill || selectedTag);
 
   async function refreshExperiences() {
     setIsLoading(true);
@@ -385,25 +405,82 @@ export function App() {
               </p>
               <h2>已保存经历</h2>
             </div>
-            <span className="count-pill">{items.length}</span>
+            <span className="count-pill">
+              {visibleItems.length}/{items.length}
+            </span>
           </div>
 
           {activeSkills.length > 0 ? (
             <div className="skill-strip">
               {activeSkills.map((skill) => (
-                <span key={skill}>{skill}</span>
+                <button
+                  aria-pressed={selectedSkill === skill}
+                  className="filter-chip"
+                  key={skill}
+                  onClick={() =>
+                    setSelectedSkill((current) => (current === skill ? null : skill))
+                  }
+                  type="button"
+                >
+                  {skill}
+                </button>
               ))}
             </div>
           ) : null}
+
+          <div className="library-filters" aria-label="经历筛选">
+            <label>
+              搜索经历
+              <span>
+                <Search size={15} />
+                <input
+                  value={experienceQuery}
+                  onChange={(event) => setExperienceQuery(event.target.value)}
+                  placeholder="搜索标题、技能、标签、职责或成果"
+                />
+              </span>
+            </label>
+            {activeTags.length > 0 ? (
+              <div className="filter-chip-row" aria-label="标签筛选">
+                {activeTags.map((tag) => (
+                  <button
+                    aria-pressed={selectedTag === tag}
+                    className="filter-chip"
+                    key={tag}
+                    onClick={() => setSelectedTag((current) => (current === tag ? null : tag))}
+                    type="button"
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {hasExperienceFilters ? (
+              <button
+                className="secondary-button"
+                onClick={() => {
+                  setExperienceQuery("");
+                  setSelectedSkill(null);
+                  setSelectedTag(null);
+                }}
+                type="button"
+              >
+                清除筛选
+              </button>
+            ) : null}
+          </div>
 
           {isLoading ? <p className="empty-state">正在加载经历库...</p> : null}
 
           {!isLoading && items.length === 0 ? (
             <p className="empty-state">还没有经历素材。先录入一个项目或实习经历。</p>
           ) : null}
+          {!isLoading && items.length > 0 && visibleItems.length === 0 ? (
+            <p className="empty-state">当前筛选下没有匹配经历。</p>
+          ) : null}
 
           <div className="experience-list">
-            {items.map((item) => (
+            {visibleItems.map((item) => (
               <article className="experience-card" key={item.id}>
                 <div className="experience-card__header">
                   <div>
@@ -515,4 +592,44 @@ function splitLines(value: string) {
     .split("\n")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function matchesExperienceFilters({
+  item,
+  query,
+  selectedSkill,
+  selectedTag
+}: {
+  item: ExperienceItem;
+  query: string;
+  selectedSkill: string | null;
+  selectedTag: string | null;
+}) {
+  if (selectedSkill && !item.techStack.includes(selectedSkill)) {
+    return false;
+  }
+
+  if (selectedTag && !item.tags.includes(selectedTag)) {
+    return false;
+  }
+
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  return [
+    item.title,
+    item.organization,
+    item.role,
+    item.summary,
+    ...item.techStack,
+    ...item.responsibilities,
+    ...item.achievements,
+    ...item.metrics,
+    ...item.tags
+  ]
+    .filter((value): value is string => Boolean(value))
+    .some((value) => value.toLowerCase().includes(normalizedQuery));
 }

@@ -1021,3 +1021,27 @@ Accepted / Proposed / Rejected
 
 - 运行 `codegraph sync .` 并提交推送本次改动。
 - 继续完善完整 diff、导出 PDF/DOCX，或插件侧边栏完整视图。
+
+## 2026-06-10 更新 24
+
+### Done
+
+- 明确 V1 阶段结束标识：里程碑 0-7 核心验收项全部完成并通过端到端验收后，才进入 V2。
+- 在迭代计划中新增 V1 验收矩阵，后续“继续开发”优先处理矩阵中未完成或待复验项目。
+- 补齐里程碑 1 的经历库筛选验收项：Web 经历库支持关键词搜索，并支持按技能和标签点击筛选。
+- 使用文档已补充经历库搜索、技能筛选、标签筛选和清除筛选的使用方法。
+
+### Verification
+
+- `npm run typecheck`
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `git diff --check`
+- Chrome DevTools 本地页面验证：经历库初始显示 `2/2`；关键词 `React` 搜索后显示 `1/2`；清除筛选恢复 `2/2`；技能 `Fastify` 筛选后显示 `1/2`；标签 `AI` 筛选后显示 `1/2`。
+- `codegraph sync .`
+- `codegraph status .`
+
+### Next
+
+- 下一轮优先复验并补齐里程碑 2：插件采集、重复岗位识别和采集失败提示。

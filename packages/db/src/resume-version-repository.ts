@@ -28,7 +28,7 @@ export function createResumeVersionRepository(db: DatabaseSync) {
           SELECT *
           FROM resume_versions
           WHERE job_id = ?
-          ORDER BY created_at DESC
+          ORDER BY created_at DESC, rowid DESC
         `
         )
         .all(jobId) as ResumeVersionRow[];
@@ -43,7 +43,7 @@ export function createResumeVersionRepository(db: DatabaseSync) {
           SELECT *
           FROM resume_versions
           WHERE job_id = ?
-          ORDER BY created_at DESC
+          ORDER BY created_at DESC, rowid DESC
           LIMIT 1
         `
         )

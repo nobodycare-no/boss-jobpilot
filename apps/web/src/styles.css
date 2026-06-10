@@ -280,6 +280,55 @@ button:disabled {
   margin-bottom: 16px;
 }
 
+.library-filters {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #d8d0c3;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #fbfaf7;
+}
+
+.library-filters label {
+  display: grid;
+  gap: 6px;
+}
+
+.library-filters label > span {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.library-filters label svg {
+  color: #607073;
+}
+
+.filter-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-chip {
+  min-height: 28px;
+  border-color: #cbd9d7;
+  border-radius: 999px;
+  padding: 0 10px;
+  color: #3e5558;
+  background: #edf3f2;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.filter-chip[aria-pressed="true"] {
+  border-color: #0f5d66;
+  color: #ffffff;
+  background: #0f5d66;
+}
+
 .review-panel {
   display: grid;
   gap: 14px;
