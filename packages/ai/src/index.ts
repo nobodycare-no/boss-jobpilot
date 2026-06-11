@@ -77,7 +77,7 @@ export function createOpenAiCompatibleProvider({
   model = defaultPackyApiModel,
   name = "packyapi"
 }: OpenAiCompatibleProviderOptions): AiProvider {
-  const normalizedBaseUrl = baseUrl.trim().replace(/\/+$/, "");
+  const normalizedBaseUrl = normalizeOpenAiCompatibleBaseUrl(baseUrl);
   const normalizedModel = model.trim();
 
   return {
@@ -90,6 +90,13 @@ export function createOpenAiCompatibleProvider({
       }
 
       const requestModel = request.model?.trim() || normalizedModel;
+      const requestBody = {
+        messages: ensureJsonModeUserInstruction(request.messages),
+        model: requestModel,
+        response_format: {
+          type: "json_object"
+        }
+      };
       let response: Response;
 
       try {
@@ -99,14 +106,7 @@ export function createOpenAiCompatibleProvider({
             Authorization: `Bearer ${apiKey}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({
-            messages: request.messages,
-            model: requestModel,
-            response_format: {
-              type: "json_object"
-            },
-            temperature: request.temperature ?? 0.2
-          })
+          body: JSON.stringify(requestBody)
         });
       } catch (error) {
         throw new Error(
@@ -136,6 +136,42 @@ export function createOpenAiCompatibleProvider({
       return JSON.parse(content) as T;
     }
   };
+}
+
+function normalizeOpenAiCompatibleBaseUrl(baseUrl: string) {
+  return baseUrl
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\/chat\/completions$/i, "")
+    .replace(/\/responses$/i, "")
+    .replace(/\/completions$/i, "");
+}
+
+function ensureJsonModeUserInstruction(messages: AiMessage[]) {
+  if (messages.some((message) => message.role === "user" && /\bjson\b/i.test(message.content))) {
+    return messages;
+  }
+
+  const lastUserMessageIndex = messages.findLastIndex((message) => message.role === "user");
+
+  if (lastUserMessageIndex === -1) {
+    return [
+      ...messages,
+      {
+        role: "user" as const,
+        content: "Return the final answer as a valid json object."
+      }
+    ];
+  }
+
+  return messages.map((message, index) =>
+    index === lastUserMessageIndex
+      ? {
+          ...message,
+          content: `${message.content}\n\nReturn the final answer as a valid json object.`
+        }
+      : message
+  );
 }
 
 export function createAiProviderFromEnv(env: Record<string, string | undefined>) {

@@ -1146,3 +1146,24 @@ Accepted / Proposed / Rejected
 ### Next
 
 - 继续执行全量校验、同步 codegraph，并尝试推送本次 Provider 诊断增强。
+
+## 2026-06-11 更新 29
+
+### Done
+
+- 使用 `.env` 中的真实 PackyAPI 密钥完成最小请求矩阵验证，确认 `gpt-5.5` 在 `https://www.packyapi.com/v1/chat/completions` 上可用。
+- 定位本次 AI Provider 验证失败根因：`AI_API_BASE_URL` 被误填为 `https://www.packyapi.com/v1/responses`，项目再拼接 `/chat/completions` 后变成无效路径。
+- 进一步确认 GPT-5.5 的 PackyAPI JSON mode 兼容约束：用户消息需要包含 `json`，并且请求中不应传 `temperature`。
+- `packages/ai` 已修复 OpenAI-compatible Provider：自动归一化误填 endpoint 的 base URL，自动补齐用户级 `json` 指令，默认省略 `temperature`。
+- 已将本地 `.env` 的 `AI_API_BASE_URL` 修正为 `https://www.packyapi.com/v1`。
+- README、使用手册和迭代计划已同步更新 PackyAPI GPT-5.5 排查说明。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/ai test`
+- `corepack pnpm --filter @boss-jobpilot/ai typecheck`
+- 真实 PackyAPI health probe：`configured=true`、`status=ok`、`detail=ready`
+
+### Next
+
+- 跑全量 typecheck/test/lint/build，更新 codegraph 后提交并尝试推送。

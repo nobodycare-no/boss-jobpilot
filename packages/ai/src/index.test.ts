@@ -489,6 +489,15 @@ describe("OpenAI compatible provider", () => {
     expect(provider?.modelName).toBe("gpt-5");
   });
 
+  it("normalizes endpoint URLs back to the OpenAI-compatible base URL", () => {
+    const provider = createAiProviderFromEnv({
+      AI_API_BASE_URL: "https://www.packyapi.com/v1/responses",
+      AI_API_KEY: "test-key"
+    });
+
+    expect(provider?.baseUrl).toBe("https://www.packyapi.com/v1");
+  });
+
   it("calls the chat completions endpoint and parses JSON content", async () => {
     const calls: Array<{ body: string; headers: Record<string, string>; url: string }> = [];
     const provider = createOpenAiCompatibleProvider({
@@ -537,6 +546,49 @@ describe("OpenAI compatible provider", () => {
         type: "json_object"
       }
     });
+    expect(JSON.parse(call?.body ?? "{}")).not.toHaveProperty("temperature");
+  });
+
+  it("adds a user-level json instruction for JSON mode compatibility", async () => {
+    const calls: Array<{ body: string }> = [];
+    const provider = createOpenAiCompatibleProvider({
+      apiKey: "test-key",
+      fetch: async (_url, init) => {
+        calls.push({
+          body: String(init?.body)
+        });
+
+        return new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    ok: true
+                  })
+                }
+              }
+            ]
+          }),
+          {
+            status: 200
+          }
+        );
+      }
+    });
+
+    await provider.generateJson({
+      messages: [{ role: "user", content: "Return {\"ok\":true}." }],
+      temperature: 0
+    });
+
+    const body = JSON.parse(calls[0]?.body ?? "{}") as {
+      messages: Array<{ content: string; role: string }>;
+    };
+    const lastUserMessage = body.messages.findLast((message) => message.role === "user");
+
+    expect(lastUserMessage?.content).toContain("valid json object");
+    expect(body).not.toHaveProperty("temperature");
   });
 
   it("reports model and base URL when the provider rejects a request", async () => {

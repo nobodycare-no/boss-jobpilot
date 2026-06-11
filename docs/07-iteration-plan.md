@@ -227,6 +227,7 @@ V1 端到端验收必须覆盖：
 - Provider 调用失败时，API 会回退到规则版结果并返回用户可见的降级提示。
 - Web 投递复盘区已提供 AI Provider 健康检查入口，可确认 PackyAPI 配置、模型调用和网络状态。
 - AI Provider 健康检查失败时会显示当前模型和 base URL，便于区分密钥未配置、模型名无效和网络不可达。
+- AI Provider 已兼容 PackyAPI GPT-5.5 的 JSON mode 约束：自动归一化误填 endpoint 的 base URL、补齐用户级 `json` 指令，并默认省略 `temperature`。
 - 已支持记录最近 AI 生成请求的运行元数据，并在 Web 投递复盘区展示模型调用、降级和耗时信息。
 - Web 投递复盘区已支持按能力、状态和岗位筛选 AI 生成记录，并查看单次运行明细。
 

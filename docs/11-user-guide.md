@@ -116,6 +116,8 @@ Web 工作台的投递复盘区域会显示 AI Provider 状态：未配置、可
 - `AI_MODEL` 的优先级高于 `PACKY_API_MODEL`，不要同时填写两个不同模型。
 - 模型名必须是 PackyAPI token 分组可用的完整模型 ID；例如不要填写不存在的 `gpt-5.4`。
 - `AI_API_BASE_URL` 应保持为 `https://www.packyapi.com/v1`，不要额外拼接 `/chat/completions`。
+- `AI_API_BASE_URL` 也不要填写到 `/responses`；项目会自动兼容这种误填，但推荐配置仍是 `https://www.packyapi.com/v1`。
+- GPT-5.5 在 PackyAPI 上可用时，项目会默认省略 `temperature`，并自动补齐 JSON mode 所需的用户级 `json` 指令。
 - 修改 `.env` 后必须重启 API；只刷新 Web 页面不会重新加载密钥或模型。
 - 如果状态详情是 `fetch failed`，通常是本机网络、代理或当前运行环境无法访问 PackyAPI。
 
