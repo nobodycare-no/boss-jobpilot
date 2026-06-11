@@ -44,7 +44,7 @@ textarea {
 .app-shell {
   width: min(1120px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 48px 0;
+  padding: 24px 0;
 }
 
 .hero {
@@ -52,7 +52,7 @@ textarea {
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 32px;
   align-items: end;
-  padding: 32px 0;
+  padding: 20px 0;
   border-bottom: 1px solid #d8d0c3;
 }
 
@@ -69,15 +69,15 @@ textarea {
 h1 {
   margin: 0;
   color: #172126;
-  font-size: 56px;
+  font-size: 48px;
   line-height: 1;
 }
 
 .hero-copy {
   max-width: 720px;
-  margin: 18px 0 0;
+  margin: 12px 0 0;
   color: #4e5a5c;
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.7;
 }
 
@@ -1455,6 +1455,290 @@ button:disabled {
   font-size: 14px;
 }
 
+.experience-drawer {
+  border: 1px solid #d8d0c3;
+  border-radius: 8px;
+  margin: 16px 0 12px;
+  background: #ffffff;
+}
+
+.experience-drawer > summary {
+  display: flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  color: #172126;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.experience-drawer > summary span {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.experience-drawer > summary small {
+  color: #607073;
+  font-size: 12px;
+}
+
+.experience-drawer .workspace-grid {
+  padding: 0 16px 16px;
+}
+
+.job-workbench {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: 16px;
+  height: min(720px, calc(100vh - 330px));
+  min-height: 520px;
+}
+
+.job-sidebar,
+.job-detail-panel,
+.job-list-panel,
+.job-detail-card {
+  min-height: 0;
+}
+
+.job-sidebar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+}
+
+.job-capture-panel,
+.job-list-panel,
+.job-detail-panel,
+.job-detail-card {
+  border: 1px solid #d8d0c3;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.job-capture-panel > summary {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  padding: 0 14px;
+  cursor: pointer;
+  color: #0f5d66;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.job-capture-panel > summary span {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.job-capture-form {
+  border-top: 1px solid #d8d0c3;
+  padding: 14px;
+}
+
+.job-list-panel {
+  display: grid;
+  grid-template-rows: auto auto auto auto auto minmax(0, 1fr);
+  overflow: hidden;
+  padding: 16px;
+}
+
+.job-list {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.job-list-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  justify-items: stretch;
+  min-height: 72px;
+  border-color: #d8d0c3;
+  padding: 10px 12px;
+  color: #172126;
+  background: #ffffff;
+  text-align: left;
+}
+
+.job-list-item[aria-pressed="true"] {
+  border-color: #0f5d66;
+  background: #edf6f5;
+  box-shadow: inset 3px 0 0 #0f5d66;
+}
+
+.job-list-item > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.job-list-item strong,
+.job-list-item span,
+.job-list-item small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.job-list-item strong {
+  color: #172126;
+  font-size: 14px;
+}
+
+.job-list-item span,
+.job-list-item small {
+  color: #607073;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.job-list-item small {
+  align-self: start;
+  color: #0f5d66;
+}
+
+.job-detail-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  overflow: hidden;
+  padding: 12px;
+}
+
+.job-detail-toolbar,
+.job-tool-tabs,
+.job-tool-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.job-detail-toolbar {
+  border-bottom: 1px solid #d8d0c3;
+  padding-bottom: 10px;
+}
+
+.job-detail-card {
+  display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  gap: 12px;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.job-detail-card__header {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.job-detail-card__header h3 {
+  margin: 8px 0 0;
+  color: #172126;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.job-tool-tab {
+  min-height: 34px;
+  border-color: #cbd9d7;
+  padding: 0 11px;
+  color: #3e5558;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.job-tool-tab[aria-pressed="true"] {
+  border-color: #0f5d66;
+  color: #ffffff;
+  background: #0f5d66;
+}
+
+.job-card-busy {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  border: 1px solid #d8c8a3;
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: #5c4b24;
+  background: #fffaf0;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.job-card-busy svg {
+  animation: spin 1s linear infinite;
+}
+
+.job-summary-panel {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d8d0c3;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfaf7;
+}
+
+.job-summary-panel strong {
+  color: #3e5558;
+  font-size: 12px;
+}
+
+.job-summary-panel p {
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 6px 0 0;
+  color: #526165;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.job-tool-panel {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.job-tool-panel > .empty-state:first-child,
+.job-tool-panel .empty-state {
+  margin-top: 0;
+}
+
+.job-detail-panel > .review-panel {
+  min-height: 0;
+  overflow: auto;
+  border: 0;
+  margin: 0;
+  padding: 0 2px 0 0;
+}
+
+.resume-variant-actions,
+.greeting-variant-actions {
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 760px) {
   .app-shell {
     width: min(100% - 24px, 1120px);
@@ -1463,6 +1747,7 @@ button:disabled {
 
   .hero,
   .workspace-grid,
+  .job-workbench,
   .form-grid,
   .application-board,
   .follow-up-board,
@@ -1493,6 +1778,27 @@ button:disabled {
     font-size: 40px;
   }
   .experience-card__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .job-workbench {
+    height: auto;
+    min-height: 0;
+  }
+
+  .job-sidebar,
+  .job-list-panel,
+  .job-detail-panel,
+  .job-detail-card {
+    overflow: visible;
+  }
+
+  .job-list {
+    max-height: 360px;
+  }
+
+  .job-detail-card__header {
     align-items: stretch;
     flex-direction: column;
   }

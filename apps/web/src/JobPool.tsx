@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
-import { BriefcaseBusiness, Plus, RefreshCw, Timer } from "lucide-react";
+import { BriefcaseBusiness, ClipboardList, Plus, RefreshCw, Timer } from "lucide-react";
 
 import type {
   Application,
@@ -15,6 +15,7 @@ import type {
   ResumeVariant,
   ResumeVersion
 } from "@boss-jobpilot/shared";
+import { cleanJobPostingInput } from "@boss-jobpilot/shared";
 
 import {
   analyzeJob,
@@ -53,7 +54,7 @@ import {
   recommendationLabels,
   type JobBoardStage
 } from "./job-labels";
-import { JobCard } from "./job-card";
+import { JobCard, type JobCardTool } from "./job-card";
 
 type JobFormState = {
   platform: string;
@@ -97,6 +98,8 @@ type JobPoolProps = {
   experiences: ExperienceItem[];
 };
 
+type JobPanelTool = JobCardTool | "review";
+
 export function JobPool({ experiences }: JobPoolProps) {
   const [jobs, setJobs] = useState<JobPosting[]>([]);
   const [form, setForm] = useState<JobFormState>(emptyJobForm);
@@ -124,6 +127,9 @@ export function JobPool({ experiences }: JobPoolProps) {
   const [reviewFilters, setReviewFilters] = useState<ApplicationReviewFilters>(
     defaultApplicationReviewFilters
   );
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [activeTool, setActiveTool] = useState<JobPanelTool>("analysis");
+  const [busyJobAction, setBusyJobAction] = useState<Record<string, string>>({});
   const [strategyRecap, setStrategyRecap] = useState<ApplicationReviewStrategyRecap | null>(null);
   const [isStrategyRecapLoading, setIsStrategyRecapLoading] = useState(false);
   const [strategyRecapError, setStrategyRecapError] = useState<string | null>(null);
@@ -262,6 +268,33 @@ export function JobPool({ experiences }: JobPoolProps) {
       }),
     [activeBoardFilter, applicationByJobId, jobs]
   );
+  const selectedJob = useMemo(() => {
+    if (selectedJobId) {
+      const selected = jobs.find((job) => job.id === selectedJobId);
+
+      if (selected) {
+        return selected;
+      }
+    }
+
+    return visibleJobs[0] ?? null;
+  }, [jobs, selectedJobId, visibleJobs]);
+
+  useEffect(() => {
+    if (visibleJobs.length === 0) {
+      setSelectedJobId(null);
+      return;
+    }
+
+    if (!selectedJobId || !visibleJobs.some((job) => job.id === selectedJobId)) {
+      const firstVisibleJob = visibleJobs[0];
+
+      if (firstVisibleJob) {
+        setSelectedJobId(firstVisibleJob.id);
+      }
+      setActiveTool("analysis");
+    }
+  }, [selectedJobId, visibleJobs]);
 
   async function refreshJobs() {
     setIsLoading(true);
@@ -482,6 +515,7 @@ export function JobPool({ experiences }: JobPoolProps) {
   async function handleAnalyze(id: string) {
     setError(null);
     setFeedback(null);
+    setBusyJobAction((current) => ({ ...current, [id]: "正在分析当前岗位..." }));
 
     try {
       const response = await analyzeJob(id);
@@ -493,12 +527,15 @@ export function JobPool({ experiences }: JobPoolProps) {
       void refreshAiGenerationRuns();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "岗位分析失败");
+    } finally {
+      setBusyJobAction((current) => removeRecordKey(current, id));
     }
   }
 
   async function handleGenerateResume(id: string, variant: ResumeVariant) {
     setError(null);
     setFeedback(null);
+    setBusyJobAction((current) => ({ ...current, [id]: "正在生成定制简历..." }));
 
     try {
       const response = await generateResume(id, variant);
@@ -515,12 +552,15 @@ export function JobPool({ experiences }: JobPoolProps) {
       void refreshAiGenerationRuns();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "定制简历生成失败");
+    } finally {
+      setBusyJobAction((current) => removeRecordKey(current, id));
     }
   }
 
   async function handleGenerateGreeting(id: string, variant: GreetingVariant) {
     setError(null);
     setFeedback(null);
+    setBusyJobAction((current) => ({ ...current, [id]: "正在生成打招呼语..." }));
 
     try {
       const response = await generateGreeting(id, variant);
@@ -542,6 +582,8 @@ export function JobPool({ experiences }: JobPoolProps) {
       void refreshAiGenerationRuns();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "打招呼语生成失败");
+    } finally {
+      setBusyJobAction((current) => removeRecordKey(current, id));
     }
   }
 
@@ -688,235 +730,284 @@ export function JobPool({ experiences }: JobPoolProps) {
     }
   }
 
+  const selectedApplication = selectedJob ? applicationByJobId[selectedJob.id] : undefined;
+
   return (
     <section className="job-section" aria-label="岗位池">
       {error ? <div className="notice">{error}</div> : null}
       {feedback ? <div className="notice notice--success">{feedback}</div> : null}
 
-      <div className="workspace-grid">
-        <form className="editor-panel" onSubmit={handleSubmit}>
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">
-                <BriefcaseBusiness size={16} />
-                岗位采集
-              </p>
-              <h2>保存岗位</h2>
-            </div>
-          </div>
+      <div className="job-workbench">
+        <aside className="job-sidebar">
+          <details className="job-capture-panel">
+            <summary>
+              <span>
+                <Plus size={16} />
+                手动保存岗位
+              </span>
+            </summary>
+            <form className="job-capture-form" onSubmit={handleSubmit}>
+              <div className="form-grid">
+                <label>
+                  平台
+                  <input
+                    required
+                    value={form.platform}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, platform: event.target.value }))
+                    }
+                  />
+                </label>
+                <label>
+                  城市
+                  <input
+                    value={form.city}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, city: event.target.value }))
+                    }
+                    placeholder="上海"
+                  />
+                </label>
+                <label className="wide">
+                  岗位标题
+                  <input
+                    required
+                    value={form.title}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, title: event.target.value }))
+                    }
+                    placeholder="AI 前端开发工程师"
+                  />
+                </label>
+                <label>
+                  公司
+                  <input
+                    value={form.companyName}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, companyName: event.target.value }))
+                    }
+                    placeholder="示例科技"
+                  />
+                </label>
+                <label>
+                  薪资
+                  <input
+                    value={form.salaryText}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, salaryText: event.target.value }))
+                    }
+                    placeholder="20-35K"
+                  />
+                </label>
+                <label>
+                  经验
+                  <input
+                    value={form.experienceRequirement}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        experienceRequirement: event.target.value
+                      }))
+                    }
+                    placeholder="1-3 年"
+                  />
+                </label>
+                <label>
+                  学历
+                  <input
+                    value={form.educationRequirement}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        educationRequirement: event.target.value
+                      }))
+                    }
+                    placeholder="本科"
+                  />
+                </label>
+                <label className="wide">
+                  链接
+                  <input
+                    value={form.url}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, url: event.target.value }))
+                    }
+                    placeholder="https://www.zhipin.com/..."
+                  />
+                </label>
+                <label className="wide">
+                  JD
+                  <textarea
+                    required
+                    value={form.jdRaw}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, jdRaw: event.target.value }))
+                    }
+                    placeholder="粘贴岗位职责和任职要求，用于后续匹配分析。"
+                  />
+                </label>
+              </div>
 
-          <div className="form-grid">
-            <label>
-              平台
-              <input
-                required
-                value={form.platform}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, platform: event.target.value }))
-                }
-              />
-            </label>
-            <label>
-              城市
-              <input
-                value={form.city}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, city: event.target.value }))
-                }
-                placeholder="上海"
-              />
-            </label>
-            <label className="wide">
-              岗位标题
-              <input
-                required
-                value={form.title}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, title: event.target.value }))
-                }
-                placeholder="AI 前端开发工程师"
-              />
-            </label>
-            <label>
-              公司
-              <input
-                value={form.companyName}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, companyName: event.target.value }))
-                }
-                placeholder="示例科技"
-              />
-            </label>
-            <label>
-              薪资
-              <input
-                value={form.salaryText}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, salaryText: event.target.value }))
-                }
-                placeholder="20-35K"
-              />
-            </label>
-            <label>
-              经验
-              <input
-                value={form.experienceRequirement}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, experienceRequirement: event.target.value }))
-                }
-                placeholder="1-3 年"
-              />
-            </label>
-            <label>
-              学历
-              <input
-                value={form.educationRequirement}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, educationRequirement: event.target.value }))
-                }
-                placeholder="本科"
-              />
-            </label>
-            <label className="wide">
-              链接
-              <input
-                value={form.url}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, url: event.target.value }))
-                }
-                placeholder="https://www.zhipin.com/..."
-              />
-            </label>
-            <label className="wide">
-              JD
-              <textarea
-                required
-                value={form.jdRaw}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, jdRaw: event.target.value }))
-                }
-                placeholder="粘贴岗位职责和任职要求，用于后续匹配分析。"
-              />
-            </label>
-          </div>
-
-          <div className="form-actions">
-            <button type="submit" disabled={isSaving}>
-              <Plus size={18} />
-              {isSaving ? "保存中" : "保存岗位"}
-            </button>
-            <button type="button" className="secondary-button" onClick={() => void refreshJobs()}>
-              <RefreshCw size={18} />
-              刷新
-            </button>
-          </div>
-        </form>
-
-        <section className="library-panel" aria-label="岗位列表">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">
-                <BriefcaseBusiness size={16} />
-                岗位池
-              </p>
-              <h2>已保存岗位</h2>
-            </div>
-            <span className="count-pill">
-              {visibleJobs.length}/{jobs.length}
-            </span>
-          </div>
-
-          {jobKeywords.length > 0 ? (
-            <div className="skill-strip">
-              {jobKeywords.map((keyword) => (
-                <span key={keyword}>{keyword}</span>
-              ))}
-            </div>
-          ) : null}
-
-          {jobs.length > 0 ? (
-            <ApplicationReviewPanel
-              aiGenerationRuns={aiGenerationRuns}
-              aiProviderHealth={aiProviderHealth}
-              aiProviderHealthError={aiProviderHealthError}
-              cityOptions={reviewCityOptions}
-              filters={reviewFilters}
-              isAiProviderHealthLoading={isAiProviderHealthLoading}
-              isStrategyRecapLoading={isStrategyRecapLoading}
-              onFiltersChange={setReviewFilters}
-              onRefreshAiProviderHealth={refreshAiProviderHealth}
-              strategyRecap={strategyRecap}
-              strategyRecapError={strategyRecapError}
-              summary={reviewSummary}
-              jobs={jobs}
-              totalJobs={jobs.length}
-            />
-          ) : null}
-
-          {jobs.length > 0 ? (
-            <div className="application-board" aria-label="投递看板">
-              {boardItems.map((item) => (
-                <button
-                  aria-pressed={activeBoardFilter === item.stage}
-                  className="board-filter-button"
-                  key={item.stage}
-                  onClick={() => setActiveBoardFilter(item.stage)}
-                  type="button"
-                >
-                  <span>{item.label}</span>
-                  <strong>{item.count}</strong>
+              <div className="form-actions">
+                <button type="submit" disabled={isSaving}>
+                  <Plus size={18} />
+                  {isSaving ? "保存中" : "保存岗位"}
                 </button>
-              ))}
-            </div>
-          ) : null}
-
-          {jobs.length > 0 ? (
-            <div className="follow-up-board" aria-label="跟进队列">
-              {followUpItems.map((item) => (
                 <button
-                  aria-pressed={activeBoardFilter === item.filter}
-                  className="board-filter-button follow-up-filter-button"
-                  key={item.filter}
-                  onClick={() => setActiveBoardFilter(item.filter)}
                   type="button"
+                  className="secondary-button"
+                  onClick={() => void refreshJobs()}
                 >
-                  <span>
-                    <Timer size={13} />
-                    {item.label}
-                  </span>
-                  <strong>{item.count}</strong>
+                  <RefreshCw size={18} />
+                  刷新
                 </button>
-              ))}
+              </div>
+            </form>
+          </details>
+
+          <section className="job-list-panel" aria-label="岗位列表">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">
+                  <BriefcaseBusiness size={16} />
+                  岗位池
+                </p>
+                <h2>已保存岗位</h2>
+              </div>
+              <span className="count-pill">
+                {visibleJobs.length}/{jobs.length}
+              </span>
             </div>
-          ) : null}
 
-          {isLoading ? <p className="empty-state">正在加载岗位池...</p> : null}
-          {!isLoading && jobs.length === 0 ? (
-            <p className="empty-state">还没有岗位。先手动保存一个岗位，后续会接入插件采集。</p>
-          ) : null}
-          {!isLoading && jobs.length > 0 && visibleJobs.length === 0 ? (
-            <p className="empty-state">
-              {isFollowUpFilter(activeBoardFilter)
-                ? "当前跟进队列下没有岗位。"
-                : "当前投递状态下没有岗位。"}
-            </p>
-          ) : null}
+            {jobKeywords.length > 0 ? (
+              <div className="skill-strip">
+                {jobKeywords.map((keyword) => (
+                  <span key={keyword}>{keyword}</span>
+                ))}
+              </div>
+            ) : null}
 
-          <div className="experience-list">
-            {visibleJobs.map((job) => {
-              const application = applicationByJobId[job.id];
+            {jobs.length > 0 ? (
+              <div className="application-board" aria-label="投递看板">
+                {boardItems.map((item) => (
+                  <button
+                    aria-pressed={activeBoardFilter === item.stage}
+                    className="board-filter-button"
+                    key={item.stage}
+                    onClick={() => setActiveBoardFilter(item.stage)}
+                    type="button"
+                  >
+                    <span>{item.label}</span>
+                    <strong>{item.count}</strong>
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
-              return (
-                <JobCard
+            {jobs.length > 0 ? (
+              <div className="follow-up-board" aria-label="跟进队列">
+                {followUpItems.map((item) => (
+                  <button
+                    aria-pressed={activeBoardFilter === item.filter}
+                    className="board-filter-button follow-up-filter-button"
+                    key={item.filter}
+                    onClick={() => setActiveBoardFilter(item.filter)}
+                    type="button"
+                  >
+                    <span>
+                      <Timer size={13} />
+                      {item.label}
+                    </span>
+                    <strong>{item.count}</strong>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {isLoading ? <p className="empty-state">正在加载岗位池...</p> : null}
+            {!isLoading && jobs.length === 0 ? (
+              <p className="empty-state">还没有岗位。先手动保存一个岗位，后续会接入插件采集。</p>
+            ) : null}
+            {!isLoading && jobs.length > 0 && visibleJobs.length === 0 ? (
+              <p className="empty-state">
+                {isFollowUpFilter(activeBoardFilter)
+                  ? "当前跟进队列下没有岗位。"
+                  : "当前投递状态下没有岗位。"}
+              </p>
+            ) : null}
+
+            <div className="job-list">
+              {visibleJobs.map((job) => (
+                <JobListItem
+                  active={selectedJob?.id === job.id}
                   analysis={analysisByJobId[job.id]}
-                  application={application}
-                  applicationEvents={
-                    application ? (eventsByApplicationId[application.id] ?? []) : []
-                  }
-                  applicationHistory={applicationHistoryByJobId[job.id] ?? []}
-                  experienceById={experienceById}
+                  application={applicationByJobId[job.id]}
+                  busyLabel={busyJobAction[job.id]}
                   job={job}
                   key={job.id}
+                  onSelect={() => {
+                    setSelectedJobId(job.id);
+                    setActiveTool("analysis");
+                  }}
+                />
+              ))}
+            </div>
+          </section>
+        </aside>
+
+        <section className="job-detail-panel" aria-label="当前岗位">
+          {selectedJob ? (
+            <>
+              <div className="job-detail-toolbar" aria-label="投递工具">
+                <button
+                  aria-pressed={activeTool !== "review"}
+                  className="job-tool-tab"
+                  onClick={() => setActiveTool("analysis")}
+                  type="button"
+                >
+                  <BriefcaseBusiness size={15} />
+                  当前岗位
+                </button>
+                <button
+                  aria-pressed={activeTool === "review"}
+                  className="job-tool-tab"
+                  onClick={() => setActiveTool("review")}
+                  type="button"
+                >
+                  <ClipboardList size={15} />
+                  投递复盘
+                </button>
+              </div>
+
+              {activeTool === "review" ? (
+                <ApplicationReviewPanel
+                  aiGenerationRuns={aiGenerationRuns}
+                  aiProviderHealth={aiProviderHealth}
+                  aiProviderHealthError={aiProviderHealthError}
+                  cityOptions={reviewCityOptions}
+                  filters={reviewFilters}
+                  isAiProviderHealthLoading={isAiProviderHealthLoading}
+                  isStrategyRecapLoading={isStrategyRecapLoading}
+                  onFiltersChange={setReviewFilters}
+                  onRefreshAiProviderHealth={refreshAiProviderHealth}
+                  strategyRecap={strategyRecap}
+                  strategyRecapError={strategyRecapError}
+                  summary={reviewSummary}
+                  jobs={jobs}
+                  totalJobs={jobs.length}
+                />
+              ) : (
+                <JobCard
+                  activeTool={activeTool}
+                  analysis={analysisByJobId[selectedJob.id]}
+                  application={selectedApplication}
+                  applicationEvents={
+                    selectedApplication ? (eventsByApplicationId[selectedApplication.id] ?? []) : []
+                  }
+                  applicationHistory={applicationHistoryByJobId[selectedJob.id] ?? []}
+                  busyLabel={busyJobAction[selectedJob.id]}
+                  experienceById={experienceById}
+                  job={selectedJob}
                   onAnalyze={handleAnalyze}
                   onDelete={handleDelete}
                   onGenerateGreeting={handleGenerateGreeting}
@@ -924,17 +1015,54 @@ export function JobPool({ experiences }: JobPoolProps) {
                   onCopyText={handleCopyText}
                   onSaveGreetingEdit={handleSaveGreetingEdit}
                   onSaveResumeEdit={handleSaveResumeEdit}
+                  onToolChange={(tool) => setActiveTool(tool)}
                   onUpdateFollowUp={handleUpdateApplicationFollowUp}
                   onUpdateApplicationStatus={handleUpdateApplicationStatus}
-                  resume={resumeByJobId[job.id]}
-                  resumeHistory={resumeHistoryByJobId[job.id] ?? []}
+                  resume={resumeByJobId[selectedJob.id]}
+                  resumeHistory={resumeHistoryByJobId[selectedJob.id] ?? []}
                 />
-              );
-            })}
-          </div>
+              )}
+            </>
+          ) : (
+            <p className="empty-state">选择一个岗位后查看分析、简历和话术。</p>
+          )}
         </section>
       </div>
     </section>
+  );
+}
+
+function JobListItem({
+  active,
+  analysis,
+  application,
+  busyLabel,
+  job,
+  onSelect
+}: {
+  active: boolean;
+  analysis?: JobAnalysis;
+  application?: Application;
+  busyLabel?: string;
+  job: JobPosting;
+  onSelect: () => void;
+}) {
+  return (
+    <button aria-pressed={active} className="job-list-item" onClick={onSelect} type="button">
+      <div>
+        <strong>{job.title}</strong>
+        <span>
+          {[job.companyName, job.city, job.salaryText].filter(Boolean).join(" / ") || job.platform}
+        </span>
+      </div>
+      <small>
+        {busyLabel ??
+          [
+            analysis ? `${analysis.matchScore} 分` : "未分析",
+            application ? boardStageLabels[application.status] : "未开始"
+          ].join(" · ")}
+      </small>
+    </button>
   );
 }
 
@@ -973,7 +1101,7 @@ function getRecommendationScopeLabel(recommendation: ApplicationReviewRecommenda
 }
 
 function formToInput(form: JobFormState): JobPostingCreateInput {
-  return {
+  return cleanJobPostingInput({
     platform: form.platform.trim(),
     url: optionalText(form.url),
     title: form.title.trim(),
@@ -983,7 +1111,7 @@ function formToInput(form: JobFormState): JobPostingCreateInput {
     educationRequirement: optionalText(form.educationRequirement),
     companyName: optionalText(form.companyName),
     jdRaw: form.jdRaw.trim()
-  };
+  });
 }
 
 function optionalText(value: string) {
@@ -1068,4 +1196,10 @@ async function writeClipboardText(value: string) {
   } finally {
     textarea.remove();
   }
+}
+
+function removeRecordKey<T>(record: Record<string, T>, key: string) {
+  const next = { ...record };
+  delete next[key];
+  return next;
 }

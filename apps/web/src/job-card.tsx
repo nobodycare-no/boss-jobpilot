@@ -1,4 +1,12 @@
-import { BarChart3, Copy, FileText, MessageSquareText, Trash2 } from "lucide-react";
+import {
+  BarChart3,
+  Copy,
+  FileClock,
+  FileText,
+  MessageSquareText,
+  RefreshCw,
+  Trash2
+} from "lucide-react";
 
 import type {
   Application,
@@ -20,10 +28,12 @@ import {
 } from "./job-card-panels";
 
 export type JobCardProps = {
+  activeTool: JobCardTool;
   analysis?: JobAnalysis;
   application?: Application;
   applicationEvents: ApplicationEvent[];
   applicationHistory: Application[];
+  busyLabel?: string;
   experienceById: Map<string, ExperienceItem>;
   job: JobPosting;
   onAnalyze: (id: string) => Promise<void>;
@@ -38,15 +48,20 @@ export type JobCardProps = {
     applicationId: string,
     status: Application["status"]
   ) => Promise<void>;
+  onToolChange: (tool: JobCardTool) => void;
   resume?: ResumeVersion;
   resumeHistory: ResumeVersion[];
 };
 
+export type JobCardTool = "analysis" | "resume" | "greeting" | "versions";
+
 export function JobCard({
+  activeTool,
   analysis,
   application,
   applicationEvents,
   applicationHistory,
+  busyLabel,
   experienceById,
   job,
   onAnalyze,
@@ -58,27 +73,25 @@ export function JobCard({
   onSaveResumeEdit,
   onUpdateFollowUp,
   onUpdateApplicationStatus,
+  onToolChange,
   resume,
   resumeHistory
 }: JobCardProps) {
+  const isBusy = Boolean(busyLabel);
+
   return (
-    <article className="experience-card">
-      <div className="experience-card__header">
+    <article className="job-detail-card">
+      <div className="job-detail-card__header">
         <div>
           <span className="type-pill">{job.platform}</span>
           <h3>{job.title}</h3>
+          <p className="experience-meta">
+            {[job.companyName, job.city, job.salaryText, job.experienceRequirement]
+              .filter(Boolean)
+              .join(" / ")}
+          </p>
         </div>
         <div className="card-actions">
-          <button
-            type="button"
-            className="icon-button"
-            onClick={() => void onAnalyze(job.id)}
-            title="分析"
-          >
-            <BarChart3 size={17} />
-          </button>
-          <ResumeVariantActions jobId={job.id} onGenerateResume={onGenerateResume} />
-          <GreetingVariantActions jobId={job.id} onGenerateGreeting={onGenerateGreeting} />
           <button
             type="button"
             className="icon-button"
@@ -109,39 +122,153 @@ export function JobCard({
           </button>
         </div>
       </div>
-      <p className="experience-meta">
-        {[job.companyName, job.city, job.salaryText, job.experienceRequirement]
-          .filter(Boolean)
-          .join(" / ")}
-      </p>
-      <p>{job.jdRaw}</p>
-      {analysis ? <AnalysisPanel analysis={analysis} experienceById={experienceById} /> : null}
-      {resume ? (
-        <ResumePanel resume={resume} onCopyText={onCopyText} onSaveEdit={onSaveResumeEdit} />
-      ) : null}
-      {application ? (
-        <ApplicationPanel
-          application={application}
-          events={applicationEvents}
-          onCopyText={onCopyText}
-          onSaveEdit={onSaveGreetingEdit}
-          onUpdateFollowUp={onUpdateFollowUp}
-          onUpdateStatus={onUpdateApplicationStatus}
+
+      <div className="job-tool-tabs" aria-label="当前岗位工具栏">
+        <ToolTab
+          activeTool={activeTool}
+          Icon={BarChart3}
+          label={analysis ? `${analysis.matchScore} 分` : "分析"}
+          tool="analysis"
+          onToolChange={onToolChange}
         />
+        <ToolTab
+          activeTool={activeTool}
+          Icon={FileText}
+          label={resume ? "简历" : "生成简历"}
+          tool="resume"
+          onToolChange={onToolChange}
+        />
+        <ToolTab
+          activeTool={activeTool}
+          Icon={MessageSquareText}
+          label={application ? "话术" : "打招呼"}
+          tool="greeting"
+          onToolChange={onToolChange}
+        />
+        <ToolTab
+          activeTool={activeTool}
+          Icon={FileClock}
+          label="版本"
+          tool="versions"
+          onToolChange={onToolChange}
+        />
+      </div>
+
+      {busyLabel ? (
+        <div className="job-card-busy" role="status">
+          <RefreshCw size={15} />
+          {busyLabel}
+        </div>
       ) : null}
-      <VersionComparePanel
-        applications={applicationHistory}
-        onCopyText={onCopyText}
-        resumes={resumeHistory}
-      />
+
+      <section className="job-summary-panel" aria-label="岗位核心信息">
+        <div>
+          <strong>JD 摘要</strong>
+          <p>{job.jdRaw || "暂无岗位描述"}</p>
+        </div>
+      </section>
+
+      <div className="job-tool-panel">
+        {activeTool === "analysis" ? (
+          <>
+            <div className="job-tool-actions">
+              <button
+                type="button"
+                className="panel-action-button"
+                disabled={isBusy}
+                onClick={() => void onAnalyze(job.id)}
+              >
+                <BarChart3 size={15} />
+                {analysis ? "重新分析" : "分析当前岗位"}
+              </button>
+            </div>
+            {analysis ? (
+              <AnalysisPanel analysis={analysis} experienceById={experienceById} />
+            ) : (
+              <p className="empty-state">还没有分析结果。</p>
+            )}
+          </>
+        ) : null}
+
+        {activeTool === "resume" ? (
+          <>
+            <ResumeVariantActions
+              disabled={isBusy || !analysis}
+              jobId={job.id}
+              onGenerateResume={onGenerateResume}
+            />
+            {!analysis ? <p className="empty-state">先完成岗位分析，再生成定制简历。</p> : null}
+            {resume ? (
+              <ResumePanel resume={resume} onCopyText={onCopyText} onSaveEdit={onSaveResumeEdit} />
+            ) : null}
+          </>
+        ) : null}
+
+        {activeTool === "greeting" ? (
+          <>
+            <GreetingVariantActions
+              disabled={isBusy || !analysis}
+              jobId={job.id}
+              onGenerateGreeting={onGenerateGreeting}
+            />
+            {!analysis ? <p className="empty-state">先完成岗位分析，再生成打招呼语。</p> : null}
+            {application ? (
+              <ApplicationPanel
+                application={application}
+                events={applicationEvents}
+                onCopyText={onCopyText}
+                onSaveEdit={onSaveGreetingEdit}
+                onUpdateFollowUp={onUpdateFollowUp}
+                onUpdateStatus={onUpdateApplicationStatus}
+              />
+            ) : null}
+          </>
+        ) : null}
+
+        {activeTool === "versions" ? (
+          <VersionComparePanel
+            applications={applicationHistory}
+            onCopyText={onCopyText}
+            resumes={resumeHistory}
+          />
+        ) : null}
+      </div>
     </article>
   );
 }
 
+function ToolTab({
+  activeTool,
+  Icon,
+  label,
+  onToolChange,
+  tool
+}: {
+  activeTool: JobCardTool;
+  Icon: typeof BarChart3;
+  label: string;
+  onToolChange: (tool: JobCardTool) => void;
+  tool: JobCardTool;
+}) {
+  return (
+    <button
+      aria-pressed={activeTool === tool}
+      className="job-tool-tab"
+      onClick={() => onToolChange(tool)}
+      type="button"
+    >
+      <Icon size={15} />
+      {label}
+    </button>
+  );
+}
+
 function ResumeVariantActions({
+  disabled,
   jobId,
   onGenerateResume
 }: {
+  disabled: boolean;
   jobId: string;
   onGenerateResume: (id: string, variant: ResumeVariant) => Promise<void>;
 }) {
@@ -160,7 +287,8 @@ function ResumeVariantActions({
       {variants.map((item) => (
         <button
           type="button"
-          className="icon-button"
+          className="panel-action-button"
+          disabled={disabled}
           key={item.variant}
           onClick={() => void onGenerateResume(jobId, item.variant)}
           title={item.title}
@@ -174,9 +302,11 @@ function ResumeVariantActions({
 }
 
 function GreetingVariantActions({
+  disabled,
   jobId,
   onGenerateGreeting
 }: {
+  disabled: boolean;
   jobId: string;
   onGenerateGreeting: (id: string, variant: GreetingVariant) => Promise<void>;
 }) {
@@ -195,7 +325,8 @@ function GreetingVariantActions({
       {variants.map((item) => (
         <button
           type="button"
-          className="icon-button"
+          className="panel-action-button"
+          disabled={disabled}
           key={item.variant}
           onClick={() => void onGenerateGreeting(jobId, item.variant)}
           title={item.title}

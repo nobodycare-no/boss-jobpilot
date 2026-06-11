@@ -1,8 +1,9 @@
-import { type JobPostingInput } from "@boss-jobpilot/shared";
+import { cleanJobPostingInput, cleanText, type JobPostingInput } from "@boss-jobpilot/shared";
 
-function textFrom(document: Document, selectors: string[]) {
+function textFrom(root: ParentNode, selectors: string[], options: { multiline?: boolean } = {}) {
   for (const selector of selectors) {
-    const value = document.querySelector(selector)?.textContent?.trim();
+    const element = root.querySelector(selector);
+    const value = cleanText(element?.textContent, options);
 
     if (value) {
       return value;
@@ -13,6 +14,8 @@ function textFrom(document: Document, selectors: string[]) {
 }
 
 export function extractBossJobPosting(document: Document): JobPostingInput {
+  const detailRoot =
+    document.querySelector(".job-detail, .job-detail-box, .job-detail-container") ?? document;
   const title =
     textFrom(document, [".job-title", ".name", "[class*='job-title']"]) || document.title;
   const salary = textFrom(document, [".salary", "[class*='salary']"]);
@@ -21,9 +24,20 @@ export function extractBossJobPosting(document: Document): JobPostingInput {
     ".company-name",
     "[class*='company']"
   ]);
-  const jdRaw = textFrom(document, [".job-sec-text", ".job-detail", "[class*='job-detail']"]);
+  const jdRaw = textFrom(
+    detailRoot,
+    [
+      ".job-sec-text",
+      ".job-detail-section .text",
+      ".job-detail .text",
+      ".job-description",
+      "[class*='job-sec']",
+      "[class*='job-detail']"
+    ],
+    { multiline: true }
+  );
 
-  return {
+  return cleanJobPostingInput({
     id: crypto.randomUUID(),
     platform: "boss",
     url: location.href,
@@ -35,5 +49,5 @@ export function extractBossJobPosting(document: Document): JobPostingInput {
     jdRaw,
     companyName,
     capturedAt: new Date().toISOString()
-  };
+  });
 }

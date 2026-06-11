@@ -4,6 +4,8 @@ import {
   JobPostingCreateSchema,
   JobPostingSchema,
   JobPostingUpdateSchema,
+  cleanJobPostingInput,
+  cleanJobPostingUpdateInput,
   type JobPosting,
   type JobPostingCreateInput,
   type JobPostingUpdateInput
@@ -57,8 +59,9 @@ export function createJobRepository(db: DatabaseSync) {
 
     create(input: JobPostingCreateInput) {
       const now = new Date().toISOString();
+      const cleanedInput = cleanJobPostingInput(JobPostingCreateSchema.parse(input));
       const job = JobPostingSchema.parse({
-        ...JobPostingCreateSchema.parse(input),
+        ...cleanedInput,
         id: input.id ?? crypto.randomUUID(),
         capturedAt: input.capturedAt ?? now
       });
@@ -110,7 +113,7 @@ export function createJobRepository(db: DatabaseSync) {
 
       const next = JobPostingSchema.parse({
         ...existing,
-        ...JobPostingUpdateSchema.parse(input),
+        ...cleanJobPostingUpdateInput(JobPostingUpdateSchema.parse(input)),
         id
       });
       const now = new Date().toISOString();
@@ -216,17 +219,19 @@ export function createJobRepository(db: DatabaseSync) {
 }
 
 function rowToJobPosting(row: JobRow): JobPosting {
-  return JobPostingSchema.parse({
-    id: row.id,
-    platform: row.platform,
-    url: row.url ?? undefined,
-    title: row.title,
-    salaryText: row.salary_text ?? undefined,
-    city: row.city ?? undefined,
-    experienceRequirement: row.experience_requirement ?? undefined,
-    educationRequirement: row.education_requirement ?? undefined,
-    jdRaw: row.jd_raw,
-    companyName: row.company_name ?? undefined,
-    capturedAt: row.captured_at
-  });
+  return JobPostingSchema.parse(
+    cleanJobPostingInput({
+      id: row.id,
+      platform: row.platform,
+      url: row.url ?? undefined,
+      title: row.title,
+      salaryText: row.salary_text ?? undefined,
+      city: row.city ?? undefined,
+      experienceRequirement: row.experience_requirement ?? undefined,
+      educationRequirement: row.education_requirement ?? undefined,
+      jdRaw: row.jd_raw,
+      companyName: row.company_name ?? undefined,
+      capturedAt: row.captured_at
+    })
+  );
 }
