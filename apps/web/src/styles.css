@@ -42,17 +42,17 @@ textarea {
 }
 
 .app-shell {
-  width: min(1120px, calc(100% - 32px));
+  width: min(1680px, calc(100% - 40px));
   margin: 0 auto;
-  padding: 24px 0;
+  padding: 16px 0 20px;
 }
 
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 32px;
+  gap: 24px;
   align-items: end;
-  padding: 20px 0;
+  padding: 12px 0 16px;
   border-bottom: 1px solid #d8d0c3;
 }
 
@@ -69,7 +69,7 @@ textarea {
 h1 {
   margin: 0;
   color: #172126;
-  font-size: 48px;
+  font-size: 44px;
   line-height: 1;
 }
 
@@ -1482,7 +1482,7 @@ button:disabled {
 .experience-drawer {
   border: 1px solid #d8d0c3;
   border-radius: 8px;
-  margin: 16px 0 12px;
+  margin: 12px 0 8px;
   background: #ffffff;
 }
 
@@ -1515,10 +1515,10 @@ button:disabled {
 
 .job-workbench {
   display: grid;
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
-  gap: 16px;
-  height: min(720px, calc(100vh - 330px));
-  min-height: 520px;
+  grid-template-columns: minmax(360px, 440px) minmax(0, 1fr);
+  gap: 20px;
+  height: clamp(500px, calc(100vh - 300px), 840px);
+  min-height: 0;
 }
 
 .job-sidebar,

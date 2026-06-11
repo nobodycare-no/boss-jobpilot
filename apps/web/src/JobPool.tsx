@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { BriefcaseBusiness, ClipboardList, Plus, RefreshCw, Timer } from "lucide-react";
 
@@ -83,6 +83,14 @@ const emptyJobForm: JobFormState = {
 type FollowUpFilter = "followUpDue" | "followUpOverdue" | "followUpToday" | "followUpUpcoming";
 type JobBoardFilter = "all" | FollowUpFilter | JobBoardStage;
 type FollowUpBucket = "overdue" | "today" | "upcoming" | "none";
+type RefreshJobsOptions = {
+  force?: boolean;
+  preserveFeedback?: boolean;
+  preferredJobId?: string;
+  revealNewJobs?: boolean;
+  resetBoardFilter?: boolean;
+  silent?: boolean;
+};
 
 const followUpFilterItems = [
   { filter: "followUpDue", label: "今日待跟进" },
@@ -133,6 +141,9 @@ export function JobPool({ experiences }: JobPoolProps) {
   const [strategyRecap, setStrategyRecap] = useState<ApplicationReviewStrategyRecap | null>(null);
   const [isStrategyRecapLoading, setIsStrategyRecapLoading] = useState(false);
   const [strategyRecapError, setStrategyRecapError] = useState<string | null>(null);
+  const jobSyncSignatureRef = useRef("");
+  const knownJobIdsRef = useRef<Set<string> | null>(null);
+  const isRefreshingJobsRef = useRef(false);
 
   const jobKeywords = useMemo(
     () =>
@@ -242,30 +253,7 @@ export function JobPool({ experiences }: JobPoolProps) {
   );
   const reviewScopeLabel = useMemo(() => buildReviewScopeLabel(reviewFilters), [reviewFilters]);
   const visibleJobs = useMemo(
-    () =>
-      jobs.filter((job) => {
-        if (activeBoardFilter === "all") {
-          return true;
-        }
-
-        if (activeBoardFilter === "followUpDue") {
-          return isFollowUpDue(applicationByJobId[job.id]?.nextFollowUpAt);
-        }
-
-        if (activeBoardFilter === "followUpOverdue") {
-          return getFollowUpBucket(applicationByJobId[job.id]?.nextFollowUpAt) === "overdue";
-        }
-
-        if (activeBoardFilter === "followUpToday") {
-          return getFollowUpBucket(applicationByJobId[job.id]?.nextFollowUpAt) === "today";
-        }
-
-        if (activeBoardFilter === "followUpUpcoming") {
-          return getFollowUpBucket(applicationByJobId[job.id]?.nextFollowUpAt) === "upcoming";
-        }
-
-        return getJobBoardStage(job.id, applicationByJobId) === activeBoardFilter;
-      }),
+    () => filterJobsByBoard({ applicationByJobId, filter: activeBoardFilter, jobs }),
     [activeBoardFilter, applicationByJobId, jobs]
   );
   const selectedJob = useMemo(() => {
@@ -296,14 +284,23 @@ export function JobPool({ experiences }: JobPoolProps) {
     }
   }, [selectedJobId, visibleJobs]);
 
-  async function refreshJobs() {
-    setIsLoading(true);
+  async function refreshJobs(options: RefreshJobsOptions = {}) {
+    if (isRefreshingJobsRef.current) {
+      return;
+    }
+
+    isRefreshingJobsRef.current = true;
+
+    if (!options.silent) {
+      setIsLoading(true);
+    }
     setError(null);
-    setFeedback(null);
+    if (!options.preserveFeedback) {
+      setFeedback(null);
+    }
 
     try {
       const response = await listJobs();
-      setJobs(response.items);
       const latestAnalyses = await Promise.all(
         response.items.map(async (job) => {
           const latest = await getLatestJobAnalysis(job.id);
@@ -343,40 +340,92 @@ export function JobPool({ experiences }: JobPoolProps) {
             return [application.id, events.items] as const;
           })
       );
+      const nextAnalysisByJobId = Object.fromEntries(
+        latestAnalyses.filter((entry): entry is readonly [string, JobAnalysis] =>
+          Boolean(entry[1])
+        )
+      );
+      const nextResumeByJobId = Object.fromEntries(
+        latestResumes.filter((entry): entry is readonly [string, ResumeVersion] =>
+          Boolean(entry[1])
+        )
+      );
+      const nextApplicationByJobId = Object.fromEntries(
+        latestApplications.filter((entry): entry is readonly [string, Application] =>
+          Boolean(entry[1])
+        )
+      );
+      const nextResumeHistoryByJobId = Object.fromEntries(resumeHistories);
+      const nextApplicationHistoryByJobId = Object.fromEntries(applicationHistories);
+      const nextEventsByApplicationId = Object.fromEntries(applicationEvents);
+      const nextJobIds = new Set(response.items.map((job) => job.id));
+      const previousJobIds = knownJobIdsRef.current;
+      const newJob = previousJobIds
+        ? response.items.find((job) => !previousJobIds.has(job.id))
+        : undefined;
+      const nextSignature = buildJobPoolSyncSignature(response.items, nextApplicationByJobId);
+      const shouldUpdate = options.force || nextSignature !== jobSyncSignatureRef.current;
 
-      setAnalysisByJobId(
-        Object.fromEntries(
-          latestAnalyses.filter((entry): entry is readonly [string, JobAnalysis] =>
-            Boolean(entry[1])
-          )
-        )
-      );
-      setResumeByJobId(
-        Object.fromEntries(
-          latestResumes.filter((entry): entry is readonly [string, ResumeVersion] =>
-            Boolean(entry[1])
-          )
-        )
-      );
-      setResumeHistoryByJobId(Object.fromEntries(resumeHistories));
-      setApplicationByJobId(
-        Object.fromEntries(
-          latestApplications.filter((entry): entry is readonly [string, Application] =>
-            Boolean(entry[1])
-          )
-        )
-      );
-      setApplicationHistoryByJobId(Object.fromEntries(applicationHistories));
-      setEventsByApplicationId(Object.fromEntries(applicationEvents));
+      knownJobIdsRef.current = nextJobIds;
+
+      if (!shouldUpdate) {
+        return;
+      }
+
+      jobSyncSignatureRef.current = nextSignature;
+      setJobs(response.items);
+      setAnalysisByJobId(nextAnalysisByJobId);
+      setResumeByJobId(nextResumeByJobId);
+      setResumeHistoryByJobId(nextResumeHistoryByJobId);
+      setApplicationByJobId(nextApplicationByJobId);
+      setApplicationHistoryByJobId(nextApplicationHistoryByJobId);
+      setEventsByApplicationId(nextEventsByApplicationId);
+
+      const jobIdToReveal =
+        options.preferredJobId ?? (options.revealNewJobs ? newJob?.id : undefined);
+
+      if (options.resetBoardFilter || jobIdToReveal) {
+        setActiveBoardFilter("all");
+      }
+
+      if (jobIdToReveal) {
+        setSelectedJobId(jobIdToReveal);
+        setActiveTool("analysis");
+      }
+
+      if (newJob && options.revealNewJobs && !options.preferredJobId) {
+        setFeedback("已同步新保存岗位");
+      }
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "岗位池加载失败");
     } finally {
-      setIsLoading(false);
+      isRefreshingJobsRef.current = false;
+      if (!options.silent) {
+        setIsLoading(false);
+      }
     }
   }
 
   useEffect(() => {
-    void refreshJobs();
+    void refreshJobs({ force: true });
+  }, []);
+
+  useEffect(() => {
+    function refreshVisibleJobs() {
+      if (document.visibilityState === "visible") {
+        void refreshJobs({ preserveFeedback: true, revealNewJobs: true, silent: true });
+      }
+    }
+
+    window.addEventListener("focus", refreshVisibleJobs);
+    document.addEventListener("visibilitychange", refreshVisibleJobs);
+    const intervalId = window.setInterval(refreshVisibleJobs, 8000);
+
+    return () => {
+      window.removeEventListener("focus", refreshVisibleJobs);
+      document.removeEventListener("visibilitychange", refreshVisibleJobs);
+      window.clearInterval(intervalId);
+    };
   }, []);
 
   async function refreshAiProviderHealth() {
@@ -457,14 +506,28 @@ export function JobPool({ experiences }: JobPoolProps) {
     setFeedback(null);
 
     try {
-      await createJob(formToInput(form));
+      const response = await createJob(formToInput(form));
       setForm(emptyJobForm);
-      await refreshJobs();
+      await refreshJobs({
+        force: true,
+        preferredJobId: response.item.id,
+        resetBoardFilter: true,
+        silent: true
+      });
+      setFeedback("岗位已保存并同步到岗位池");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "岗位保存失败");
     } finally {
       setIsSaving(false);
     }
+  }
+
+  function handleSelectBoardFilter(filter: JobBoardFilter) {
+    const nextVisibleJobs = filterJobsByBoard({ applicationByJobId, filter, jobs });
+
+    setActiveBoardFilter(filter);
+    setSelectedJobId(nextVisibleJobs[0]?.id ?? null);
+    setActiveTool("analysis");
   }
 
   async function handleDelete(id: string) {
@@ -894,7 +957,7 @@ export function JobPool({ experiences }: JobPoolProps) {
                     aria-pressed={activeBoardFilter === item.stage}
                     className="board-filter-button"
                     key={item.stage}
-                    onClick={() => setActiveBoardFilter(item.stage)}
+                    onClick={() => handleSelectBoardFilter(item.stage)}
                     type="button"
                   >
                     <span>{item.label}</span>
@@ -911,7 +974,7 @@ export function JobPool({ experiences }: JobPoolProps) {
                     aria-pressed={activeBoardFilter === item.filter}
                     className="board-filter-button follow-up-filter-button"
                     key={item.filter}
-                    onClick={() => setActiveBoardFilter(item.filter)}
+                    onClick={() => handleSelectBoardFilter(item.filter)}
                     type="button"
                   >
                     <span>
@@ -1030,6 +1093,63 @@ export function JobPool({ experiences }: JobPoolProps) {
       </div>
     </section>
   );
+}
+
+export function filterJobsByBoard({
+  applicationByJobId,
+  filter,
+  jobs
+}: {
+  applicationByJobId: Record<string, Application>;
+  filter: JobBoardFilter;
+  jobs: JobPosting[];
+}) {
+  return jobs.filter((job) => {
+    if (filter === "all") {
+      return true;
+    }
+
+    if (filter === "followUpDue") {
+      return isFollowUpDue(applicationByJobId[job.id]?.nextFollowUpAt);
+    }
+
+    if (filter === "followUpOverdue") {
+      return getFollowUpBucket(applicationByJobId[job.id]?.nextFollowUpAt) === "overdue";
+    }
+
+    if (filter === "followUpToday") {
+      return getFollowUpBucket(applicationByJobId[job.id]?.nextFollowUpAt) === "today";
+    }
+
+    if (filter === "followUpUpcoming") {
+      return getFollowUpBucket(applicationByJobId[job.id]?.nextFollowUpAt) === "upcoming";
+    }
+
+    return getJobBoardStage(job.id, applicationByJobId) === filter;
+  });
+}
+
+export function buildJobPoolSyncSignature(
+  jobs: JobPosting[],
+  applicationByJobId: Record<string, Application>
+) {
+  return jobs
+    .map((job) => {
+      const application = applicationByJobId[job.id];
+
+      return [
+        job.id,
+        job.capturedAt,
+        job.title,
+        job.companyName ?? "",
+        job.salaryText ?? "",
+        application?.id ?? "",
+        application?.status ?? "",
+        application?.updatedAt ?? "",
+        application?.nextFollowUpAt ?? ""
+      ].join(":");
+    })
+    .join("|");
 }
 
 function JobListItem({
