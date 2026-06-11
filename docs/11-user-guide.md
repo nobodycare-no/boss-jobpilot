@@ -111,6 +111,14 @@ Web 工作台的投递复盘区域会显示 AI Provider 状态：未配置、可
 
 如果你已经写了 `.env` 但页面仍显示“AI Provider 未配置”，优先检查：`.env` 是否在项目根目录、变量名是否为 `AI_API_KEY` 或 `PACKY_API_KEY`、API 是否已经重启、Web 是否连接到同一个 API 地址。
 
+如果页面显示“AI Provider 验证失败”，说明 API 已经读到密钥，但 PackyAPI 探测请求没有成功。优先检查：
+
+- `AI_MODEL` 的优先级高于 `PACKY_API_MODEL`，不要同时填写两个不同模型。
+- 模型名必须是 PackyAPI token 分组可用的完整模型 ID；例如不要填写不存在的 `gpt-5.4`。
+- `AI_API_BASE_URL` 应保持为 `https://www.packyapi.com/v1`，不要额外拼接 `/chat/completions`。
+- 修改 `.env` 后必须重启 API；只刷新 Web 页面不会重新加载密钥或模型。
+- 如果状态详情是 `fetch failed`，通常是本机网络、代理或当前运行环境无法访问 PackyAPI。
+
 投递复盘区域还会显示最近 AI 生成记录，包括岗位分析、定制简历、打招呼语和策略复盘的运行状态、Provider、耗时、Prompt 版本和降级原因。可以按能力、状态和关联岗位筛选，并点击记录查看明细。这里不会保存完整 Prompt、简历正文、经历库正文或 JD 正文。
 
 ## 数据保存位置

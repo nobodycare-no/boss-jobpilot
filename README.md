@@ -93,6 +93,8 @@ npm run dev
 
 不配置 `AI_API_KEY` 时，系统会继续使用本地规则版生成逻辑。不要把真实密钥提交到 Git。
 
+如果 Web 显示“AI Provider 验证失败”，说明密钥已经被 API 读取，但 PackyAPI 请求失败。请确认 `AI_MODEL` 是 PackyAPI token 分组可用的完整模型 ID；`AI_MODEL` 会优先于 `PACKY_API_MODEL`，不要同时配置两个不同模型。`AI_API_BASE_URL` 保持为 `https://www.packyapi.com/v1` 即可。
+
 也可以分别启动：
 
 ```powershell

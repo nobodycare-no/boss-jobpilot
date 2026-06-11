@@ -28,6 +28,8 @@ export type AiJsonRequest = {
 };
 
 export type AiProvider = {
+  baseUrl?: string;
+  modelName?: string;
   name: string;
   generateJson<T>(request: AiJsonRequest): Promise<T>;
 };
@@ -75,33 +77,47 @@ export function createOpenAiCompatibleProvider({
   model = defaultPackyApiModel,
   name = "packyapi"
 }: OpenAiCompatibleProviderOptions): AiProvider {
-  const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
+  const normalizedBaseUrl = baseUrl.trim().replace(/\/+$/, "");
+  const normalizedModel = model.trim();
 
   return {
+    baseUrl: normalizedBaseUrl,
+    modelName: normalizedModel,
     name,
     async generateJson<T>(request: AiJsonRequest): Promise<T> {
       if (!fetchImpl) {
         throw new Error("Fetch API is not available for AI provider requests");
       }
 
-      const response = await fetchImpl(`${normalizedBaseUrl}/chat/completions`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          messages: request.messages,
-          model: request.model ?? model,
-          response_format: {
-            type: "json_object"
+      const requestModel = request.model?.trim() || normalizedModel;
+      let response: Response;
+
+      try {
+        response = await fetchImpl(`${normalizedBaseUrl}/chat/completions`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
           },
-          temperature: request.temperature ?? 0.2
-        })
-      });
+          body: JSON.stringify({
+            messages: request.messages,
+            model: requestModel,
+            response_format: {
+              type: "json_object"
+            },
+            temperature: request.temperature ?? 0.2
+          })
+        });
+      } catch (error) {
+        throw new Error(
+          `AI provider request failed before response for model ${requestModel} at ${normalizedBaseUrl}: ${formatAiProviderError(error)}`
+        );
+      }
 
       if (!response.ok) {
-        throw new Error(`AI provider request failed with status ${response.status}`);
+        throw new Error(
+          `AI provider request failed with status ${response.status} for model ${requestModel} at ${normalizedBaseUrl}${await formatAiProviderResponseDetail(response)}`
+        );
       }
 
       const payload = (await response.json()) as {
@@ -123,7 +139,7 @@ export function createOpenAiCompatibleProvider({
 }
 
 export function createAiProviderFromEnv(env: Record<string, string | undefined>) {
-  const apiKey = env.AI_API_KEY ?? env.PACKY_API_KEY ?? env.PACKYCODE_API_KEY;
+  const apiKey = firstNonEmptyEnv(env.AI_API_KEY, env.PACKY_API_KEY, env.PACKYCODE_API_KEY);
 
   if (!apiKey) {
     return undefined;
@@ -132,10 +148,44 @@ export function createAiProviderFromEnv(env: Record<string, string | undefined>)
   return createOpenAiCompatibleProvider({
     apiKey,
     baseUrl:
-      env.AI_API_BASE_URL ?? env.AI_BASE_URL ?? env.PACKY_API_BASE_URL ?? defaultPackyApiBaseUrl,
-    model: env.AI_MODEL ?? env.PACKY_API_MODEL ?? defaultPackyApiModel,
-    name: env.AI_PROVIDER_NAME ?? env.AI_PROVIDER ?? "packyapi"
+      firstNonEmptyEnv(env.AI_API_BASE_URL, env.AI_BASE_URL, env.PACKY_API_BASE_URL) ??
+      defaultPackyApiBaseUrl,
+    model: firstNonEmptyEnv(env.AI_MODEL, env.PACKY_API_MODEL) ?? defaultPackyApiModel,
+    name: firstNonEmptyEnv(env.AI_PROVIDER_NAME, env.AI_PROVIDER) ?? "packyapi"
   });
+}
+
+function firstNonEmptyEnv(...values: Array<string | undefined>) {
+  for (const value of values) {
+    const trimmed = value?.trim();
+
+    if (trimmed) {
+      return trimmed;
+    }
+  }
+
+  return undefined;
+}
+
+function formatAiProviderError(error: unknown) {
+  if (error instanceof Error) {
+    const cause = error.cause instanceof Error ? `; cause: ${error.cause.message}` : "";
+
+    return `${error.message}${cause}`;
+  }
+
+  return "Unknown AI provider error";
+}
+
+async function formatAiProviderResponseDetail(response: Response) {
+  try {
+    const responseText = await response.text();
+    const snippet = responseText.trim().slice(0, 300);
+
+    return snippet ? `; response: ${snippet}` : "";
+  } catch {
+    return "";
+  }
 }
 
 export async function checkAiProviderHealth(

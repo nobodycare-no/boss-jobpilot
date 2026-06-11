@@ -461,6 +461,7 @@ describe("OpenAI compatible provider", () => {
     });
 
     expect(provider?.name).toBe("packyapi-test");
+    expect(provider?.modelName).toBe("gpt-5");
   });
 
   it("accepts Packy-specific and legacy environment aliases", () => {
@@ -471,6 +472,21 @@ describe("OpenAI compatible provider", () => {
     });
 
     expect(provider?.name).toBe("packy-legacy");
+  });
+
+  it("ignores blank environment variables when selecting provider settings", () => {
+    const provider = createAiProviderFromEnv({
+      AI_API_BASE_URL: " ",
+      AI_API_KEY: "",
+      AI_MODEL: "",
+      PACKY_API_BASE_URL: " https://packy.example/v1/ ",
+      PACKY_API_KEY: " test-key ",
+      PACKY_API_MODEL: " gpt-5 "
+    });
+
+    expect(provider).toBeDefined();
+    expect(provider?.baseUrl).toBe("https://packy.example/v1");
+    expect(provider?.modelName).toBe("gpt-5");
   });
 
   it("calls the chat completions endpoint and parses JSON content", async () => {
@@ -521,5 +537,25 @@ describe("OpenAI compatible provider", () => {
         type: "json_object"
       }
     });
+  });
+
+  it("reports model and base URL when the provider rejects a request", async () => {
+    const provider = createOpenAiCompatibleProvider({
+      apiKey: "test-key",
+      baseUrl: "https://www.packyapi.com/v1/",
+      fetch: async () =>
+        new Response(JSON.stringify({ error: "invalid model" }), {
+          status: 400
+        }),
+      model: "gpt-5.4"
+    });
+
+    await expect(
+      provider.generateJson({
+        messages: [{ role: "user", content: "Return JSON." }]
+      })
+    ).rejects.toThrow(
+      "AI provider request failed with status 400 for model gpt-5.4 at https://www.packyapi.com/v1"
+    );
   });
 });

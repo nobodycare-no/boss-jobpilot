@@ -1127,3 +1127,22 @@ Accepted / Proposed / Rejected
 ### Next
 
 - V1 已通过 Functional Complete 验收。下一轮进入 V2 规划：优先考虑真实 Boss 页面兼容性复验、导入器、导出 PDF/DOCX、侧边栏常驻视图或真实投递后的策略复盘增强。
+
+## 2026-06-11 更新 28
+
+### Done
+
+- 使用根目录 `.env` 的真实配置完成 AI Provider 诊断：本地 API 能读到 `AI_API_KEY`，Provider 已创建，失败点不再是“未配置”。
+- 发现当前 `AI_MODEL=gpt-5.4` 会优先于 `PACKY_API_MODEL`，该模型名疑似不是 PackyAPI token 分组可用模型；对照请求显示 PackyAPI 能收到请求，但会返回 400/503。
+- `packages/ai` 增强 OpenAI-compatible Provider 错误信息，失败详情会包含当前模型和 base URL，便于从 Web 状态条直接定位模型或网络问题。
+- `createAiProviderFromEnv` 现在会忽略空白环境变量，避免空值遮挡有效别名配置。
+- README 和使用手册已补充 AI Provider 验证失败排查：模型优先级、PackyAPI base URL、API 重启和 `fetch failed` 网络问题。
+
+### Verification
+
+- `corepack pnpm --filter @boss-jobpilot/ai test`
+- `corepack pnpm --filter @boss-jobpilot/ai typecheck`
+
+### Next
+
+- 继续执行全量校验、同步 codegraph，并尝试推送本次 Provider 诊断增强。
