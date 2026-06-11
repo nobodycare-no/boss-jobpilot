@@ -32,4 +32,24 @@ describe("experience repository", () => {
 
     db.close();
   });
+
+  it("stores resume material items", () => {
+    const db = openJobpilotDatabase(":memory:");
+    const repository = createExperienceRepository(db);
+
+    const created = repository.create({
+      type: "resume",
+      title: "Main resume",
+      summary: "React, TypeScript, Node.js and AI application experience.",
+      responsibilities: ["React, TypeScript, Node.js and AI application experience."],
+      evidenceLevel: "deep_interview_ready",
+      ownershipLevel: "owned",
+      tags: ["resume"]
+    });
+
+    expect(created.type).toBe("resume");
+    expect(repository.list()[0]?.summary).toContain("React");
+
+    db.close();
+  });
 });

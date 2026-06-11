@@ -146,6 +146,26 @@ h1 {
   gap: 14px;
 }
 
+.mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.mode-switch__button {
+  min-width: 0;
+  border-color: #cbd9d7;
+  color: #3e5558;
+  background: #edf3f2;
+}
+
+.mode-switch__button[aria-pressed="true"] {
+  border-color: #0f5d66;
+  color: #ffffff;
+  background: #0f5d66;
+}
+
 label {
   display: grid;
   gap: 7px;
@@ -180,6 +200,10 @@ textarea {
   resize: vertical;
   padding: 10px 11px;
   line-height: 1.5;
+}
+
+.resume-textarea {
+  min-height: 220px;
 }
 
 input:focus,

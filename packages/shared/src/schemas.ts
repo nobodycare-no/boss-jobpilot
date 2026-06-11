@@ -5,7 +5,8 @@ export const ExperienceTypeSchema = z.enum([
   "internship",
   "work",
   "open_source",
-  "education"
+  "education",
+  "resume"
 ]);
 
 export const EvidenceLevelSchema = z.enum([

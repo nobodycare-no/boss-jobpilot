@@ -20,6 +20,33 @@ const replacementCharacterPattern = /[\ufffd�]/g;
 const mojibakeCharacterPattern = /[ÃÂÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßà-ÿ]/g;
 const mojibakeTokenPattern =
   /\S*[ÃÂÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßà-ÿ]\S*[ÃÂÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßà-ÿ]\S*[ÃÂÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßà-ÿ]\S*/g;
+const cssNoisePattern = /[.#][A-Za-z0-9_-]+\s*\{[^}]*\}/g;
+const bossNoisePattern = /来自BOSS直聘|BOSS直聘|boss直聘|kanzhun|直聘/gi;
+const bossPrivateUseDigitMap: Record<string, string> = {
+  "\ue031": "0",
+  "\ue032": "1",
+  "\ue033": "2",
+  "\ue034": "3",
+  "\ue035": "4",
+  "\ue036": "5",
+  "\ue037": "6",
+  "\ue038": "7",
+  "\ue039": "8",
+  "\ue030": "9",
+  "\ue0b1": "0",
+  "\ue0b2": "1",
+  "\ue0b3": "2",
+  "\ue0b4": "3",
+  "\ue0b5": "4",
+  "\ue0b6": "5",
+  "\ue0b7": "6",
+  "\ue0b8": "7",
+  "\ue0b9": "8",
+  "\ue0b0": "9"
+};
+const bossPrivateUsePattern = /[\ue030-\ue039\ue0b0-\ue0b9]/g;
+const salaryPattern =
+  /(?:\d+(?:\.\d+)?\s*[-~—]\s*\d+(?:\.\d+)?\s*(?:K|k|万|千|元\/天|元\/月|元\/年)(?:·\d+薪)?|\d+\s*元\/天)/;
 
 const htmlEntities: Record<string, string> = {
   amp: "&",
@@ -41,7 +68,9 @@ export function cleanText(value: string | null | undefined, options: { multiline
       .replace(/<br\s*\/?>/gi, "\n")
       .replace(/<\/(?:div|p|li|section|article|h[1-6])>/gi, "\n")
       .replace(htmlTagPattern, " ")
+      .replace(cssNoisePattern, "\n")
       .replace(mojibakeTokenPattern, " ")
+      .replace(bossPrivateUsePattern, (character) => bossPrivateUseDigitMap[character] ?? "")
   )
     .replace(controlCharacterPattern, " ")
     .replace(/\u00a0/g, " ")
@@ -65,15 +94,17 @@ export function cleanText(value: string | null | undefined, options: { multiline
 export function cleanJobPostingInput<T extends JobPostingCreateInput | JobPostingInput>(
   input: T
 ): T {
+  const salaryText = cleanOptionalText(input.salaryText);
+  const title = cleanText(input.title);
   const cleanFields: Partial<JobTextFields> = {
     city: cleanOptionalText(input.city),
     companyName: cleanOptionalText(input.companyName),
     educationRequirement: cleanOptionalText(input.educationRequirement),
     experienceRequirement: cleanOptionalText(input.experienceRequirement),
-    jdRaw: cleanText(input.jdRaw, { multiline: true }),
+    jdRaw: cleanJobDescriptionText(input.jdRaw),
     platform: cleanText(input.platform),
-    salaryText: cleanOptionalText(input.salaryText),
-    title: cleanText(input.title),
+    salaryText: cleanSalaryText(salaryText),
+    title: removeSalaryFromTitle(title, salaryText),
     url: cleanOptionalText(input.url)
   };
 
@@ -121,6 +152,87 @@ function cleanOptionalText(value: string | null | undefined) {
   const cleaned = cleanText(value);
 
   return cleaned || undefined;
+}
+
+function cleanJobDescriptionText(value: string | null | undefined) {
+  const cleaned = cleanText(value, { multiline: true })
+    .replace(bossNoisePattern, "")
+    .replace(/boss/gi, "");
+  const trimmedStart = trimBeforeJobDescription(cleaned);
+  const trimmedEnd = trimAfterJobDescription(trimmedStart)
+    .split(/\r?\n/)
+    .filter((line) => !/在线|HR|招聘者|刚刚活跃|今日活跃/.test(line))
+    .join("\n");
+
+  return trimmedEnd;
+}
+
+function cleanSalaryText(value: string | undefined) {
+  if (!value) {
+    return undefined;
+  }
+
+  const match = value.match(salaryPattern);
+
+  return match?.[0]?.replace(/\s+/g, "") || value;
+}
+
+function removeSalaryFromTitle(title: string, salaryText: string | undefined) {
+  const cleanedSalary = cleanSalaryText(salaryText);
+
+  if (!cleanedSalary) {
+    return title;
+  }
+
+  return title.replace(cleanedSalary, "").trim();
+}
+
+function trimBeforeJobDescription(value: string) {
+  const strongStart = ["岗位职责", "工作职责", "任职要求", "岗位要求"]
+    .map((keyword) => value.indexOf(keyword))
+    .filter((index) => index >= 0)
+    .sort((left, right) => left - right)[0];
+
+  if (strongStart !== undefined) {
+    return value.slice(strongStart).trim();
+  }
+
+  const candidates = ["职位描述"];
+  const firstIndex = candidates
+    .map((keyword) => value.indexOf(keyword))
+    .filter((index) => index >= 0)
+    .sort((left, right) => left - right)[0];
+
+  if (firstIndex === undefined) {
+    return value;
+  }
+
+  const prefix = value.slice(0, firstIndex);
+
+  if (prefix.length < 40 && !salaryPattern.test(prefix) && !/收藏|立即沟通|举报|扫码/.test(prefix)) {
+    return value;
+  }
+
+  return value.slice(firstIndex).trim();
+}
+
+function trimAfterJobDescription(value: string) {
+  const firstIndex = [
+    "工作地址",
+    "去App与",
+    "求职工具",
+    "升级VIP",
+    "热门职位",
+    "热门城市",
+    "热门企业",
+    "附近城市",
+    "查看更多信息"
+  ]
+    .map((keyword) => value.indexOf(keyword))
+    .filter((index) => index >= 0)
+    .sort((left, right) => left - right)[0];
+
+  return firstIndex === undefined ? value : value.slice(0, firstIndex).trim();
 }
 
 function decodeHtmlEntities(value: string) {

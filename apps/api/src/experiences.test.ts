@@ -37,4 +37,28 @@ describe("experience routes", () => {
     expect(listResponse.statusCode).toBe(200);
     expect(listResponse.json().items).toHaveLength(1);
   });
+
+  it("creates resume materials", async () => {
+    const createResponse = await server.inject({
+      method: "POST",
+      url: "/experiences",
+      payload: {
+        type: "resume",
+        title: "Frontend resume",
+        role: "Frontend Engineer",
+        summary: "React, TypeScript, Node.js and AI application experience.",
+        responsibilities: ["React, TypeScript, Node.js and AI application experience."],
+        techStack: ["React", "TypeScript", "Node.js"],
+        evidenceLevel: "deep_interview_ready",
+        ownershipLevel: "owned",
+        tags: ["resume"]
+      }
+    });
+
+    expect(createResponse.statusCode).toBe(201);
+    expect(createResponse.json().item).toMatchObject({
+      type: "resume",
+      title: "Frontend resume"
+    });
+  });
 });

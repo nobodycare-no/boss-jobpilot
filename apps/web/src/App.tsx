@@ -1,6 +1,17 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
 
-import { Edit3, LibraryBig, Plus, Radar, RefreshCw, Save, Search, Trash2, X } from "lucide-react";
+import {
+  Edit3,
+  FileText,
+  LibraryBig,
+  Plus,
+  Radar,
+  RefreshCw,
+  Save,
+  Search,
+  Trash2,
+  X
+} from "lucide-react";
 
 import type { ExperienceItem, ExperienceItemCreateInput } from "@boss-jobpilot/shared";
 
@@ -24,6 +35,8 @@ type ExperienceFormState = {
   tags: string;
 };
 
+type MaterialMode = "experience" | "resume";
+
 const emptyForm: ExperienceFormState = {
   type: "project",
   title: "",
@@ -41,13 +54,27 @@ const emptyForm: ExperienceFormState = {
   tags: ""
 };
 
+const emptyResumeForm: ExperienceFormState = {
+  ...emptyForm,
+  type: "resume",
+  title: "我的简历",
+  evidenceLevel: "deep_interview_ready",
+  ownershipLevel: "owned",
+  tags: "简历"
+};
+
 const experienceTypeLabels: Record<ExperienceItem["type"], string> = {
   project: "项目",
   internship: "实习",
   work: "工作",
   open_source: "开源",
-  education: "教育"
+  education: "教育",
+  resume: "简历"
 };
+
+const editableExperienceTypes = Object.entries(experienceTypeLabels).filter(
+  ([value]) => value !== "resume"
+);
 
 const evidenceLabels: Record<ExperienceItem["evidenceLevel"], string> = {
   deep_interview_ready: "可深入讲",
@@ -66,6 +93,7 @@ const ownershipLabels: Record<ExperienceItem["ownershipLevel"], string> = {
 export function App() {
   const [items, setItems] = useState<ExperienceItem[]>([]);
   const [form, setForm] = useState<ExperienceFormState>(emptyForm);
+  const [materialMode, setMaterialMode] = useState<MaterialMode>("experience");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [experienceQuery, setExperienceQuery] = useState("");
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
@@ -128,7 +156,7 @@ export function App() {
         await createExperience(input);
       }
 
-      setForm(emptyForm);
+      setForm(materialMode === "resume" ? emptyResumeForm : emptyForm);
       setEditingId(null);
       await refreshExperiences();
     } catch (caughtError) {
@@ -152,12 +180,43 @@ export function App() {
   function handleEdit(item: ExperienceItem) {
     setEditingId(item.id);
     setForm(experienceToForm(item));
+    setMaterialMode(item.type === "resume" ? "resume" : "experience");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function resetForm() {
     setEditingId(null);
+    setMaterialMode("experience");
     setForm(emptyForm);
+  }
+
+  function setMode(nextMode: MaterialMode) {
+    setEditingId(null);
+    setMaterialMode(nextMode);
+    setForm(nextMode === "resume" ? emptyResumeForm : emptyForm);
+  }
+
+  async function handleResumeFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      const content = await file.text();
+      const fallbackTitle = file.name.replace(/\.[^.]+$/, "") || "我的简历";
+
+      setForm((current) => ({
+        ...current,
+        title: current.title.trim() ? current.title : fallbackTitle,
+        summary: content
+      }));
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "简历文件读取失败");
+    } finally {
+      event.target.value = "";
+    }
   }
 
   return (
@@ -199,7 +258,15 @@ export function App() {
                   <LibraryBig size={16} />
                   经历素材
                 </p>
-                <h2>{editingId ? "编辑经历" : "新增经历"}</h2>
+                <h2>
+                  {editingId
+                    ? materialMode === "resume"
+                      ? "编辑简历"
+                      : "编辑经历"
+                    : materialMode === "resume"
+                      ? "添加简历"
+                      : "新增经历"}
+                </h2>
               </div>
               {editingId ? (
                 <button className="icon-button" type="button" onClick={resetForm} title="取消编辑">
@@ -208,25 +275,57 @@ export function App() {
               ) : null}
             </div>
 
+            <div className="mode-switch" aria-label="素材类型">
+              <button
+                aria-pressed={materialMode === "experience"}
+                className="mode-switch__button"
+                onClick={() => setMode("experience")}
+                type="button"
+              >
+                <Plus size={16} />
+                新增经历
+              </button>
+              <button
+                aria-pressed={materialMode === "resume"}
+                className="mode-switch__button"
+                onClick={() => setMode("resume")}
+                type="button"
+              >
+                <FileText size={16} />
+                添加简历
+              </button>
+            </div>
+
             <div className="form-grid">
-              <label>
-                类型
-                <select
-                  value={form.type}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      type: event.target.value as ExperienceItem["type"]
-                    }))
-                  }
-                >
-                  {Object.entries(experienceTypeLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {materialMode === "experience" ? (
+                <label>
+                  类型
+                  <select
+                    value={form.type}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        type: event.target.value as ExperienceItem["type"]
+                      }))
+                    }
+                  >
+                    {editableExperienceTypes.map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <label>
+                  导入文本简历
+                  <input
+                    accept=".txt,.md,text/plain,text/markdown"
+                    onChange={handleResumeFileChange}
+                    type="file"
+                  />
+                </label>
+              )}
 
               <label>
                 真实性
@@ -248,79 +347,91 @@ export function App() {
               </label>
 
               <label className="wide">
-                标题
+                {materialMode === "resume" ? "简历名称" : "标题"}
                 <input
                   required
                   value={form.title}
                   onChange={(event) =>
                     setForm((current) => ({ ...current, title: event.target.value }))
                   }
-                  placeholder="例如：AI 求职代理系统"
-                />
-              </label>
-
-              <label>
-                组织
-                <input
-                  value={form.organization}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, organization: event.target.value }))
+                  placeholder={
+                    materialMode === "resume" ? "例如：我的前端工程师简历" : "例如：AI 求职代理系统"
                   }
-                  placeholder="公司 / 学校 / 个人项目"
                 />
               </label>
 
+              {materialMode === "experience" ? (
+                <label>
+                  组织
+                  <input
+                    value={form.organization}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, organization: event.target.value }))
+                    }
+                    placeholder="公司 / 学校 / 个人项目"
+                  />
+                </label>
+              ) : null}
+
               <label>
-                角色
+                {materialMode === "resume" ? "目标角色" : "角色"}
                 <input
                   value={form.role}
                   onChange={(event) =>
                     setForm((current) => ({ ...current, role: event.target.value }))
                   }
-                  placeholder="全栈开发"
+                  placeholder={
+                    materialMode === "resume" ? "例如：前端工程师 / 全栈开发" : "全栈开发"
+                  }
                 />
               </label>
 
-              <label>
-                开始时间
-                <input
-                  value={form.startDate}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, startDate: event.target.value }))
-                  }
-                  placeholder="2025-03"
-                />
-              </label>
+              {materialMode === "experience" ? (
+                <label>
+                  开始时间
+                  <input
+                    value={form.startDate}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, startDate: event.target.value }))
+                    }
+                    placeholder="2025-03"
+                  />
+                </label>
+              ) : null}
 
-              <label>
-                结束时间
-                <input
-                  value={form.endDate}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, endDate: event.target.value }))
-                  }
-                  placeholder="至今"
-                />
-              </label>
+              {materialMode === "experience" ? (
+                <label>
+                  结束时间
+                  <input
+                    value={form.endDate}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, endDate: event.target.value }))
+                    }
+                    placeholder="至今"
+                  />
+                </label>
+              ) : null}
 
-              <label>
-                负责程度
-                <select
-                  value={form.ownershipLevel}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      ownershipLevel: event.target.value as ExperienceItem["ownershipLevel"]
-                    }))
-                  }
-                >
-                  {Object.entries(ownershipLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {materialMode === "experience" ? (
+                <label>
+                  负责程度
+                  <select
+                    value={form.ownershipLevel}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        ownershipLevel: event.target.value as ExperienceItem["ownershipLevel"]
+                      }))
+                    }
+                  >
+                    {Object.entries(ownershipLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
 
               <label className="wide">
                 技术栈
@@ -334,48 +445,60 @@ export function App() {
               </label>
 
               <label className="wide">
-                摘要
+                {materialMode === "resume" ? "简历全文" : "摘要"}
                 <textarea
+                  className={materialMode === "resume" ? "resume-textarea" : undefined}
+                  required={materialMode === "resume"}
                   value={form.summary}
                   onChange={(event) =>
                     setForm((current) => ({ ...current, summary: event.target.value }))
                   }
-                  placeholder="这段经历解决了什么问题，和求职目标有什么关系。"
+                  placeholder={
+                    materialMode === "resume"
+                      ? "粘贴文本简历，系统会在岗位分析、简历定制和打招呼语中使用这些内容。"
+                      : "这段经历解决了什么问题，和求职目标有什么关系。"
+                  }
                 />
               </label>
 
-              <label className="wide">
-                职责
-                <textarea
-                  value={form.responsibilities}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, responsibilities: event.target.value }))
-                  }
-                  placeholder="每行一条，例如：负责经历库数据建模和录入流程"
-                />
-              </label>
+              {materialMode === "experience" ? (
+                <label className="wide">
+                  职责
+                  <textarea
+                    value={form.responsibilities}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, responsibilities: event.target.value }))
+                    }
+                    placeholder="每行一条，例如：负责经历库数据建模和录入流程"
+                  />
+                </label>
+              ) : null}
 
-              <label className="wide">
-                成果
-                <textarea
-                  value={form.achievements}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, achievements: event.target.value }))
-                  }
-                  placeholder="每行一条，可以写真实指标、上线结果或可讲产出"
-                />
-              </label>
+              {materialMode === "experience" ? (
+                <label className="wide">
+                  成果
+                  <textarea
+                    value={form.achievements}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, achievements: event.target.value }))
+                    }
+                    placeholder="每行一条，可以写真实指标、上线结果或可讲产出"
+                  />
+                </label>
+              ) : null}
 
-              <label>
-                指标
-                <input
-                  value={form.metrics}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, metrics: event.target.value }))
-                  }
-                  placeholder="交付周期, 性能指标"
-                />
-              </label>
+              {materialMode === "experience" ? (
+                <label>
+                  指标
+                  <input
+                    value={form.metrics}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, metrics: event.target.value }))
+                    }
+                    placeholder="交付周期, 性能指标"
+                  />
+                </label>
+              ) : null}
 
               <label>
                 标签
@@ -392,7 +515,13 @@ export function App() {
             <div className="form-actions">
               <button type="submit" disabled={isSaving}>
                 {editingId ? <Save size={18} /> : <Plus size={18} />}
-                {isSaving ? "保存中" : editingId ? "保存修改" : "新增经历"}
+                {isSaving
+                  ? "保存中"
+                  : editingId
+                    ? "保存修改"
+                    : materialMode === "resume"
+                      ? "添加简历"
+                      : "新增经历"}
               </button>
               <button
                 type="button"
@@ -520,7 +649,9 @@ export function App() {
                       .filter(Boolean)
                       .join(" · ")}
                   </p>
-                  {item.summary ? <p>{item.summary}</p> : null}
+                  {item.summary ? (
+                    <p>{item.type === "resume" ? compactText(item.summary, 220) : item.summary}</p>
+                  ) : null}
                   {item.techStack.length > 0 ? (
                     <div className="tag-row">
                       {item.techStack.map((skill) => (
@@ -547,6 +678,25 @@ export function App() {
 }
 
 function formToInput(form: ExperienceFormState): ExperienceItemCreateInput {
+  if (form.type === "resume") {
+    const resumeContent = form.summary.trim();
+
+    return {
+      type: "resume",
+      title: form.title.trim(),
+      organization: optionalText(form.organization),
+      role: optionalText(form.role),
+      summary: optionalText(resumeContent),
+      techStack: splitSmartTokens(form.techStack),
+      responsibilities: splitResumeContent(resumeContent),
+      achievements: splitLines(form.achievements),
+      metrics: splitSmartTokens(form.metrics),
+      evidenceLevel: form.evidenceLevel,
+      ownershipLevel: form.ownershipLevel,
+      tags: uniqueTokens(["简历", ...splitSmartTokens(form.tags)])
+    };
+  }
+
   return {
     type: form.type,
     title: form.title.trim(),
@@ -555,13 +705,13 @@ function formToInput(form: ExperienceFormState): ExperienceItemCreateInput {
     startDate: optionalText(form.startDate),
     endDate: optionalText(form.endDate),
     summary: optionalText(form.summary),
-    techStack: splitTokens(form.techStack),
+    techStack: splitSmartTokens(form.techStack),
     responsibilities: splitLines(form.responsibilities),
     achievements: splitLines(form.achievements),
-    metrics: splitTokens(form.metrics),
+    metrics: splitSmartTokens(form.metrics),
     evidenceLevel: form.evidenceLevel,
     ownershipLevel: form.ownershipLevel,
-    tags: splitTokens(form.tags)
+    tags: splitSmartTokens(form.tags)
   };
 }
 
@@ -590,18 +740,42 @@ function optionalText(value: string) {
   return trimmed ? trimmed : undefined;
 }
 
-function splitTokens(value: string) {
+function splitLines(value: string) {
+  return value
+    .split("\n")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function splitSmartTokens(value: string) {
   return value
     .split(/[,，\n]/)
     .map((item) => item.trim())
     .filter(Boolean);
 }
 
-function splitLines(value: string) {
-  return value
-    .split("\n")
-    .map((item) => item.trim())
-    .filter(Boolean);
+function splitResumeContent(value: string) {
+  const lines = splitLines(value);
+
+  if (lines.length > 0) {
+    return lines;
+  }
+
+  return optionalText(value) ? [value.trim()] : [];
+}
+
+function uniqueTokens(values: string[]) {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+
+function compactText(value: string, maxLength: number) {
+  const normalized = value.replace(/\s+/g, " ").trim();
+
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, maxLength)}...`;
 }
 
 function matchesExperienceFilters({
@@ -630,6 +804,7 @@ function matchesExperienceFilters({
   }
 
   return [
+    experienceTypeLabels[item.type],
     item.title,
     item.organization,
     item.role,

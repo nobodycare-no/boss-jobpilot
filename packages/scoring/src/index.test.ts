@@ -83,4 +83,43 @@ describe("analyzeJobPosting", () => {
     expect(analysis.resumeStrategy).toContain("AI Frontend Engineer");
     expect(analysis.resumeStrategy).toContain("1");
   });
+
+  it("matches resume material text against the job", () => {
+    const analysis = analyzeJobPosting(
+      {
+        id: "job-resume-1",
+        platform: "boss",
+        title: "Frontend Engineer",
+        jdRaw: "Need React, TypeScript, Node.js and AI workflow experience.",
+        city: "Shanghai",
+        capturedAt: new Date().toISOString()
+      },
+      {
+        targetRoles: ["Frontend Engineer"],
+        targetCities: ["Shanghai"],
+        preferredKeywords: ["React", "TypeScript", "Node.js", "AI"],
+        blockedKeywords: []
+      },
+      [
+        {
+          id: "resume-main",
+          type: "resume",
+          title: "Main resume",
+          role: "Frontend Engineer",
+          summary: "Built React, TypeScript and Node.js products with AI workflow automation.",
+          techStack: [],
+          responsibilities: [
+            "Built React, TypeScript and Node.js products with AI workflow automation."
+          ],
+          achievements: [],
+          metrics: [],
+          evidenceLevel: "deep_interview_ready",
+          ownershipLevel: "owned",
+          tags: ["resume"]
+        }
+      ]
+    );
+
+    expect(analysis.matchedExperienceIds).toEqual(["resume-main"]);
+  });
 });

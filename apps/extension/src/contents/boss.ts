@@ -20,11 +20,20 @@ window.dispatchEvent(
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
   if (isExtractMessage(message)) {
-    sendResponse({
-      job: extractBossJobPosting(document),
-      ok: true
-    });
-    return false;
+    void waitForJobDetail()
+      .then(() =>
+        sendResponse({
+          job: extractBossJobPosting(document),
+          ok: true
+        })
+      )
+      .catch((error: unknown) =>
+        sendResponse({
+          ok: false,
+          error: error instanceof Error ? error.message : "岗位信息尚未渲染完成"
+        })
+      );
+    return true;
   }
 
   if (isFillGreetingMessage(message)) {
@@ -49,6 +58,7 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
 });
 
 async function captureCurrentJob() {
+  await waitForJobDetail();
   const job = extractBossJobPosting(document);
   const jobsResponse = await fetch("http://127.0.0.1:4000/jobs");
 
@@ -85,6 +95,42 @@ async function captureCurrentJob() {
     ok: true,
     job
   };
+}
+
+async function waitForJobDetail(timeoutMs = 6000) {
+  const startedAt = Date.now();
+  let lastSignature = "";
+  let stableCount = 0;
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const signature = [
+      document.querySelector(".job-title, .job-banner .name, .job-primary .name")?.textContent,
+      document.querySelector(".salary, .job-banner .salary, .job-primary .salary")?.textContent,
+      document.querySelector(".job-sec-text, .job-detail-section .text, .job-description")
+        ?.textContent
+    ]
+      .filter(Boolean)
+      .join("\n")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (signature.length >= 30 && signature === lastSignature) {
+      stableCount += 1;
+
+      if (stableCount >= 2) {
+        return;
+      }
+    } else {
+      stableCount = 0;
+      lastSignature = signature;
+    }
+
+    await delay(250);
+  }
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function isCaptureMessage(
