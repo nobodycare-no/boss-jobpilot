@@ -12,7 +12,7 @@ export const recommendationOrder = ["prioritize", "apply", "cautious", "skip"] s
 >;
 
 export const applicationStatusLabels: Record<Application["status"], string> = {
-  draft: "草稿",
+  draft: "话术待发送",
   greeted: "已打招呼",
   applied: "已投递",
   replied: "已回复",
@@ -22,15 +22,17 @@ export const applicationStatusLabels: Record<Application["status"], string> = {
   closed: "已关闭"
 };
 
-export type JobBoardStage = "unstarted" | Application["status"];
+export type JobBoardStage = "unstarted" | "resumeReady" | Application["status"];
 
 export const boardStageLabels: Record<JobBoardStage, string> = {
-  unstarted: "未生成草稿",
+  unstarted: "待生成简历",
+  resumeReady: "简历已生成",
   ...applicationStatusLabels
 };
 
 export const boardStageOrder = [
   "unstarted",
+  "resumeReady",
   "draft",
   "greeted",
   "applied",

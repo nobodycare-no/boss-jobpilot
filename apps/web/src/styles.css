@@ -972,9 +972,9 @@ button:disabled {
 
 .application-board {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .follow-up-board {
@@ -982,16 +982,16 @@ button:disabled {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   border-top: 1px solid #d8d0c3;
-  margin: -4px 0 16px;
-  padding-top: 12px;
+  margin: 0 0 12px;
+  padding-top: 10px;
 }
 
 .board-filter-button {
   display: grid;
-  min-height: 56px;
+  min-height: 48px;
   justify-items: start;
   border-color: #cbd9d7;
-  padding: 9px 10px;
+  padding: 8px 9px;
   color: #3e5558;
   background: #ffffff;
 }
@@ -1000,6 +1000,7 @@ button:disabled {
   display: inline-flex;
   gap: 5px;
   align-items: center;
+  min-width: 0;
   font-size: 12px;
   font-weight: 700;
 }
@@ -1567,8 +1568,8 @@ button:disabled {
 
 .job-list-panel {
   display: grid;
-  grid-template-rows: auto auto auto auto auto minmax(0, 1fr);
-  overflow: hidden;
+  grid-template-rows: auto auto auto auto auto minmax(160px, 1fr) auto;
+  overflow: auto;
   padding: 16px;
 }
 
@@ -1579,6 +1580,22 @@ button:disabled {
   min-height: 0;
   overflow: auto;
   padding-right: 2px;
+}
+
+.job-pagination {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid #d8d0c3;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.job-pagination span {
+  color: #3e5558;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .job-list-item {

@@ -1,6 +1,14 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import { BriefcaseBusiness, ClipboardList, Plus, RefreshCw, Timer } from "lucide-react";
+import {
+  BriefcaseBusiness,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  Plus,
+  RefreshCw,
+  Timer
+} from "lucide-react";
 
 import type {
   Application,
@@ -92,11 +100,13 @@ type RefreshJobsOptions = {
   silent?: boolean;
 };
 
+const jobPageSize = 8;
+
 const followUpFilterItems = [
-  { filter: "followUpDue", label: "今日待跟进" },
+  { filter: "followUpDue", label: "待跟进" },
   { filter: "followUpOverdue", label: "逾期" },
   { filter: "followUpToday", label: "今天" },
-  { filter: "followUpUpcoming", label: "未来 3 天" }
+  { filter: "followUpUpcoming", label: "未来3天" }
 ] satisfies Array<{
   filter: FollowUpFilter;
   label: string;
@@ -135,6 +145,7 @@ export function JobPool({ experiences }: JobPoolProps) {
   const [reviewFilters, setReviewFilters] = useState<ApplicationReviewFilters>(
     defaultApplicationReviewFilters
   );
+  const [jobPage, setJobPage] = useState(1);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<JobPanelTool>("analysis");
   const [busyJobAction, setBusyJobAction] = useState<Record<string, string>>({});
@@ -145,19 +156,6 @@ export function JobPool({ experiences }: JobPoolProps) {
   const knownJobIdsRef = useRef<Set<string> | null>(null);
   const isRefreshingJobsRef = useRef(false);
 
-  const jobKeywords = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          jobs.flatMap((job) =>
-            [job.title, job.companyName, job.city, job.salaryText].filter(
-              (value): value is string => Boolean(value)
-            )
-          )
-        )
-      ).slice(0, 10),
-    [jobs]
-  );
   const experienceById = useMemo(
     () => new Map(experiences.map((experience) => [experience.id, experience])),
     [experiences]
@@ -168,7 +166,7 @@ export function JobPool({ experiences }: JobPoolProps) {
     );
 
     for (const job of jobs) {
-      const stage = getJobBoardStage(job.id, applicationByJobId);
+      const stage = getJobBoardStage(job.id, applicationByJobId, resumeHistoryByJobId);
       counts.set(stage, (counts.get(stage) ?? 0) + 1);
     }
 
@@ -184,7 +182,7 @@ export function JobPool({ experiences }: JobPoolProps) {
         stage
       }))
     ];
-  }, [applicationByJobId, jobs]);
+  }, [applicationByJobId, jobs, resumeHistoryByJobId]);
   const followUpItems = useMemo(() => {
     const counts = {
       followUpDue: 0,
@@ -228,10 +226,11 @@ export function JobPool({ experiences }: JobPoolProps) {
       filterApplicationReviewJobs({
         analysisByJobId,
         applicationByJobId,
+        resumeHistoryByJobId,
         filters: reviewFilters,
         jobs
       }),
-    [analysisByJobId, applicationByJobId, jobs, reviewFilters]
+    [analysisByJobId, applicationByJobId, jobs, resumeHistoryByJobId, reviewFilters]
   );
   const reviewSummary = useMemo(
     () =>
@@ -253,8 +252,23 @@ export function JobPool({ experiences }: JobPoolProps) {
   );
   const reviewScopeLabel = useMemo(() => buildReviewScopeLabel(reviewFilters), [reviewFilters]);
   const visibleJobs = useMemo(
-    () => filterJobsByBoard({ applicationByJobId, filter: activeBoardFilter, jobs }),
-    [activeBoardFilter, applicationByJobId, jobs]
+    () =>
+      filterJobsByBoard({
+        applicationByJobId,
+        filter: activeBoardFilter,
+        jobs,
+        resumeHistoryByJobId
+      }),
+    [activeBoardFilter, applicationByJobId, jobs, resumeHistoryByJobId]
+  );
+  const totalJobPages = Math.max(1, Math.ceil(visibleJobs.length / jobPageSize));
+  const pagedVisibleJobs = useMemo(
+    () => visibleJobs.slice((jobPage - 1) * jobPageSize, jobPage * jobPageSize),
+    [jobPage, visibleJobs]
+  );
+  const visibleJobKeywords = useMemo(
+    () => buildVisibleJobKeywords(pagedVisibleJobs),
+    [pagedVisibleJobs]
   );
   const selectedJob = useMemo(() => {
     if (selectedJobId) {
@@ -269,20 +283,30 @@ export function JobPool({ experiences }: JobPoolProps) {
   }, [jobs, selectedJobId, visibleJobs]);
 
   useEffect(() => {
-    if (visibleJobs.length === 0) {
+    setJobPage(1);
+  }, [activeBoardFilter]);
+
+  useEffect(() => {
+    if (jobPage > totalJobPages) {
+      setJobPage(totalJobPages);
+    }
+  }, [jobPage, totalJobPages]);
+
+  useEffect(() => {
+    if (pagedVisibleJobs.length === 0) {
       setSelectedJobId(null);
       return;
     }
 
-    if (!selectedJobId || !visibleJobs.some((job) => job.id === selectedJobId)) {
-      const firstVisibleJob = visibleJobs[0];
+    if (!selectedJobId || !pagedVisibleJobs.some((job) => job.id === selectedJobId)) {
+      const firstVisibleJob = pagedVisibleJobs[0];
 
       if (firstVisibleJob) {
         setSelectedJobId(firstVisibleJob.id);
       }
       setActiveTool("analysis");
     }
-  }, [selectedJobId, visibleJobs]);
+  }, [pagedVisibleJobs, selectedJobId]);
 
   async function refreshJobs(options: RefreshJobsOptions = {}) {
     if (isRefreshingJobsRef.current) {
@@ -363,7 +387,11 @@ export function JobPool({ experiences }: JobPoolProps) {
       const newJob = previousJobIds
         ? response.items.find((job) => !previousJobIds.has(job.id))
         : undefined;
-      const nextSignature = buildJobPoolSyncSignature(response.items, nextApplicationByJobId);
+      const nextSignature = buildJobPoolSyncSignature(
+        response.items,
+        nextApplicationByJobId,
+        nextResumeHistoryByJobId
+      );
       const shouldUpdate = options.force || nextSignature !== jobSyncSignatureRef.current;
 
       knownJobIdsRef.current = nextJobIds;
@@ -523,9 +551,15 @@ export function JobPool({ experiences }: JobPoolProps) {
   }
 
   function handleSelectBoardFilter(filter: JobBoardFilter) {
-    const nextVisibleJobs = filterJobsByBoard({ applicationByJobId, filter, jobs });
+    const nextVisibleJobs = filterJobsByBoard({
+      applicationByJobId,
+      filter,
+      jobs,
+      resumeHistoryByJobId
+    });
 
     setActiveBoardFilter(filter);
+    setJobPage(1);
     setSelectedJobId(nextVisibleJobs[0]?.id ?? null);
     setActiveTool("analysis");
   }
@@ -942,9 +976,9 @@ export function JobPool({ experiences }: JobPoolProps) {
               </span>
             </div>
 
-            {jobKeywords.length > 0 ? (
+            {visibleJobKeywords.length > 0 ? (
               <div className="skill-strip">
-                {jobKeywords.map((keyword) => (
+                {visibleJobKeywords.map((keyword) => (
                   <span key={keyword}>{keyword}</span>
                 ))}
               </div>
@@ -1000,14 +1034,18 @@ export function JobPool({ experiences }: JobPoolProps) {
             ) : null}
 
             <div className="job-list">
-              {visibleJobs.map((job) => (
+              {pagedVisibleJobs.map((job) => (
                 <JobListItem
                   active={selectedJob?.id === job.id}
                   analysis={analysisByJobId[job.id]}
-                  application={applicationByJobId[job.id]}
                   busyLabel={busyJobAction[job.id]}
                   job={job}
                   key={job.id}
+                  stageLabel={
+                    boardStageLabels[
+                      getJobBoardStage(job.id, applicationByJobId, resumeHistoryByJobId)
+                    ]
+                  }
                   onSelect={() => {
                     setSelectedJobId(job.id);
                     setActiveTool("analysis");
@@ -1015,6 +1053,32 @@ export function JobPool({ experiences }: JobPoolProps) {
                 />
               ))}
             </div>
+
+            {visibleJobs.length > jobPageSize ? (
+              <div className="job-pagination" aria-label="岗位分页">
+                <button
+                  className="icon-button"
+                  disabled={jobPage === 1}
+                  onClick={() => setJobPage((current) => Math.max(1, current - 1))}
+                  title="上一页"
+                  type="button"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span>
+                  {jobPage}/{totalJobPages}
+                </span>
+                <button
+                  className="icon-button"
+                  disabled={jobPage === totalJobPages}
+                  onClick={() => setJobPage((current) => Math.min(totalJobPages, current + 1))}
+                  title="下一页"
+                  type="button"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            ) : null}
           </section>
         </aside>
 
@@ -1098,11 +1162,13 @@ export function JobPool({ experiences }: JobPoolProps) {
 export function filterJobsByBoard({
   applicationByJobId,
   filter,
-  jobs
+  jobs,
+  resumeHistoryByJobId = {}
 }: {
   applicationByJobId: Record<string, Application>;
   filter: JobBoardFilter;
   jobs: JobPosting[];
+  resumeHistoryByJobId?: Record<string, ResumeVersion[]>;
 }) {
   return jobs.filter((job) => {
     if (filter === "all") {
@@ -1125,17 +1191,19 @@ export function filterJobsByBoard({
       return getFollowUpBucket(applicationByJobId[job.id]?.nextFollowUpAt) === "upcoming";
     }
 
-    return getJobBoardStage(job.id, applicationByJobId) === filter;
+    return getJobBoardStage(job.id, applicationByJobId, resumeHistoryByJobId) === filter;
   });
 }
 
 export function buildJobPoolSyncSignature(
   jobs: JobPosting[],
-  applicationByJobId: Record<string, Application>
+  applicationByJobId: Record<string, Application>,
+  resumeHistoryByJobId: Record<string, ResumeVersion[]> = {}
 ) {
   return jobs
     .map((job) => {
       const application = applicationByJobId[job.id];
+      const latestResume = resumeHistoryByJobId[job.id]?.[0];
 
       return [
         job.id,
@@ -1146,25 +1214,39 @@ export function buildJobPoolSyncSignature(
         application?.id ?? "",
         application?.status ?? "",
         application?.updatedAt ?? "",
-        application?.nextFollowUpAt ?? ""
+        application?.nextFollowUpAt ?? "",
+        latestResume?.id ?? "",
+        resumeHistoryByJobId[job.id]?.length ?? 0
       ].join(":");
     })
     .join("|");
 }
 
+export function buildVisibleJobKeywords(jobs: JobPosting[]) {
+  const values = jobs.flatMap((job) => [job.title, job.salaryText, job.city]);
+
+  return Array.from(
+    new Set(
+      values
+        .map((value) => value?.trim())
+        .filter((value): value is string => Boolean(value))
+    )
+  );
+}
+
 function JobListItem({
   active,
   analysis,
-  application,
   busyLabel,
   job,
+  stageLabel,
   onSelect
 }: {
   active: boolean;
   analysis?: JobAnalysis;
-  application?: Application;
   busyLabel?: string;
   job: JobPosting;
+  stageLabel: string;
   onSelect: () => void;
 }) {
   return (
@@ -1177,10 +1259,7 @@ function JobListItem({
       </div>
       <small>
         {busyLabel ??
-          [
-            analysis ? `${analysis.matchScore} 分` : "未分析",
-            application ? boardStageLabels[application.status] : "未开始"
-          ].join(" · ")}
+          [analysis ? `${analysis.matchScore} 分` : "未分析", stageLabel].join(" · ")}
       </small>
     </button>
   );
@@ -1242,9 +1321,16 @@ function optionalText(value: string) {
 
 function getJobBoardStage(
   jobId: string,
-  applicationByJobId: Record<string, Application>
+  applicationByJobId: Record<string, Application>,
+  resumeHistoryByJobId: Record<string, ResumeVersion[]> = {}
 ): JobBoardStage {
-  return applicationByJobId[jobId]?.status ?? "unstarted";
+  const application = applicationByJobId[jobId];
+
+  if (application) {
+    return application.status;
+  }
+
+  return (resumeHistoryByJobId[jobId]?.length ?? 0) > 0 ? "resumeReady" : "unstarted";
 }
 
 function isFollowUpDue(value?: string) {

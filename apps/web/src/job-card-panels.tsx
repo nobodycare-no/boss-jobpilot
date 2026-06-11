@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import {
   BadgeCheck,
@@ -343,12 +343,11 @@ export function ResumePanel({
   onCopyText: (label: string, value: string) => Promise<void>;
   onSaveEdit: (resume: ResumeVersion, markdownContent: string) => Promise<void>;
 }) {
-  const markdownInputRef = useRef<HTMLTextAreaElement>(null);
+  const [markdownContent, setMarkdownContent] = useState(resume.markdownContent);
+  const hasEditedMarkdown = markdownContent.trim() !== resume.markdownContent.trim();
 
   useEffect(() => {
-    if (markdownInputRef.current) {
-      markdownInputRef.current.value = resume.markdownContent;
-    }
+    setMarkdownContent(resume.markdownContent);
   }, [resume.markdownContent]);
 
   return (
@@ -364,7 +363,7 @@ export function ResumePanel({
             <Copy size={15} />
             复制
           </button>
-          <span>{resume.variant}</span>
+          <span>{resume.variant} · 已自动保存</span>
         </div>
       </div>
       {resume.changeSummary ? <p>{resume.changeSummary}</p> : null}
@@ -372,17 +371,20 @@ export function ResumePanel({
       <div className="draft-editor">
         <label>
           编辑 Markdown 简历
-          <textarea defaultValue={resume.markdownContent} ref={markdownInputRef} rows={10} />
+          <textarea
+            onChange={(event) => setMarkdownContent(event.target.value)}
+            rows={10}
+            value={markdownContent}
+          />
         </label>
         <div className="draft-editor__actions">
           <button
             type="button"
             className="panel-action-button"
-            onClick={() =>
-              void onSaveEdit(resume, markdownInputRef.current?.value.trim() ?? "")
-            }
+            disabled={!hasEditedMarkdown}
+            onClick={() => void onSaveEdit(resume, markdownContent.trim())}
           >
-            保存为新版本
+            保存编辑为新版本
           </button>
         </div>
       </div>

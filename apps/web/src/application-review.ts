@@ -6,6 +6,8 @@ import type {
   ResumeVersion
 } from "@boss-jobpilot/shared";
 
+import type { JobBoardStage } from "./job-labels";
+
 export type ApplicationReviewDistributionItem = {
   count: number;
   label: string;
@@ -52,7 +54,7 @@ export type ApplicationReviewSummary = {
   strategySuggestions: ApplicationReviewStrategySuggestion[];
 };
 
-export type ApplicationReviewStatusFilter = "all" | "unstarted" | Application["status"];
+export type ApplicationReviewStatusFilter = "all" | JobBoardStage;
 
 export type ApplicationReviewRecommendationFilter = "all" | "unanalyzed" | JobAnalysis["recommendation"];
 
@@ -205,11 +207,13 @@ export function buildApplicationReviewSummary({
 export function filterApplicationReviewJobs({
   analysisByJobId,
   applicationByJobId,
+  resumeHistoryByJobId = {},
   filters,
   jobs
 }: {
   analysisByJobId: Record<string, JobAnalysis>;
   applicationByJobId: Record<string, Application>;
+  resumeHistoryByJobId?: Record<string, ResumeVersion[]>;
   filters: ApplicationReviewFilters;
   jobs: JobPosting[];
 }) {
@@ -232,9 +236,14 @@ export function filterApplicationReviewJobs({
     }
 
     const application = applicationByJobId[job.id];
+    const hasResume = (resumeHistoryByJobId[job.id]?.length ?? 0) > 0;
 
     if (filters.status === "unstarted") {
-      return !application;
+      return !hasResume;
+    }
+
+    if (filters.status === "resumeReady") {
+      return hasResume && !application;
     }
 
     if (filters.status !== "all" && application?.status !== filters.status) {
