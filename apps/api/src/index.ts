@@ -1,4 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
+import { existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import Fastify from "fastify";
@@ -1007,6 +1009,8 @@ function createAiFallbackWarning(featureLabel: string, error: unknown): AiFallba
 }
 
 async function main() {
+  loadNearestEnvFile();
+
   const host = process.env.API_HOST ?? "127.0.0.1";
   const port = Number(process.env.API_PORT ?? 4000);
   const server = buildServer({
@@ -1015,6 +1019,27 @@ async function main() {
   });
 
   await server.listen({ host, port });
+}
+
+export function loadNearestEnvFile(startDirectory = process.cwd()) {
+  let currentDirectory = resolve(startDirectory);
+
+  while (true) {
+    const candidate = join(currentDirectory, ".env");
+
+    if (existsSync(candidate)) {
+      process.loadEnvFile(candidate);
+      return candidate;
+    }
+
+    const parentDirectory = dirname(currentDirectory);
+
+    if (parentDirectory === currentDirectory) {
+      return undefined;
+    }
+
+    currentDirectory = parentDirectory;
+  }
 }
 
 const entrypoint = process.argv[1] ? pathToFileURL(process.argv[1]).href : undefined;

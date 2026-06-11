@@ -103,9 +103,13 @@ AI_API_BASE_URL=https://www.packyapi.com/v1
 AI_MODEL=gpt-5
 ```
 
+API 启动时会从当前目录向上查找最近的 `.env` 文件并加载，所以推荐把 `.env` 放在项目根目录。修改 `.env` 后必须重启 API，也就是关闭当前 `npm run dev` / `npm run dev:api` / `start.bat` 启动的 API 窗口后重新启动；只刷新浏览器页面不会让后端重新读取密钥。
+
 配置 `AI_API_KEY` 后，岗位分析、定制简历、打招呼语和 AI 策略复盘会优先使用 Provider；不配置时，软件会继续使用本地规则版生成逻辑。Provider 调用失败时，本次操作会回退到规则版结果并在页面提示降级原因。不要把真实密钥提交到 Git。
 
 Web 工作台的投递复盘区域会显示 AI Provider 状态：未配置、可用或验证失败。点击“刷新”会让本地 API 发起一次最小 JSON 探测，用来确认 PackyAPI 密钥、模型和网络是否可用；探测不会发送你的简历、经历库或岗位 JD。
+
+如果你已经写了 `.env` 但页面仍显示“AI Provider 未配置”，优先检查：`.env` 是否在项目根目录、变量名是否为 `AI_API_KEY` 或 `PACKY_API_KEY`、API 是否已经重启、Web 是否连接到同一个 API 地址。
 
 投递复盘区域还会显示最近 AI 生成记录，包括岗位分析、定制简历、打招呼语和策略复盘的运行状态、Provider、耗时、Prompt 版本和降级原因。可以按能力、状态和关联岗位筛选，并点击记录查看明细。这里不会保存完整 Prompt、简历正文、经历库正文或 JD 正文。
 

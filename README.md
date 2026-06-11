@@ -89,6 +89,8 @@ $env:AI_MODEL="gpt-5"
 npm run dev
 ```
 
+也可以复制 `.env.example` 为项目根目录 `.env` 后填写 `AI_API_KEY`。API 启动时会自动从当前目录向上查找 `.env`；修改 `.env` 后需要重启 API，刷新页面本身不会重新读取密钥。
+
 不配置 `AI_API_KEY` 时，系统会继续使用本地规则版生成逻辑。不要把真实密钥提交到 Git。
 
 也可以分别启动：
