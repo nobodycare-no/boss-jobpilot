@@ -304,6 +304,19 @@ button:disabled {
   margin-bottom: 16px;
 }
 
+.job-list-panel .skill-strip {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 6px;
+  overflow-x: auto;
+  margin-bottom: 10px;
+  padding-bottom: 2px;
+}
+
+.job-list-panel .skill-strip span {
+  flex: 0 0 auto;
+}
+
 .library-filters {
   display: grid;
   gap: 10px;
@@ -972,26 +985,17 @@ button:disabled {
 
 .application-board {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.follow-up-board {
-  display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  border-top: 1px solid #d8d0c3;
-  margin: 0 0 12px;
-  padding-top: 10px;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
 .board-filter-button {
   display: grid;
-  min-height: 48px;
+  min-height: 42px;
   justify-items: start;
   border-color: #cbd9d7;
-  padding: 8px 9px;
+  padding: 7px 8px;
   color: #3e5558;
   background: #ffffff;
 }
@@ -1001,13 +1005,13 @@ button:disabled {
   gap: 5px;
   align-items: center;
   min-width: 0;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 
 .board-filter-button strong {
   color: #0f5d66;
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
 }
 
@@ -1019,21 +1023,6 @@ button:disabled {
 
 .board-filter-button[aria-pressed="true"] strong {
   color: #ffffff;
-}
-
-.follow-up-filter-button {
-  border-color: #d8c8a3;
-  color: #5c4b24;
-  background: #fffaf0;
-}
-
-.follow-up-filter-button strong {
-  color: #7a5b12;
-}
-
-.follow-up-filter-button[aria-pressed="true"] {
-  border-color: #7a5b12;
-  background: #7a5b12;
 }
 
 .skill-strip span,
@@ -1567,16 +1556,17 @@ button:disabled {
 }
 
 .job-list-panel {
-  display: grid;
-  grid-template-rows: auto auto auto auto auto minmax(160px, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   overflow: auto;
-  padding: 16px;
+  padding: 14px;
 }
 
 .job-list {
   display: grid;
   align-content: start;
-  gap: 8px;
+  gap: 6px;
+  flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
   padding-right: 2px;
@@ -1601,11 +1591,11 @@ button:disabled {
 .job-list-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: 8px;
   justify-items: stretch;
-  min-height: 72px;
+  min-height: 44px;
   border-color: #d8d0c3;
-  padding: 10px 12px;
+  padding: 6px 9px;
   color: #172126;
   background: #ffffff;
   text-align: left;
@@ -1619,7 +1609,7 @@ button:disabled {
 
 .job-list-item > div {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
 }
 
@@ -1633,13 +1623,13 @@ button:disabled {
 
 .job-list-item strong {
   color: #172126;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .job-list-item span,
 .job-list-item small {
   color: #607073;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -1791,7 +1781,6 @@ button:disabled {
   .job-workbench,
   .form-grid,
   .application-board,
-  .follow-up-board,
   .review-metrics,
   .review-controls,
   .review-strategy > div,

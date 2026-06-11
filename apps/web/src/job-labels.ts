@@ -14,7 +14,7 @@ export const recommendationOrder = ["prioritize", "apply", "cautious", "skip"] s
 export const applicationStatusLabels: Record<Application["status"], string> = {
   draft: "话术待发送",
   greeted: "已打招呼",
-  applied: "已投递",
+  applied: "已投递后",
   replied: "已回复",
   interview: "面试中",
   rejected: "已拒绝",
@@ -35,10 +35,5 @@ export const boardStageOrder = [
   "resumeReady",
   "draft",
   "greeted",
-  "applied",
-  "replied",
-  "interview",
-  "offer",
-  "rejected",
-  "closed"
+  "applied"
 ] satisfies JobBoardStage[];

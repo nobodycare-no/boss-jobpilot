@@ -6,8 +6,7 @@ import {
   ChevronRight,
   ClipboardList,
   Plus,
-  RefreshCw,
-  Timer
+  RefreshCw
 } from "lucide-react";
 
 import type {
@@ -88,7 +87,7 @@ const emptyJobForm: JobFormState = {
   jdRaw: ""
 };
 
-type FollowUpFilter = "followUpDue" | "followUpOverdue" | "followUpToday" | "followUpUpcoming";
+type FollowUpFilter = "followUpDue";
 type JobBoardFilter = "all" | FollowUpFilter | JobBoardStage;
 type FollowUpBucket = "overdue" | "today" | "upcoming" | "none";
 type RefreshJobsOptions = {
@@ -100,17 +99,12 @@ type RefreshJobsOptions = {
   silent?: boolean;
 };
 
-const jobPageSize = 8;
+const jobPageSize = 3;
 
-const followUpFilterItems = [
-  { filter: "followUpDue", label: "待跟进" },
-  { filter: "followUpOverdue", label: "逾期" },
-  { filter: "followUpToday", label: "今天" },
-  { filter: "followUpUpcoming", label: "未来3天" }
-] satisfies Array<{
+const followUpFilterItem = { filter: "followUpDue", label: "待跟进" } satisfies {
   filter: FollowUpFilter;
   label: string;
-}>;
+};
 
 type JobPoolProps = {
   experiences: ExperienceItem[];
@@ -160,6 +154,22 @@ export function JobPool({ experiences }: JobPoolProps) {
     () => new Map(experiences.map((experience) => [experience.id, experience])),
     [experiences]
   );
+  const followUpItem = useMemo(() => {
+    let count = 0;
+
+    for (const job of jobs) {
+      const bucket = getFollowUpBucket(applicationByJobId[job.id]?.nextFollowUpAt);
+
+      if (bucket === "overdue" || bucket === "today") {
+        count += 1;
+      }
+    }
+
+    return {
+      count,
+      ...followUpFilterItem
+    };
+  }, [applicationByJobId, jobs]);
   const boardItems = useMemo(() => {
     const counts = new Map<JobBoardStage, number>(
       boardStageOrder.map((stage) => [stage, 0] as const)
@@ -173,47 +183,24 @@ export function JobPool({ experiences }: JobPoolProps) {
     return [
       {
         count: jobs.length,
+        filter: "all" as const,
         label: "全部",
         stage: "all" as const
       },
       ...boardStageOrder.map((stage) => ({
         count: counts.get(stage) ?? 0,
+        filter: stage,
         label: boardStageLabels[stage],
         stage
-      }))
+      })),
+      {
+        count: followUpItem.count,
+        filter: followUpItem.filter,
+        label: followUpItem.label,
+        stage: followUpItem.filter
+      }
     ];
-  }, [applicationByJobId, jobs, resumeHistoryByJobId]);
-  const followUpItems = useMemo(() => {
-    const counts = {
-      followUpDue: 0,
-      followUpOverdue: 0,
-      followUpToday: 0,
-      followUpUpcoming: 0
-    } satisfies Record<FollowUpFilter, number>;
-
-    for (const job of jobs) {
-      const bucket = getFollowUpBucket(applicationByJobId[job.id]?.nextFollowUpAt);
-
-      if (bucket === "overdue") {
-        counts.followUpDue += 1;
-        counts.followUpOverdue += 1;
-      }
-
-      if (bucket === "today") {
-        counts.followUpDue += 1;
-        counts.followUpToday += 1;
-      }
-
-      if (bucket === "upcoming") {
-        counts.followUpUpcoming += 1;
-      }
-    }
-
-    return followUpFilterItems.map((item) => ({
-      count: counts[item.filter],
-      ...item
-    }));
-  }, [applicationByJobId, jobs]);
+  }, [applicationByJobId, followUpItem, jobs, resumeHistoryByJobId]);
   const reviewCityOptions = useMemo(
     () =>
       Array.from(new Set(jobs.map(getApplicationReviewCityLabel))).sort((left, right) =>
@@ -988,33 +975,13 @@ export function JobPool({ experiences }: JobPoolProps) {
               <div className="application-board" aria-label="投递看板">
                 {boardItems.map((item) => (
                   <button
-                    aria-pressed={activeBoardFilter === item.stage}
-                    className="board-filter-button"
-                    key={item.stage}
-                    onClick={() => handleSelectBoardFilter(item.stage)}
-                    type="button"
-                  >
-                    <span>{item.label}</span>
-                    <strong>{item.count}</strong>
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            {jobs.length > 0 ? (
-              <div className="follow-up-board" aria-label="跟进队列">
-                {followUpItems.map((item) => (
-                  <button
                     aria-pressed={activeBoardFilter === item.filter}
-                    className="board-filter-button follow-up-filter-button"
+                    className="board-filter-button"
                     key={item.filter}
                     onClick={() => handleSelectBoardFilter(item.filter)}
                     type="button"
                   >
-                    <span>
-                      <Timer size={13} />
-                      {item.label}
-                    </span>
+                    <span>{item.label}</span>
                     <strong>{item.count}</strong>
                   </button>
                 ))}
@@ -1179,16 +1146,8 @@ export function filterJobsByBoard({
       return isFollowUpDue(applicationByJobId[job.id]?.nextFollowUpAt);
     }
 
-    if (filter === "followUpOverdue") {
-      return getFollowUpBucket(applicationByJobId[job.id]?.nextFollowUpAt) === "overdue";
-    }
-
-    if (filter === "followUpToday") {
-      return getFollowUpBucket(applicationByJobId[job.id]?.nextFollowUpAt) === "today";
-    }
-
-    if (filter === "followUpUpcoming") {
-      return getFollowUpBucket(applicationByJobId[job.id]?.nextFollowUpAt) === "upcoming";
+    if (filter === "applied") {
+      return isAppliedOrBeyond(applicationByJobId[job.id]?.status);
     }
 
     return getJobBoardStage(job.id, applicationByJobId, resumeHistoryByJobId) === filter;
@@ -1341,6 +1300,12 @@ function isFollowUpDue(value?: string) {
 
 function isFollowUpFilter(value: JobBoardFilter): value is FollowUpFilter {
   return value.startsWith("followUp");
+}
+
+function isAppliedOrBeyond(status?: Application["status"]) {
+  return Boolean(
+    status && ["applied", "replied", "interview", "offer", "rejected", "closed"].includes(status)
+  );
 }
 
 function getFollowUpBucket(value?: string): FollowUpBucket {
