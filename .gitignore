@@ -20,6 +20,11 @@ artifacts/
 *.sqlite3
 data/
 
+# Internal project notes
+docs/0[0-9]-*.md
+docs/10-*.md
+docs/internal/
+
 # Logs
 *.log
 npm-debug.log*

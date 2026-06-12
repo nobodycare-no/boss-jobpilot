@@ -1,61 +1,34 @@
 # boss-jobpilot
 
-`boss-jobpilot` 是一个本地优先的 AI 求职代理，目标是尽量自动化求职投递中的重复劳动：岗位采集、公司分析、匹配评分、个性化打招呼语、定制简历、投递记录、跟进提醒和面试准备。
+`boss-jobpilot` 是一个本地优先的 AI 求职工作台，用来把岗位保存、岗位分析、简历素材管理、定制简历、打招呼语和投递跟进集中到一个可控的本地流程里。
 
-项目原则：
+项目的核心原则：
 
-- 自动完成信息收集、分析、生成和记录。
-- 对高价值或高风险动作保留人工确认。
-- 使用真实经历库生成简历，强化表达但不编造经历。
-- 数据默认保存在本地，简历和求职记录不上传到自有服务器。
+- 数据默认保存在本机，本项目不提供云端同步服务。
+- AI 只作为分析和生成助手，发送前始终由用户确认。
+- 简历内容基于真实素材生成，强调表达优化，不鼓励编造经历。
+- Boss 直聘插件只负责采集和辅助复制，不会自动投递或自动发送消息。
 
-## Recommended Repo Name
+## 功能概览
 
-实际仓库名：`boss-jobpilot`
+- 本地 Web 工作台：维护简历素材、保存岗位、查看岗位池和投递阶段。
+- Chrome 插件：从 Boss 直聘岗位页采集当前岗位，并读取本地生成的打招呼语或投递包。
+- 岗位分析：提取岗位重点、匹配经历、风险信号和投递建议。
+- 简历素材：支持录入结构化经历，也支持直接添加整份简历作为分析素材。
+- 定制简历：按岗位生成 Markdown 简历草稿，并保留版本记录。
+- 打招呼语：按岗位和简历素材生成短消息草稿。
+- 投递跟进：记录打招呼、投递、回复、面试等状态，并设置下一次跟进时间。
+- 本地降级：未配置 AI Provider 或调用失败时，仍可使用规则版逻辑完成基础生成。
 
-备选名称：
+## 快速开始
 
-- `jobpilot-ai`
-- `career-agent-ai`
-- `resume-copilot`
-- `hireflow-ai`
-
-## Documentation
-
-- [项目概要](docs/00-project-brief.md)
-- [技术栈](docs/01-tech-stack.md)
-- [系统架构](docs/02-system-architecture.md)
-- [产品需求](docs/03-product-requirements.md)
-- [数据模型](docs/04-data-model.md)
-- [AI Agent 设计](docs/05-ai-agent-design.md)
-- [安全与合规](docs/06-security-compliance.md)
-- [迭代计划](docs/07-iteration-plan.md)
-- [进度追踪计划](docs/08-progress-tracking.md)
-- [Git 工作流](docs/09-git-workflow.md)
-- [Codex 开发说明](docs/10-dev-notes-for-codex.md)
-- [当前软件使用手册](docs/11-user-guide.md)
-
-## MVP Roadmap
-
-第一版目标：
-
-1. 建立个人经历库。
-2. 从 Boss 直聘页面采集岗位和公司信息。
-3. AI 分析 JD、公司要求和岗位风险。
-4. 根据经历库生成岗位定制简历和打招呼语。
-5. 管理投递状态、跟进记录和面试准备材料。
-
-## Development
-
-### 新手启动
-
-Windows 用户可以直接双击根目录的：
+Windows 用户可以在项目根目录双击：
 
 ```text
 start.bat
 ```
 
-它会自动检查 Node/Corepack、在缺少依赖时执行安装、分别启动本地 API 和 Web，并打开浏览器。
+脚本会检查 Node/Corepack、安装缺失依赖，并启动本地 API 与 Web 工作台。
 
 启动后访问：
 
@@ -63,52 +36,90 @@ start.bat
 http://127.0.0.1:5173
 ```
 
-关闭项目时，关闭 `boss-jobpilot API` 和 `boss-jobpilot Web` 两个命令行窗口即可。
-
-### 程序员启动
-
-本项目使用 pnpm workspace。推荐在根目录运行：
+开发者也可以直接运行：
 
 ```powershell
 npm run dev
 ```
 
-这会同时启动：
+默认服务地址：
 
 - API：`http://127.0.0.1:4000`
 - Web：`http://127.0.0.1:5173`
 
-### AI Provider
+## AI Provider
 
-项目已预留 OpenAI-compatible Provider，默认面向 PackyAPI 中转站：
+项目支持 OpenAI-compatible API。复制 `.env.example` 为 `.env`，然后按需填写：
 
-```powershell
-$env:AI_API_KEY="你的 PackyAPI Key"
-$env:AI_API_BASE_URL="https://www.packyapi.com/v1"
-$env:AI_MODEL="gpt-5"
-npm run dev
+```text
+AI_API_KEY=your_api_key
+AI_API_BASE_URL=https://your-provider.example/v1
+AI_MODEL=your-model-id
 ```
 
-也可以复制 `.env.example` 为项目根目录 `.env` 后填写 `AI_API_KEY`。API 启动时会自动从当前目录向上查找 `.env`；修改 `.env` 后需要重启 API，刷新页面本身不会重新读取密钥。
+配置变更后需要重启 API。不要把真实密钥提交到 Git。
 
-不配置 `AI_API_KEY` 时，系统会继续使用本地规则版生成逻辑。不要把真实密钥提交到 Git。
+未配置 `AI_API_KEY` 时，系统会使用本地规则版分析和生成逻辑；配置后，岗位分析、简历草稿、打招呼语和策略复盘会优先使用真实模型。
 
-如果 Web 显示“AI Provider 验证失败”，说明密钥已经被 API 读取，但 PackyAPI 请求失败。请确认 `AI_MODEL` 是 PackyAPI token 分组可用的完整模型 ID；`AI_MODEL` 会优先于 `PACKY_API_MODEL`，不要同时配置两个不同模型。`AI_API_BASE_URL` 保持为 `https://www.packyapi.com/v1` 即可，不要填写到 `/responses` 或 `/chat/completions`。
+## Chrome 插件
 
-也可以分别启动：
-
-```powershell
-npm run dev:api
-npm run dev:web
-```
-
-插件开发单独启动：
+开发模式启动：
 
 ```powershell
 npm run dev:extension
 ```
 
-若本机没有直接安装 pnpm，也可以通过 Corepack 调用：
+生产构建：
+
+```powershell
+corepack pnpm --filter @boss-jobpilot/extension build
+```
+
+然后在 Chrome 打开 `chrome://extensions`，启用开发者模式，加载构建目录：
+
+```text
+apps/extension/build/chrome-mv3-dev
+```
+
+或生产构建目录：
+
+```text
+apps/extension/build/chrome-mv3-prod
+```
+
+插件需要本地 API 已启动。它会把当前 Boss 直聘页面识别出的岗位保存到本地岗位池，也可以从本地读取已生成的打招呼语或完整投递包。
+
+## 数据存储
+
+默认 SQLite 数据库位置：
+
+```text
+data/jobpilot.sqlite
+```
+
+可以通过环境变量覆盖：
+
+```powershell
+$env:DATABASE_PATH="D:\path\jobpilot.sqlite"
+npm run dev:api
+```
+
+`data/`、`.tmp/`、`.env` 和 SQLite 文件默认被 Git 忽略。
+
+## 常用脚本
+
+```powershell
+npm run dev
+npm run dev:api
+npm run dev:web
+npm run dev:extension
+npm run typecheck
+npm run test
+npm run lint
+npm run build
+```
+
+若本机没有直接安装 pnpm，可以通过 Corepack 调用：
 
 ```powershell
 corepack pnpm install
@@ -118,17 +129,22 @@ corepack pnpm lint
 corepack pnpm build
 ```
 
-本地 API 默认使用 `data/jobpilot.sqlite` 保存经历库数据，可通过 `DATABASE_PATH` 覆盖。
-
-当前 workspace：
+## 项目结构
 
 - `apps/web`：本地求职工作台。
 - `apps/api`：本地 Fastify API。
-- `apps/extension`：Chrome 插件骨架。
+- `apps/extension`：Chrome 插件。
 - `packages/shared`：共享 Zod schema 和类型。
 - `packages/db`：SQLite schema、初始化和仓储层。
-- `packages/ai`：AI Provider 和 Prompt 版本骨架。
+- `packages/ai`：AI Provider 与生成逻辑。
 - `packages/resume`：简历 Markdown 生成逻辑。
 - `packages/scoring`：岗位匹配评分逻辑。
+- `docs/11-user-guide.md`：当前用户使用手册。
 
-插件采集需要先启动本地 API；popup 会把当前 Boss 页面岗位保存到 `http://127.0.0.1:4000/jobs`。
+## 文档
+
+- [用户使用手册](docs/11-user-guide.md)
+
+## 安全说明
+
+本项目面向个人本地使用。公开仓库不包含内部产品规划、开发协作记录、私有安全审计细节、真实数据库、密钥或个人简历数据。使用前仍建议自行检查 `.env`、`data/`、`.tmp/` 和浏览器插件构建产物，避免误提交个人信息。
