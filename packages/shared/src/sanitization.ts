@@ -15,6 +15,8 @@ type JobTextFields = Pick<
 
 const htmlBlockPattern = /<(script|style|noscript)[^>]*>[\s\S]*?<\/\1>/gi;
 const htmlTagPattern = /<\/?(?:[a-z][\w:-]*)(?:\s[^>]*)?>/gi;
+// Intentionally strips ASCII control characters from scraped page text.
+// eslint-disable-next-line no-control-regex
 const controlCharacterPattern = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/g;
 const replacementCharacterPattern = /[\ufffd�]/g;
 const mojibakeCharacterPattern = /[ÃÂÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßà-ÿ]/g;

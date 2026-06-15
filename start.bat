@@ -54,13 +54,13 @@ echo.
 echo Starting local API at http://127.0.0.1:4000
 start "boss-jobpilot API" cmd /k "pushd ""%ROOT%"" && corepack pnpm --filter @boss-jobpilot/api dev"
 
-echo Starting web app at http://127.0.0.1:5173
+echo Starting web app at http://127.0.0.1:5173 and http://localhost:5173
 start "boss-jobpilot Web" cmd /k "pushd ""%ROOT%"" && corepack pnpm --filter @boss-jobpilot/web dev"
 
 echo.
 echo Waiting a few seconds before opening the browser...
 timeout /t 5 /nobreak >nul
-start "" "http://127.0.0.1:5173"
+start "" "http://localhost:5173"
 
 echo.
 echo Startup commands have been launched.
@@ -68,4 +68,3 @@ echo Keep the API and Web terminal windows open while using the app.
 echo Close those windows to stop the project.
 echo.
 pause
-

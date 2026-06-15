@@ -26,12 +26,15 @@
   },
   "manifest": {
     "host_permissions": [
-      "https://www.zhipin.com/*",
-      "http://127.0.0.1:4000/*"
+      "https://zhipin.com/*",
+      "https://*.zhipin.com/*",
+      "http://127.0.0.1:4000/*",
+      "http://localhost:4000/*"
     ],
     "permissions": [
       "activeTab",
       "clipboardWrite",
+      "scripting",
       "storage"
     ]
   }

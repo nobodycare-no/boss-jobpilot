@@ -6,7 +6,7 @@ import { fillGreetingDraft } from "../fill-greeting";
 import { findMatchingJob } from "../job-matching";
 
 export const config: PlasmoCSConfig = {
-  matches: ["https://www.zhipin.com/*"],
+  matches: ["https://zhipin.com/*", "https://*.zhipin.com/*"],
   run_at: "document_idle"
 };
 

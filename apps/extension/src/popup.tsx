@@ -21,6 +21,11 @@ type ContentResult<T> = {
   ok?: boolean;
 } & T;
 
+type EmptyContentResult = {
+  error?: string;
+  ok?: boolean;
+};
+
 type JobListResponse = {
   items: JobPosting[];
 };
@@ -46,6 +51,11 @@ type MatchedApplicationPackage = {
   job: JobPosting;
 };
 
+type ActiveTab = {
+  id: number;
+  url?: string;
+};
+
 export default function Popup() {
   const [state, setState] = useState<PopupState>("idle");
   const [message, setMessage] = useState(
@@ -61,8 +71,8 @@ export default function Popup() {
     setMessage("正在采集当前页面...");
 
     try {
-      const tabId = await getActiveTabId();
-      const currentJob = await extractCurrentJob(tabId);
+      const tab = await getActiveTab();
+      const currentJob = await extractCurrentJob(tab);
       const jobs = await fetchJson<JobListResponse>("/jobs");
       const matchedJob = findMatchingJob(currentJob, jobs.items);
 
@@ -96,8 +106,8 @@ export default function Popup() {
     setMessage("正在匹配本地岗位和最新打招呼语...");
 
     try {
-      const tabId = await getActiveTabId();
-      const currentJob = await extractCurrentJob(tabId);
+      const tab = await getActiveTab();
+      const currentJob = await extractCurrentJob(tab);
       const jobs = await fetchJson<JobListResponse>("/jobs");
       const matchedJob = findMatchingJob(currentJob, jobs.items);
 
@@ -145,8 +155,8 @@ export default function Popup() {
     setMessage("正在匹配本地岗位并生成投递包...");
 
     try {
-      const tabId = await getActiveTabId();
-      const currentJob = await extractCurrentJob(tabId);
+      const tab = await getActiveTab();
+      const currentJob = await extractCurrentJob(tab);
       const jobs = await fetchJson<JobListResponse>("/jobs");
       const matchedJob = findMatchingJob(currentJob, jobs.items);
 
@@ -190,11 +200,8 @@ export default function Popup() {
     setMessage("正在填入当前页面输入框...");
 
     try {
-      const tabId = await getActiveTabId();
-      const result = await sendTabMessage<ContentResult<Record<string, never>>>(tabId, {
-        greetingMessage: matchedPackage.application.greetingMessage,
-        type: "boss-jobpilot:fill-greeting"
-      });
+      const tab = await getActiveTab();
+      const result = await fillGreetingOnPage(tab.id, matchedPackage.application.greetingMessage);
 
       if (!result.ok) {
         throw new Error(result.error ?? "填入失败");
@@ -347,7 +354,7 @@ const secondaryButtonStyle = {
   cursor: "pointer"
 } satisfies React.CSSProperties;
 
-async function getActiveTabId() {
+async function getActiveTab(): Promise<ActiveTab> {
   const [tab] = await chrome.tabs.query({
     active: true,
     currentWindow: true
@@ -357,13 +364,27 @@ async function getActiveTabId() {
     throw new Error("没有找到当前标签页");
   }
 
-  return tab.id;
+  return {
+    id: tab.id,
+    url: tab.url
+  };
 }
 
-async function extractCurrentJob(tabId: number) {
-  const result = await sendTabMessage<ContentResult<{ job?: JobPostingInput }>>(tabId, {
-    type: "boss-jobpilot:extract-current-job"
-  });
+async function extractCurrentJob(tab: ActiveTab) {
+  ensureBossJobTab(tab.url);
+  let result: ContentResult<{ job?: JobPostingInput }>;
+
+  try {
+    result = await sendTabMessage<ContentResult<{ job?: JobPostingInput }>>(tab.id, {
+      type: "boss-jobpilot:extract-current-job"
+    });
+  } catch (error) {
+    if (!isMissingContentScriptError(error)) {
+      throw error;
+    }
+
+    result = await extractCurrentJobWithScripting(tab.id);
+  }
 
   if (!result.ok || !result.job) {
     throw new Error(result.error ?? "当前页面不是可识别的 Boss 岗位页");
@@ -374,6 +395,355 @@ async function extractCurrentJob(tabId: number) {
 
 async function sendTabMessage<T>(tabId: number, message: Record<string, unknown>) {
   return (await chrome.tabs.sendMessage(tabId, message)) as T;
+}
+
+async function extractCurrentJobWithScripting(tabId: number) {
+  const [injection] = await chrome.scripting.executeScript({
+    func: extractBossJobPostingFallback,
+    target: {
+      tabId
+    }
+  });
+
+  return injection?.result ?? { error: "当前页面无法读取岗位信息，请刷新 Boss 岗位页后重试。", ok: false };
+}
+
+async function fillGreetingOnPage(tabId: number, greetingMessage: string): Promise<EmptyContentResult> {
+  try {
+    return await sendTabMessage<EmptyContentResult>(tabId, {
+      greetingMessage,
+      type: "boss-jobpilot:fill-greeting"
+    });
+  } catch (error) {
+    if (!isMissingContentScriptError(error)) {
+      throw error;
+    }
+
+    const [injection] = await chrome.scripting.executeScript({
+      args: [greetingMessage],
+      func: fillGreetingFallback,
+      target: {
+        tabId
+      }
+    });
+
+    return injection?.result ?? { error: "当前页面无法填入打招呼语，请复制后手动粘贴。", ok: false };
+  }
+}
+
+function ensureBossJobTab(url?: string) {
+  if (!url) {
+    return;
+  }
+
+  try {
+    const currentUrl = new URL(url);
+
+    if (currentUrl.protocol === "https:" && /(^|\.)zhipin\.com$/i.test(currentUrl.hostname)) {
+      return;
+    }
+  } catch {
+    // Ignore invalid tab URLs and let the extraction path return the visible error.
+  }
+
+  throw new Error("请先打开 Boss 直聘岗位页，再使用插件保存或读取岗位。");
+}
+
+function isMissingContentScriptError(error: unknown) {
+  return (
+    error instanceof Error &&
+    /receiving end does not exist|could not establish connection|message port closed/i.test(
+      error.message
+    )
+  );
+}
+
+function extractBossJobPostingFallback(): ContentResult<{ job?: JobPostingInput }> {
+  const textFrom = (selectors: string[]) => {
+    for (const selector of selectors) {
+      const element = document.querySelector(selector);
+      const text = cleanText(element?.textContent ?? "");
+
+      if (text) {
+        return text;
+      }
+    }
+
+    return "";
+  };
+
+  const title =
+    cleanTitle(
+      textFrom([
+        ".job-title",
+        ".job-banner .name",
+        ".job-primary .name",
+        ".name",
+        "[class*='job-title']"
+      ]) || cleanTitle(document.title)
+    ) || "未识别岗位";
+  const salary = extractSalary(
+    textFrom([".salary", ".job-banner .salary", ".job-primary .salary", "[class*='salary']"]),
+    title
+  );
+  const companyName = cleanCompany(
+    textFrom([".company-info .name", ".company-name", "[class*='company']"])
+  );
+  const city = cleanCity(
+    textFrom([
+      ".job-location",
+      ".job-address",
+      ".location-address",
+      ".job-primary .job-area",
+      ".job-banner .job-area",
+      "[class*='address']"
+    ])
+  );
+  const requirementText = textFrom([
+    ".job-primary .tag-list",
+    ".job-banner .tag-list",
+    ".job-tags",
+    ".job-sec-text",
+    "[class*='tag-list']"
+  ]);
+  const jdRaw = extractDescription();
+
+  return {
+    job: {
+      capturedAt: new Date().toISOString(),
+      city,
+      companyName,
+      educationRequirement:
+        requirementText.match(/博士|硕士|本科|大专|中专|高中|学历不限/)?.[0] ?? "",
+      experienceRequirement:
+        requirementText.match(/(?:\d+\s*-\s*\d+\s*年|\d+\s*年(?:以上|以内)?|经验不限|应届|在校)/)
+          ?.[0] ?? "",
+      id: crypto.randomUUID(),
+      jdRaw,
+      platform: "boss",
+      salaryText: salary,
+      title: salary ? title.replace(salary, "").trim() || title : title,
+      url: location.href
+    },
+    ok: true
+  };
+
+  function extractDescription() {
+    const root =
+      document.querySelector(".job-detail") ??
+      document.querySelector(".job-detail-section") ??
+      document.querySelector(".detail-content") ??
+      document.body;
+    const clone = root.cloneNode(true) as Element;
+
+    clone
+      .querySelectorAll(
+        [
+          "script",
+          "style",
+          "noscript",
+          "svg",
+          ".job-op",
+          ".job-action",
+          ".btn-container",
+          ".recommend-list",
+          ".job-list",
+          ".footer"
+        ].join(",")
+      )
+      .forEach((node) => node.remove());
+
+    return cleanDescription(clone.textContent ?? "");
+  }
+
+  function cleanDescription(value: string) {
+    const lines = cleanText(value, true)
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !/BOSS直聘|boss直聘|kanzhun/i.test(line));
+    const scoped = trimBefore(lines.join("\n"), ["岗位职责", "工作职责", "任职要求", "岗位要求"]);
+
+    return trimAfter(scoped, [
+      "工作地址",
+      "去App与",
+      "求职工具",
+      "升级VIP",
+      "热门职位",
+      "热门城市",
+      "热门企业",
+      "查看更多信息"
+    ]);
+  }
+
+  function cleanText(value: string, multiline = false) {
+    const cleaned = decodeBossDigits(value)
+      .replace(/<(script|style|noscript)[^>]*>[\s\S]*?<\/\1>/gi, "\n")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(?:div|p|li|section|article|h[1-6])>/gi, "\n")
+      .replace(/<\/?(?:[a-z][\w:-]*)(?:\s[^>]*)?>/gi, " ")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/\u00a0/g, " ")
+      .normalize("NFKC");
+    const lines = cleaned
+      .split(/\r?\n/)
+      .map((line) => line.replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+
+    return multiline ? lines.join("\n").trim() : lines.join(" ").trim();
+  }
+
+  function decodeBossDigits(value: string) {
+    const digitMap: Record<string, string> = {
+      "\ue031": "0",
+      "\ue032": "1",
+      "\ue033": "2",
+      "\ue034": "3",
+      "\ue035": "4",
+      "\ue036": "5",
+      "\ue037": "6",
+      "\ue038": "7",
+      "\ue039": "8",
+      "\ue030": "9",
+      "\ue0b1": "0",
+      "\ue0b2": "1",
+      "\ue0b3": "2",
+      "\ue0b4": "3",
+      "\ue0b5": "4",
+      "\ue0b6": "5",
+      "\ue0b7": "6",
+      "\ue0b8": "7",
+      "\ue0b9": "8",
+      "\ue0b0": "9"
+    };
+
+    return value.replace(/[\ue000-\uf8ff]/g, (character) => digitMap[character] ?? "");
+  }
+
+  function extractSalary(...sources: string[]) {
+    for (const source of sources) {
+      const match = decodeBossDigits(source).match(
+        /(?:\d+(?:\.\d+)?\s*[-~—]\s*\d+(?:\.\d+)?\s*[Kk万千元日天/月年]*|\d+\s*元\/天|\d+\s*[-~—]\s*\d+\s*元\/天)/
+      );
+
+      if (match?.[0]) {
+        return match[0].replace(/\s+/g, "");
+      }
+    }
+
+    return "";
+  }
+
+  function cleanTitle(value: string) {
+    return value
+      .replace(/[-_].*?BOSS直聘.*$/i, "")
+      .replace(/[收藏立即沟通举报]+$/g, "")
+      .trim();
+  }
+
+  function cleanCompany(value: string) {
+    return value
+      .replace(/·.*$/g, "")
+      .replace(/在线|HR|招聘者|刚刚活跃|今日活跃/g, "")
+      .trim();
+  }
+
+  function cleanCity(value: string) {
+    const match = value
+      .replace(/点击查看地图|查看地图|工作地址/g, " ")
+      .match(/[\u4e00-\u9fa5]{2,}(?:·[\u4e00-\u9fa5]{2,}){0,2}/);
+
+    return match?.[0] ?? "";
+  }
+
+  function trimBefore(value: string, keywords: string[]) {
+    const firstIndex = keywords
+      .map((keyword) => value.indexOf(keyword))
+      .filter((index) => index >= 0)
+      .sort((left, right) => left - right)[0];
+
+    return firstIndex === undefined ? value.trim() : value.slice(firstIndex).trim();
+  }
+
+  function trimAfter(value: string, keywords: string[]) {
+    const firstIndex = keywords
+      .map((keyword) => value.indexOf(keyword))
+      .filter((index) => index >= 0)
+      .sort((left, right) => left - right)[0];
+
+    return firstIndex === undefined ? value.trim() : value.slice(0, firstIndex).trim();
+  }
+}
+
+function fillGreetingFallback(greetingMessage: string): EmptyContentResult {
+  const selectors = [
+    "[class*='chat'] textarea",
+    "[class*='input'] textarea",
+    "[class*='message'] textarea",
+    "[class*='editor'] [contenteditable='true']",
+    "[class*='dialog'] [contenteditable='true']",
+    "[class*='chat'] [contenteditable='true']",
+    "[class*='message'] [contenteditable='true']",
+    "[role='textbox']",
+    "textarea",
+    "[contenteditable='true']",
+    "input[type='text']"
+  ];
+  const input = selectors
+    .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
+    .find(isWritableElement);
+
+  if (!input) {
+    return {
+      error: "没有找到可填写的聊天输入框，请手动复制后粘贴。",
+      ok: false
+    };
+  }
+
+  if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
+    const descriptor = Object.getOwnPropertyDescriptor(
+      input instanceof HTMLTextAreaElement
+        ? HTMLTextAreaElement.prototype
+        : HTMLInputElement.prototype,
+      "value"
+    );
+
+    descriptor?.set?.call(input, greetingMessage);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    input.focus();
+
+    return { ok: true };
+  }
+
+  const editableInput = input as HTMLElement;
+  editableInput.textContent = greetingMessage;
+  editableInput.dispatchEvent(new InputEvent("input", { bubbles: true, data: greetingMessage }));
+  editableInput.dispatchEvent(new Event("change", { bubbles: true }));
+  editableInput.focus();
+
+  return { ok: true };
+
+  function isWritableElement(element: Element) {
+    if (
+      !(element instanceof HTMLTextAreaElement) &&
+      !(element instanceof HTMLInputElement) &&
+      !(element instanceof HTMLElement)
+    ) {
+      return false;
+    }
+
+    if (
+      (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) &&
+      (element.disabled || element.readOnly)
+    ) {
+      return false;
+    }
+
+    const rect = element.getBoundingClientRect();
+    const style = window.getComputedStyle(element);
+
+    return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+  }
 }
 
 async function fetchJson<T>(path: string, init?: RequestInit) {
