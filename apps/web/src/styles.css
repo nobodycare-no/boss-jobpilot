@@ -317,6 +317,43 @@ button:disabled {
   flex: 0 0 auto;
 }
 
+.job-keyword-clouds {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  overflow-x: auto;
+  margin-bottom: 10px;
+  padding-bottom: 2px;
+}
+
+.job-keyword-cloud {
+  display: inline-flex;
+  flex: 0 0 auto;
+  max-width: min(360px, 82vw);
+  flex-wrap: wrap;
+  gap: 6px;
+  border: 1px solid #d6e0df;
+  border-radius: 8px;
+  padding: 6px;
+  background: #f7fbfa;
+}
+
+.job-keyword-cloud span {
+  display: inline-flex;
+  min-height: 24px;
+  max-width: 100%;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 9px;
+  overflow: hidden;
+  color: #0f5d66;
+  background: #e7f0ef;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .library-filters {
   display: grid;
   gap: 10px;

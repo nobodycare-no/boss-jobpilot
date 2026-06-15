@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import type { Application, JobPosting, ResumeVersion } from "@boss-jobpilot/shared";
 
-import { buildJobPoolSyncSignature, buildVisibleJobKeywords, filterJobsByBoard } from "./JobPool";
+import {
+  buildJobPoolSyncSignature,
+  buildVisibleJobKeywordGroups,
+  buildVisibleJobKeywords,
+  filterJobsByBoard
+} from "./JobPool";
 
 describe("JobPool filters", () => {
   const jobs = [
@@ -90,6 +95,16 @@ describe("JobPool filters", () => {
       "20-30K",
       "深圳",
       "25-35K"
+    ]);
+    expect(buildVisibleJobKeywordGroups(keywordJobs)).toEqual([
+      {
+        jobId: "job-1",
+        keywords: ["React 工程师", "20-30K", "深圳"]
+      },
+      {
+        jobId: "job-2",
+        keywords: ["React 工程师", "25-35K", "深圳"]
+      }
     ]);
   });
 });

@@ -253,8 +253,8 @@ export function JobPool({ experiences }: JobPoolProps) {
     () => visibleJobs.slice((jobPage - 1) * jobPageSize, jobPage * jobPageSize),
     [jobPage, visibleJobs]
   );
-  const visibleJobKeywords = useMemo(
-    () => buildVisibleJobKeywords(pagedVisibleJobs),
+  const visibleJobKeywordGroups = useMemo(
+    () => buildVisibleJobKeywordGroups(pagedVisibleJobs),
     [pagedVisibleJobs]
   );
   const selectedJob = useMemo(() => {
@@ -963,10 +963,14 @@ export function JobPool({ experiences }: JobPoolProps) {
               </span>
             </div>
 
-            {visibleJobKeywords.length > 0 ? (
-              <div className="skill-strip">
-                {visibleJobKeywords.map((keyword) => (
-                  <span key={keyword}>{keyword}</span>
+            {visibleJobKeywordGroups.length > 0 ? (
+              <div className="job-keyword-clouds" aria-label="当前页岗位词云">
+                {visibleJobKeywordGroups.map((group) => (
+                  <div className="job-keyword-cloud" key={group.jobId}>
+                    {group.keywords.map((keyword) => (
+                      <span key={keyword}>{keyword}</span>
+                    ))}
+                  </div>
                 ))}
               </div>
             ) : null}
@@ -1181,9 +1185,20 @@ export function buildJobPoolSyncSignature(
     .join("|");
 }
 
-export function buildVisibleJobKeywords(jobs: JobPosting[]) {
-  const values = jobs.flatMap((job) => [job.title, job.salaryText, job.city]);
+export function buildVisibleJobKeywordGroups(jobs: JobPosting[]) {
+  return jobs
+    .map((job) => ({
+      jobId: job.id,
+      keywords: uniqueNonEmptyValues([job.title, job.salaryText, job.city])
+    }))
+    .filter((group) => group.keywords.length > 0);
+}
 
+export function buildVisibleJobKeywords(jobs: JobPosting[]) {
+  return uniqueNonEmptyValues(buildVisibleJobKeywordGroups(jobs).flatMap((group) => group.keywords));
+}
+
+function uniqueNonEmptyValues(values: Array<string | undefined>) {
   return Array.from(
     new Set(
       values
