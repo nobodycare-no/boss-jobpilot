@@ -18,6 +18,8 @@ type JobAnalysisRow = {
   matched_experience_ids_json: string;
   risk_flags_json: string;
   resume_strategy: string | null;
+  generation_status: string | null;
+  provider_name: string | null;
   model_name: string | null;
   prompt_version: string | null;
   created_at: string;
@@ -79,11 +81,13 @@ export function createJobAnalysisRepository(db: DatabaseSync) {
           matched_experience_ids_json,
           risk_flags_json,
           resume_strategy,
+          generation_status,
+          provider_name,
           model_name,
           prompt_version,
           created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `
       ).run(
         analysis.id,
@@ -96,6 +100,8 @@ export function createJobAnalysisRepository(db: DatabaseSync) {
         JSON.stringify(analysis.matchedExperienceIds),
         JSON.stringify(analysis.riskFlags),
         analysis.resumeStrategy,
+        analysis.generationStatus,
+        analysis.providerName ?? null,
         analysis.modelName,
         analysis.promptVersion,
         analysis.createdAt
@@ -118,6 +124,8 @@ function rowToJobAnalysis(row: JobAnalysisRow): JobAnalysis {
     matchedExperienceIds: parseJsonArray(row.matched_experience_ids_json),
     riskFlags: parseJsonArray(row.risk_flags_json),
     resumeStrategy: row.resume_strategy ?? "",
+    generationStatus: row.generation_status ?? "rule_based",
+    providerName: row.provider_name ?? undefined,
     modelName: row.model_name ?? "rule-based",
     promptVersion: row.prompt_version ?? "rule-based-job-analysis@0.1.0",
     createdAt: row.created_at

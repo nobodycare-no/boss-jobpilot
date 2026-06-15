@@ -86,6 +86,8 @@ export function openJobpilotDatabase(path = "data/jobpilot.sqlite") {
       matched_experience_ids_json TEXT NOT NULL DEFAULT '[]',
       risk_flags_json TEXT NOT NULL DEFAULT '[]',
       resume_strategy TEXT,
+      generation_status TEXT NOT NULL DEFAULT 'rule_based',
+      provider_name TEXT,
       model_name TEXT,
       prompt_version TEXT,
       created_at TEXT NOT NULL,
@@ -99,6 +101,10 @@ export function openJobpilotDatabase(path = "data/jobpilot.sqlite") {
       markdown_content TEXT NOT NULL,
       selected_experience_ids_json TEXT NOT NULL DEFAULT '[]',
       change_summary TEXT,
+      generation_status TEXT NOT NULL DEFAULT 'rule_based',
+      provider_name TEXT,
+      model_name TEXT,
+      prompt_version TEXT,
       created_at TEXT NOT NULL,
       FOREIGN KEY (job_id) REFERENCES job_postings(id)
     );
@@ -110,6 +116,10 @@ export function openJobpilotDatabase(path = "data/jobpilot.sqlite") {
       greeting_variant TEXT NOT NULL DEFAULT 'evidence',
       status TEXT NOT NULL,
       greeting_message TEXT,
+      generation_status TEXT NOT NULL DEFAULT 'rule_based',
+      provider_name TEXT,
+      model_name TEXT,
+      prompt_version TEXT,
       applied_at TEXT,
       next_follow_up_at TEXT,
       outcome TEXT,
@@ -144,6 +154,16 @@ export function openJobpilotDatabase(path = "data/jobpilot.sqlite") {
   `);
 
   ensureColumn(db, "applications", "greeting_variant", "TEXT NOT NULL DEFAULT 'evidence'");
+  ensureColumn(db, "applications", "generation_status", "TEXT NOT NULL DEFAULT 'manual'");
+  ensureColumn(db, "applications", "provider_name", "TEXT");
+  ensureColumn(db, "applications", "model_name", "TEXT NOT NULL DEFAULT 'manual'");
+  ensureColumn(db, "applications", "prompt_version", "TEXT NOT NULL DEFAULT 'manual-edit'");
+  ensureColumn(db, "resume_versions", "generation_status", "TEXT NOT NULL DEFAULT 'manual'");
+  ensureColumn(db, "resume_versions", "provider_name", "TEXT");
+  ensureColumn(db, "resume_versions", "model_name", "TEXT NOT NULL DEFAULT 'manual'");
+  ensureColumn(db, "resume_versions", "prompt_version", "TEXT NOT NULL DEFAULT 'manual-edit'");
+  ensureColumn(db, "job_analyses", "generation_status", "TEXT NOT NULL DEFAULT 'rule_based'");
+  ensureColumn(db, "job_analyses", "provider_name", "TEXT");
 
   return db;
 }

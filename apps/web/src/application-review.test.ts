@@ -402,6 +402,7 @@ function createAnalysis(
   return {
     bonusSkills: [],
     createdAt: "2026-06-09T00:00:00.000Z",
+    generationStatus: "rule_based",
     id: `analysis-${jobId}`,
     jobId,
     matchScore,
@@ -425,10 +426,13 @@ function createApplication(
 ): Application {
   return {
     createdAt: "2026-06-09T00:00:00.000Z",
+    generationStatus: "rule_based",
     greetingVariant: "evidence",
     greetingMessage: "你好，我对这个岗位很感兴趣。",
     id,
     jobId,
+    modelName: "rule-based",
+    promptVersion: "test",
     nextFollowUpAt,
     resumeVersionId,
     status,
@@ -440,9 +444,12 @@ function createResume(id: string, jobId: string): ResumeVersion {
   return {
     changeSummary: "",
     createdAt: "2026-06-09T00:00:00.000Z",
+    generationStatus: "rule_based",
     id,
     jobId,
     markdownContent: "# Resume",
+    modelName: "rule-based",
+    promptVersion: "test",
     selectedExperienceIds: [],
     variant: "正式版"
   };

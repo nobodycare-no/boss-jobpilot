@@ -1153,6 +1153,45 @@ button:disabled {
   font-size: 13px;
 }
 
+.generation-source {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.generation-source--provider_success {
+  color: #174d38;
+  background: #d8f0e4;
+}
+
+.generation-source--provider_fallback {
+  color: #7b3e00;
+  background: #ffe4c1;
+}
+
+.generation-source--rule_based {
+  color: #314564;
+  background: #e2e8f0;
+}
+
+.generation-source--manual {
+  color: #5b3b6e;
+  background: #eadff2;
+}
+
+.generation-source-line {
+  margin: 0;
+  color: #526165;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 .resume-box__header strong {
   color: #5b431d;
 }
@@ -1161,7 +1200,7 @@ button:disabled {
   color: #26395e;
 }
 
-.resume-box__header span {
+.resume-box__header .panel-meta-pill {
   display: inline-flex;
   min-height: 24px;
   align-items: center;
@@ -1173,7 +1212,7 @@ button:disabled {
   font-weight: 700;
 }
 
-.application-box__header span {
+.application-box__header .panel-meta-pill {
   display: inline-flex;
   min-height: 24px;
   align-items: center;

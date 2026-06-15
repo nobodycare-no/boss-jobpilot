@@ -19,6 +19,12 @@ export const EvidenceLevelSchema = z.enum([
 export const OwnershipLevelSchema = z.enum(["led", "owned", "participated", "assisted"]);
 export const ResumeVariantSchema = z.enum(["quick", "formal", "technical"]);
 export const GreetingVariantSchema = z.enum(["polite", "evidence", "direct"]);
+export const GeneratedContentSourceSchema = z.enum([
+  "provider_success",
+  "provider_fallback",
+  "rule_based",
+  "manual"
+]);
 
 export const ExperienceItemSchema = z.object({
   id: z.string().min(1),
@@ -87,6 +93,8 @@ export const JobAnalysisSchema = z.object({
   matchedExperienceIds: z.array(z.string()).default([]),
   riskFlags: z.array(z.string()).default([]),
   resumeStrategy: z.string().default(""),
+  generationStatus: GeneratedContentSourceSchema.default("rule_based"),
+  providerName: z.string().optional(),
   modelName: z.string().default("rule-based"),
   promptVersion: z.string().default("rule-based-job-analysis@0.1.0"),
   createdAt: z.string().datetime()
@@ -107,6 +115,10 @@ export const ResumeVersionSchema = z.object({
   markdownContent: z.string().min(1),
   selectedExperienceIds: z.array(z.string()).default([]),
   changeSummary: z.string().default(""),
+  generationStatus: GeneratedContentSourceSchema.default("rule_based"),
+  providerName: z.string().optional(),
+  modelName: z.string().default("rule-based"),
+  promptVersion: z.string().default("rule-based-resume-writer@0.1.0"),
   createdAt: z.string().datetime()
 });
 
@@ -136,6 +148,10 @@ export const ApplicationSchema = z.object({
   greetingVariant: GreetingVariantSchema.default("evidence"),
   status: ApplicationStatusSchema.default("draft"),
   greetingMessage: z.string().default(""),
+  generationStatus: GeneratedContentSourceSchema.default("rule_based"),
+  providerName: z.string().optional(),
+  modelName: z.string().default("rule-based"),
+  promptVersion: z.string().default("rule-based-greeting-writer@0.1.0"),
   appliedAt: z.string().datetime().optional(),
   nextFollowUpAt: z.string().datetime().optional(),
   outcome: z.string().optional(),
@@ -167,6 +183,10 @@ export const ApplicationUpdateSchema = z
     greetingVariant: GreetingVariantSchema,
     status: ApplicationStatusSchema,
     greetingMessage: z.string(),
+    generationStatus: GeneratedContentSourceSchema,
+    providerName: ApplicationSchema.shape.providerName,
+    modelName: ApplicationSchema.shape.modelName,
+    promptVersion: ApplicationSchema.shape.promptVersion,
     appliedAt: ApplicationSchema.shape.appliedAt,
     nextFollowUpAt: ApplicationSchema.shape.nextFollowUpAt.nullable(),
     outcome: ApplicationSchema.shape.outcome

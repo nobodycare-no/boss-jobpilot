@@ -23,6 +23,11 @@ import type {
 
 import { applicationStatusLabels, recommendationLabels } from "./job-labels";
 
+type GeneratedContentItem = Pick<
+  JobAnalysis | ResumeVersion | Application,
+  "generationStatus" | "modelName" | "promptVersion" | "providerName"
+>;
+
 const applicationStatusActions = [
   { status: "greeted", label: "已打招呼", Icon: CheckCircle2 },
   { status: "applied", label: "已投递", Icon: Send },
@@ -83,12 +88,14 @@ export function ApplicationPanel({
             <Copy size={15} />
             复制
           </button>
-          <span>
+          <span className="panel-meta-pill">
             {formatGreetingVariant(application.greetingVariant)} ·{" "}
             {applicationStatusLabels[application.status]}
           </span>
+          <GenerationSourceBadge item={application} />
         </div>
       </div>
+      <GenerationSourceLine item={application} />
       <p>{application.greetingMessage}</p>
       <div className="draft-editor">
         <label>
@@ -200,6 +207,7 @@ export function VersionComparePanel({
               </button>
             ),
             body: [
+              formatGenerationSource(latestResume),
               latestResume.variant,
               latestResume.changeSummary,
               `${latestResume.markdownContent.length} 字符`,
@@ -223,6 +231,7 @@ export function VersionComparePanel({
               </button>
             ),
             body: [
+              formatGenerationSource(previousResume),
               previousResume.variant,
               previousResume.changeSummary,
               `${previousResume.markdownContent.length} 字符`,
@@ -249,6 +258,7 @@ export function VersionComparePanel({
               </button>
             ),
             body: [
+              formatGenerationSource(latestApplication),
               formatGreetingVariant(latestApplication.greetingVariant),
               compactText(latestApplication.greetingMessage)
             ].join(" · "),
@@ -270,6 +280,7 @@ export function VersionComparePanel({
               </button>
             ),
             body: [
+              formatGenerationSource(previousApplication),
               formatGreetingVariant(previousApplication.greetingVariant),
               compactText(previousApplication.greetingMessage)
             ].join(" · "),
@@ -363,9 +374,11 @@ export function ResumePanel({
             <Copy size={15} />
             复制
           </button>
-          <span>{resume.variant} · 已自动保存</span>
+          <span className="panel-meta-pill">{resume.variant} · 已自动保存</span>
+          <GenerationSourceBadge item={resume} />
         </div>
       </div>
+      <GenerationSourceLine item={resume} />
       {resume.changeSummary ? <p>{resume.changeSummary}</p> : null}
       <pre>{resume.markdownContent}</pre>
       <div className="draft-editor">
@@ -404,7 +417,9 @@ export function AnalysisPanel({
       <div className="analysis-score">
         <strong>{analysis.matchScore}/100</strong>
         <span>{recommendationLabels[analysis.recommendation]}</span>
+        <GenerationSourceBadge item={analysis} />
       </div>
+      <GenerationSourceLine item={analysis} />
       <div className="analysis-grid">
         <AnalysisList label="匹配关键词" values={analysis.matchedKeywords} />
         <AnalysisList label="必需技能" values={analysis.requiredSkills} />
@@ -467,6 +482,48 @@ function AnalysisList({ label, values }: { label: string; values: string[] }) {
   );
 }
 
+function GenerationSourceBadge({ item }: { item: GeneratedContentItem }) {
+  return (
+    <span className={`generation-source generation-source--${item.generationStatus}`}>
+      {formatGenerationSourceLabel(item)}
+    </span>
+  );
+}
+
+function GenerationSourceLine({ item }: { item: GeneratedContentItem }) {
+  return (
+    <small className="generation-source-line">
+      生成来源：{formatGenerationSource(item)}
+    </small>
+  );
+}
+
+function formatGenerationSource(item: GeneratedContentItem) {
+  return [
+    formatGenerationSourceLabel(item),
+    item.providerName ? `Provider：${item.providerName}` : undefined,
+    item.modelName ? `模型：${item.modelName}` : undefined,
+    item.promptVersion ? `Prompt：${item.promptVersion}` : undefined
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function formatGenerationSourceLabel(item: GeneratedContentItem) {
+  switch (item.generationStatus) {
+    case "provider_success":
+      return "AI 模型生成";
+    case "provider_fallback":
+      return "AI 失败后本地规则生成";
+    case "rule_based":
+      return "本地规则版生成";
+    case "manual":
+      return "手动编辑/历史记录";
+    default:
+      return "生成来源未知";
+  }
+}
+
 export function buildApplicationPackage({
   analysis,
   application,
@@ -507,6 +564,10 @@ export function buildApplicationPackage({
         ["加分技能", formatList(analysis.bonusSkills)],
         ["风险信号", formatList(analysis.riskFlags)],
         ["简历策略", analysis.resumeStrategy],
+        ["生成来源", formatGenerationSource(analysis)],
+        ["Provider", analysis.providerName],
+        ["模型", analysis.modelName],
+        ["Prompt", analysis.promptVersion],
         ["分析时间", formatDateTime(analysis.createdAt)]
       ])
     );
@@ -524,6 +585,10 @@ export function buildApplicationPackage({
     sections.push(
       formatPackageSection("定制简历元信息", [
         ["版本", resume.variant],
+        ["生成来源", formatGenerationSource(resume)],
+        ["Provider", resume.providerName],
+        ["模型", resume.modelName],
+        ["Prompt", resume.promptVersion],
         ["生成时间", formatDateTime(resume.createdAt)],
         ["选用经历", formatList(resume.selectedExperienceIds)],
         ["变更摘要", resume.changeSummary]
@@ -537,6 +602,10 @@ export function buildApplicationPackage({
   if (application) {
     sections.push(
       formatPackageSection("打招呼语与投递状态", [
+        ["生成来源", formatGenerationSource(application)],
+        ["Provider", application.providerName],
+        ["模型", application.modelName],
+        ["Prompt", application.promptVersion],
         ["状态", applicationStatusLabels[application.status]],
         ["创建时间", formatDateTime(application.createdAt)],
         ["更新时间", formatDateTime(application.updatedAt)],

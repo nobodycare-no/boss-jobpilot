@@ -108,9 +108,12 @@ function createResume(id: string, jobId: string): ResumeVersion {
   return {
     changeSummary: "已生成简历",
     createdAt: "2026-06-11T00:00:00.000Z",
+    generationStatus: "rule_based",
     id,
     jobId,
     markdownContent: "# 简历",
+    modelName: "rule-based",
+    promptVersion: "test",
     selectedExperienceIds: [],
     variant: "formal"
   };
@@ -123,10 +126,13 @@ function createApplication(
 ): Application {
   return {
     createdAt: "2026-06-11T00:00:00.000Z",
+    generationStatus: "rule_based",
     greetingMessage: "你好，我对这个岗位很感兴趣。",
     greetingVariant: "evidence",
     id,
     jobId,
+    modelName: "rule-based",
+    promptVersion: "test",
     status,
     updatedAt: `2026-06-11T00:00:0${status === "draft" ? "1" : "2"}.000Z`
   };

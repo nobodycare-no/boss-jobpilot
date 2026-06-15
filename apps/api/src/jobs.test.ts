@@ -131,6 +131,7 @@ describe("job routes", () => {
     });
 
     expect(analysisResponse.statusCode).toBe(200);
+    expect(analysisResponse.json().analysis.generationStatus).toBe("rule_based");
     expect(analysisResponse.json().analysis.recommendation).toBe("prioritize");
     expect(analysisResponse.json().analysis.requiredSkills).toContain("React");
     expect(analysisResponse.json().analysis.matchedExperienceIds).toEqual(["exp-ai-frontend"]);
@@ -158,6 +159,7 @@ describe("job routes", () => {
 
     expect(resumeResponse.statusCode).toBe(201);
     expect(resumeResponse.json().item.markdownContent).toContain("AI Frontend Engineer");
+    expect(resumeResponse.json().item.generationStatus).toBe("rule_based");
     expect(resumeResponse.json().item.selectedExperienceIds).toEqual(["exp-ai-frontend"]);
     expect(resumeResponse.json().item.variant).toBe("formal");
 
@@ -200,6 +202,8 @@ describe("job routes", () => {
     });
 
     expect(editedResumeResponse.statusCode).toBe(201);
+    expect(editedResumeResponse.json().item.generationStatus).toBe("manual");
+    expect(editedResumeResponse.json().item.modelName).toBe("manual");
     expect(editedResumeResponse.json().item.variant).toBe("edited-quick");
     expect(editedResumeResponse.json().item.markdownContent).toContain("Manual refinement");
 
@@ -221,6 +225,7 @@ describe("job routes", () => {
     });
 
     expect(greetingResponse.statusCode).toBe(201);
+    expect(greetingResponse.json().item.generationStatus).toBe("rule_based");
     expect(greetingResponse.json().item.status).toBe("draft");
     expect(greetingResponse.json().item.greetingVariant).toBe("evidence");
     expect(greetingResponse.json().greeting.variant).toBe("evidence");
@@ -254,6 +259,7 @@ describe("job routes", () => {
     });
 
     expect(updateApplicationResponse.statusCode).toBe(200);
+    expect(updateApplicationResponse.json().item.generationStatus).toBe("rule_based");
     expect(updateApplicationResponse.json().item.status).toBe("greeted");
 
     const followUpResponse = await server.inject({
@@ -278,6 +284,18 @@ describe("job routes", () => {
     expect(clearFollowUpResponse.statusCode).toBe(200);
     expect(clearFollowUpResponse.json().item.nextFollowUpAt).toBeUndefined();
 
+    const editGreetingResponse = await server.inject({
+      method: "PATCH",
+      url: `/applications/${greetingResponse.json().item.id}`,
+      payload: {
+        greetingMessage: "手动优化后的打招呼语"
+      }
+    });
+
+    expect(editGreetingResponse.statusCode).toBe(200);
+    expect(editGreetingResponse.json().item.generationStatus).toBe("manual");
+    expect(editGreetingResponse.json().item.modelName).toBe("manual");
+
     const applicationEventsResponse = await server.inject({
       method: "GET",
       url: `/applications/${greetingResponse.json().item.id}/events`
@@ -298,6 +316,9 @@ describe("job routes", () => {
     );
     expect(applicationPackageResponse.json().item.markdownContent).toContain("## 岗位分析");
     expect(applicationPackageResponse.json().item.markdownContent).toContain("## Markdown 简历");
+    expect(applicationPackageResponse.json().item.markdownContent).toContain(
+      "生成来源：手动编辑/历史记录"
+    );
     expect(applicationPackageResponse.json().item.markdownContent).toContain("话术版本：证据版");
     expect(applicationPackageResponse.json().item.markdownContent).toContain("## 状态时间线");
 
@@ -430,6 +451,8 @@ describe("job routes", () => {
     });
 
     expect(analysisResponse.statusCode).toBe(200);
+    expect(analysisResponse.json().analysis.generationStatus).toBe("provider_success");
+    expect(analysisResponse.json().analysis.providerName).toBe("test-provider");
     expect(analysisResponse.json().analysis.matchScore).toBe(93);
     expect(analysisResponse.json().analysis.modelName).toBe("test-analysis-model");
 
@@ -440,6 +463,8 @@ describe("job routes", () => {
 
     expect(resumeResponse.statusCode).toBe(201);
     expect(resumeResponse.json().item.markdownContent).toContain("Provider generated resume");
+    expect(resumeResponse.json().item.generationStatus).toBe("provider_success");
+    expect(resumeResponse.json().item.providerName).toBe("test-provider");
     expect(resumeResponse.json().item.selectedExperienceIds).toEqual(["exp-provider"]);
     expect(resumeResponse.json().item.variant).toBe("formal");
 
@@ -454,6 +479,8 @@ describe("job routes", () => {
     expect(greetingResponse.statusCode).toBe(201);
     expect(greetingResponse.json().item.resumeVersionId).toBe(resumeResponse.json().item.id);
     expect(greetingResponse.json().item.greetingVariant).toBe("direct");
+    expect(greetingResponse.json().item.generationStatus).toBe("provider_success");
+    expect(greetingResponse.json().item.providerName).toBe("test-provider");
     expect(greetingResponse.json().greeting.variant).toBe("direct");
     expect(greetingResponse.json().item.greetingMessage).toBe(
       "您好，我基于真实项目经历匹配这个岗位，想进一步沟通。"
@@ -526,6 +553,8 @@ describe("job routes", () => {
     });
 
     expect(analysisResponse.statusCode).toBe(200);
+    expect(analysisResponse.json().analysis.generationStatus).toBe("provider_fallback");
+    expect(analysisResponse.json().analysis.providerName).toBe("failing-provider");
     expect(analysisResponse.json().analysis.modelName).toBe("rule-based");
     expect(analysisResponse.json().warnings[0]).toMatchObject({
       code: "AI_PROVIDER_FALLBACK",
@@ -538,6 +567,8 @@ describe("job routes", () => {
     });
 
     expect(resumeResponse.statusCode).toBe(201);
+    expect(resumeResponse.json().item.generationStatus).toBe("provider_fallback");
+    expect(resumeResponse.json().item.providerName).toBe("failing-provider");
     expect(resumeResponse.json().item.markdownContent).toContain("Frontend Engineer");
     expect(resumeResponse.json().warnings[0].code).toBe("AI_PROVIDER_FALLBACK");
 
@@ -547,6 +578,8 @@ describe("job routes", () => {
     });
 
     expect(greetingResponse.statusCode).toBe(201);
+    expect(greetingResponse.json().item.generationStatus).toBe("provider_fallback");
+    expect(greetingResponse.json().item.providerName).toBe("failing-provider");
     expect(greetingResponse.json().greeting.modelName).toBe("rule-based");
     expect(greetingResponse.json().warnings[0].code).toBe("AI_PROVIDER_FALLBACK");
 

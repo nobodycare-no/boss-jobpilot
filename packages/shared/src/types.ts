@@ -12,6 +12,7 @@ import type {
   ExperienceItemCreateSchema,
   ExperienceItemSchema,
   ExperienceItemUpdateSchema,
+  GeneratedContentSourceSchema,
   GreetingVariantSchema,
   JobAnalysisCreateSchema,
   JobAnalysisSchema,
@@ -36,6 +37,7 @@ export type AiGenerationRunCreateInput = z.input<typeof AiGenerationRunCreateSch
 export type ExperienceItem = z.infer<typeof ExperienceItemSchema>;
 export type ExperienceItemCreateInput = z.input<typeof ExperienceItemCreateSchema>;
 export type ExperienceItemUpdateInput = z.input<typeof ExperienceItemUpdateSchema>;
+export type GeneratedContentSource = z.infer<typeof GeneratedContentSourceSchema>;
 export type JobPostingInput = z.input<typeof JobPostingSchema>;
 export type JobPosting = z.infer<typeof JobPostingSchema>;
 export type JobPostingCreateInput = z.input<typeof JobPostingCreateSchema>;

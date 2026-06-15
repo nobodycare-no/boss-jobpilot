@@ -60,6 +60,10 @@ export const applications = sqliteTable("applications", {
   greetingVariant: text("greeting_variant").notNull().default("evidence"),
   status: text("status").notNull(),
   greetingMessage: text("greeting_message"),
+  generationStatus: text("generation_status").notNull().default("rule_based"),
+  providerName: text("provider_name"),
+  modelName: text("model_name"),
+  promptVersion: text("prompt_version"),
   appliedAt: text("applied_at"),
   nextFollowUpAt: text("next_follow_up_at"),
   outcome: text("outcome"),
@@ -84,6 +88,10 @@ export const resumeVersions = sqliteTable("resume_versions", {
   markdownContent: text("markdown_content").notNull(),
   selectedExperienceIdsJson: text("selected_experience_ids_json").notNull().default("[]"),
   changeSummary: text("change_summary"),
+  generationStatus: text("generation_status").notNull().default("rule_based"),
+  providerName: text("provider_name"),
+  modelName: text("model_name"),
+  promptVersion: text("prompt_version"),
   createdAt: text("created_at").notNull()
 });
 
@@ -100,6 +108,8 @@ export const jobAnalyses = sqliteTable("job_analyses", {
   matchedExperienceIdsJson: text("matched_experience_ids_json").notNull().default("[]"),
   riskFlagsJson: text("risk_flags_json").notNull().default("[]"),
   resumeStrategy: text("resume_strategy"),
+  generationStatus: text("generation_status").notNull().default("rule_based"),
+  providerName: text("provider_name"),
   modelName: text("model_name"),
   promptVersion: text("prompt_version"),
   createdAt: text("created_at").notNull()

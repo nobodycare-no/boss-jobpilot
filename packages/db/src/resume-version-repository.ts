@@ -14,6 +14,10 @@ type ResumeVersionRow = {
   markdown_content: string;
   selected_experience_ids_json: string;
   change_summary: string | null;
+  generation_status: string | null;
+  provider_name: string | null;
+  model_name: string | null;
+  prompt_version: string | null;
   created_at: string;
 };
 
@@ -69,9 +73,13 @@ export function createResumeVersionRepository(db: DatabaseSync) {
           markdown_content,
           selected_experience_ids_json,
           change_summary,
+          generation_status,
+          provider_name,
+          model_name,
+          prompt_version,
           created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `
       ).run(
         version.id,
@@ -80,6 +88,10 @@ export function createResumeVersionRepository(db: DatabaseSync) {
         version.markdownContent,
         JSON.stringify(version.selectedExperienceIds),
         version.changeSummary,
+        version.generationStatus,
+        version.providerName ?? null,
+        version.modelName,
+        version.promptVersion,
         version.createdAt
       );
 
@@ -96,6 +108,10 @@ function rowToResumeVersion(row: ResumeVersionRow): ResumeVersion {
     markdownContent: row.markdown_content,
     selectedExperienceIds: parseJsonArray(row.selected_experience_ids_json),
     changeSummary: row.change_summary ?? "",
+    generationStatus: row.generation_status ?? "manual",
+    providerName: row.provider_name ?? undefined,
+    modelName: row.model_name ?? "manual",
+    promptVersion: row.prompt_version ?? "manual-edit",
     createdAt: row.created_at
   });
 }

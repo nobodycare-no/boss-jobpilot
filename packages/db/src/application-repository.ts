@@ -17,6 +17,10 @@ type ApplicationRow = {
   greeting_variant: string;
   status: string;
   greeting_message: string | null;
+  generation_status: string | null;
+  provider_name: string | null;
+  model_name: string | null;
+  prompt_version: string | null;
   applied_at: string | null;
   next_follow_up_at: string | null;
   outcome: string | null;
@@ -114,13 +118,17 @@ export function createApplicationRepository(db: DatabaseSync) {
           greeting_variant,
           status,
           greeting_message,
+          generation_status,
+          provider_name,
+          model_name,
+          prompt_version,
           applied_at,
           next_follow_up_at,
           outcome,
           created_at,
           updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `
       ).run(
         item.id,
@@ -129,6 +137,10 @@ export function createApplicationRepository(db: DatabaseSync) {
         item.greetingVariant,
         item.status,
         item.greetingMessage,
+        item.generationStatus,
+        item.providerName ?? null,
+        item.modelName,
+        item.promptVersion,
         item.appliedAt ?? null,
         item.nextFollowUpAt ?? null,
         item.outcome ?? null,
@@ -178,6 +190,10 @@ export function createApplicationRepository(db: DatabaseSync) {
           greeting_variant = ?,
           status = ?,
           greeting_message = ?,
+          generation_status = ?,
+          provider_name = ?,
+          model_name = ?,
+          prompt_version = ?,
           applied_at = ?,
           next_follow_up_at = ?,
           outcome = ?,
@@ -189,6 +205,10 @@ export function createApplicationRepository(db: DatabaseSync) {
         next.greetingVariant,
         next.status,
         next.greetingMessage,
+        next.generationStatus,
+        next.providerName ?? null,
+        next.modelName,
+        next.promptVersion,
         next.appliedAt ?? null,
         next.nextFollowUpAt ?? null,
         next.outcome ?? null,
@@ -221,6 +241,10 @@ function rowToApplication(row: ApplicationRow): Application {
     greetingVariant: row.greeting_variant,
     status: row.status,
     greetingMessage: row.greeting_message ?? "",
+    generationStatus: row.generation_status ?? "manual",
+    providerName: row.provider_name ?? undefined,
+    modelName: row.model_name ?? "manual",
+    promptVersion: row.prompt_version ?? "manual-edit",
     appliedAt: row.applied_at ?? undefined,
     nextFollowUpAt: row.next_follow_up_at ?? undefined,
     outcome: row.outcome ?? undefined,

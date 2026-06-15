@@ -43,6 +43,7 @@ import {
   type AiGenerationRunCreateInput,
   type CandidatePreference,
   type ExperienceItem,
+  type GeneratedContentSource,
   type GreetingVariant,
   type JobAnalysis,
   type JobPosting,
@@ -61,6 +62,13 @@ type AiFallbackWarning = {
   code: "AI_PROVIDER_FALLBACK";
   message: string;
   detail: string;
+};
+
+type GeneratedResultSource = {
+  generationStatus: Exclude<GeneratedContentSource, "manual">;
+  providerName?: string;
+  modelName: string;
+  promptVersion: string;
 };
 
 const defaultCandidatePreference: CandidatePreference = {
@@ -312,7 +320,10 @@ export function buildServer(options: BuildServerOptions = {}) {
           provider: aiProvider
         })
     });
-    const analysis = jobAnalyses.create(generatedAnalysis.value);
+    const analysis = jobAnalyses.create({
+      ...generatedAnalysis.value,
+      ...generatedAnalysis.source
+    });
 
     return {
       jobId: job.id,
@@ -386,7 +397,10 @@ export function buildServer(options: BuildServerOptions = {}) {
 
     return {
       jobId: parsedJob.data.id,
-      analysis: analysis.value,
+      analysis: {
+        ...analysis.value,
+        ...analysis.source
+      },
       score: analysisToLegacyScore(analysis.value),
       warnings: analysis.warnings
     };
@@ -442,7 +456,8 @@ export function buildServer(options: BuildServerOptions = {}) {
         })
     });
     const item = resumeVersions.create({
-      ...resume.value
+      ...resume.value,
+      ...resume.source
     });
 
     return reply.status(201).send({
@@ -469,11 +484,14 @@ export function buildServer(options: BuildServerOptions = {}) {
       });
     }
 
-      const latestResume = resumeVersions.getLatestByJobId(job.id);
-      const item = resumeVersions.create({
-        jobId: job.id,
-        variant: parsedEdit.data.variant ?? toEditedResumeVariant(latestResume?.variant),
-        markdownContent: parsedEdit.data.markdownContent,
+    const latestResume = resumeVersions.getLatestByJobId(job.id);
+    const item = resumeVersions.create({
+      jobId: job.id,
+      variant: parsedEdit.data.variant ?? toEditedResumeVariant(latestResume?.variant),
+      markdownContent: parsedEdit.data.markdownContent,
+      generationStatus: "manual",
+      modelName: "manual",
+      promptVersion: "manual-edit",
       selectedExperienceIds:
         parsedEdit.data.selectedExperienceIds ?? latestResume?.selectedExperienceIds ?? [],
       changeSummary: parsedEdit.data.changeSummary ?? "手动编辑 Markdown 简历。"
@@ -559,7 +577,8 @@ export function buildServer(options: BuildServerOptions = {}) {
       resumeVersionId: latestResume?.id,
       greetingVariant: variant,
       status: "draft",
-      greetingMessage: greeting.value.message
+      greetingMessage: greeting.value.message,
+      ...greeting.source
     });
 
     return reply.status(201).send({
@@ -639,7 +658,17 @@ export function buildServer(options: BuildServerOptions = {}) {
       });
     }
 
-    const item = applications.update(request.params.id, parsedApplication.data);
+    const update =
+      "greetingMessage" in parsedApplication.data
+        ? {
+            ...parsedApplication.data,
+            generationStatus: "manual" as const,
+            providerName: undefined,
+            modelName: "manual",
+            promptVersion: "manual-edit"
+          }
+        : parsedApplication.data;
+    const item = applications.update(request.params.id, update);
 
     if (!item) {
       return reply.status(404).send({
@@ -755,6 +784,10 @@ function buildApplicationPackageMarkdown({
         ["加分技能", formatList(analysis.bonusSkills)],
         ["风险信号", formatList(analysis.riskFlags)],
         ["简历策略", analysis.resumeStrategy],
+        ["生成来源", formatGenerationSource(analysis)],
+        ["Provider", analysis.providerName],
+        ["模型", analysis.modelName],
+        ["Prompt", analysis.promptVersion],
         ["分析时间", formatDateTime(analysis.createdAt)]
       ])
     );
@@ -772,6 +805,10 @@ function buildApplicationPackageMarkdown({
     sections.push(
       formatPackageSection("定制简历元信息", [
         ["版本", resume.variant],
+        ["生成来源", formatGenerationSource(resume)],
+        ["Provider", resume.providerName],
+        ["模型", resume.modelName],
+        ["Prompt", resume.promptVersion],
         ["生成时间", formatDateTime(resume.createdAt)],
         ["选用经历", formatList(resume.selectedExperienceIds)],
         ["变更摘要", resume.changeSummary]
@@ -786,6 +823,10 @@ function buildApplicationPackageMarkdown({
     sections.push(
       formatPackageSection("打招呼语与投递状态", [
         ["话术版本", greetingVariantLabels[application.greetingVariant]],
+        ["生成来源", formatGenerationSource(application)],
+        ["Provider", application.providerName],
+        ["模型", application.modelName],
+        ["Prompt", application.promptVersion],
         ["状态", applicationStatusLabels[application.status]],
         ["创建时间", formatDateTime(application.createdAt)],
         ["更新时间", formatDateTime(application.updatedAt)],
@@ -821,6 +862,32 @@ function formatPackageSection(title: string, rows: Array<[string, string | undef
     .join("\n");
 
   return `## ${title}\n\n${body || "暂无信息"}`;
+}
+
+function formatGenerationSource(item: JobAnalysis | ResumeVersion | Application) {
+  return [
+    formatGenerationSourceLabel(item.generationStatus),
+    item.providerName ? `Provider：${item.providerName}` : undefined,
+    item.modelName ? `模型：${item.modelName}` : undefined,
+    item.promptVersion ? `Prompt：${item.promptVersion}` : undefined
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function formatGenerationSourceLabel(generationStatus: GeneratedContentSource) {
+  switch (generationStatus) {
+    case "provider_success":
+      return "AI 模型生成";
+    case "provider_fallback":
+      return "AI 失败后本地规则生成";
+    case "rule_based":
+      return "本地规则版生成";
+    case "manual":
+      return "手动编辑/历史记录";
+    default:
+      return "生成来源未知";
+  }
 }
 
 function formatPackageExperience(id: string, experience?: ExperienceItem) {
@@ -913,18 +980,21 @@ async function runWithAiFallback<T>({
   const startedAt = Date.now();
 
   if (!provider) {
+    const source = createGeneratedResultSource("rule_based", undefined, fallback, {
+      modelName: "rule-based",
+      promptVersion
+    });
     recordAiGenerationRun(onRecord, {
       durationMs: Date.now() - startedAt,
       feature,
-      ...getAiGenerationMetadata(fallback, {
-        modelName: "rule-based",
-        promptVersion
-      }),
+      modelName: source.modelName,
+      promptVersion: source.promptVersion,
       relatedJobId,
       status: "rule_based"
     });
 
     return {
+      source,
       value: fallback,
       warnings: [] satisfies AiFallbackWarning[]
     };
@@ -932,41 +1002,63 @@ async function runWithAiFallback<T>({
 
   try {
     const value = await run();
+    const source = createGeneratedResultSource("provider_success", provider.name, value, {
+      modelName: provider.name,
+      promptVersion
+    });
     recordAiGenerationRun(onRecord, {
       durationMs: Date.now() - startedAt,
       feature,
-      ...getAiGenerationMetadata(value, {
-        modelName: provider.name,
-        promptVersion
-      }),
+      modelName: source.modelName,
+      promptVersion: source.promptVersion,
       providerName: provider.name,
       relatedJobId,
       status: "provider_success"
     });
 
     return {
+      source,
       value,
       warnings: [] satisfies AiFallbackWarning[]
     };
   } catch (error) {
+    const source = createGeneratedResultSource("provider_fallback", provider.name, fallback, {
+      modelName: "rule-based",
+      promptVersion
+    });
     recordAiGenerationRun(onRecord, {
       durationMs: Date.now() - startedAt,
       errorMessage: error instanceof Error ? error.message : "Unknown AI provider error",
       feature,
-      ...getAiGenerationMetadata(fallback, {
-        modelName: "rule-based",
-        promptVersion
-      }),
+      modelName: source.modelName,
+      promptVersion: source.promptVersion,
       providerName: provider.name,
       relatedJobId,
       status: "provider_fallback"
     });
 
     return {
+      source,
       value: fallback,
       warnings: [createAiFallbackWarning(featureLabel, error)]
     };
   }
+}
+
+function createGeneratedResultSource(
+  generationStatus: GeneratedResultSource["generationStatus"],
+  providerName: string | undefined,
+  value: unknown,
+  fallback: { modelName?: string; promptVersion?: string }
+): GeneratedResultSource {
+  const metadata = getAiGenerationMetadata(value, fallback);
+
+  return {
+    generationStatus,
+    providerName,
+    modelName: metadata.modelName ?? fallback.modelName ?? "unknown",
+    promptVersion: metadata.promptVersion ?? fallback.promptVersion ?? "unknown"
+  };
 }
 
 function getAiGenerationMetadata(
