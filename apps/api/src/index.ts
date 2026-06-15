@@ -71,6 +71,12 @@ type GeneratedResultSource = {
   promptVersion: string;
 };
 
+type GeneratedResultMetadataFallback = {
+  modelName?: string;
+  preferFallbackModelName?: boolean;
+  promptVersion?: string;
+};
+
 const defaultCandidatePreference: CandidatePreference = {
   targetRoles: ["AI 应用开发", "前端开发", "全栈开发"],
   targetCities: [],
@@ -1002,10 +1008,16 @@ async function runWithAiFallback<T>({
 
   try {
     const value = await run();
-    const source = createGeneratedResultSource("provider_success", provider.name, value, {
-      modelName: provider.name,
-      promptVersion
-    });
+    const source = createGeneratedResultSource(
+      "provider_success",
+      provider.name,
+      value,
+      {
+        modelName: getProviderModelName(provider),
+        preferFallbackModelName: true,
+        promptVersion
+      }
+    );
     recordAiGenerationRun(onRecord, {
       durationMs: Date.now() - startedAt,
       feature,
@@ -1049,16 +1061,23 @@ function createGeneratedResultSource(
   generationStatus: GeneratedResultSource["generationStatus"],
   providerName: string | undefined,
   value: unknown,
-  fallback: { modelName?: string; promptVersion?: string }
+  fallback: GeneratedResultMetadataFallback
 ): GeneratedResultSource {
   const metadata = getAiGenerationMetadata(value, fallback);
 
   return {
     generationStatus,
     providerName,
-    modelName: metadata.modelName ?? fallback.modelName ?? "unknown",
+    modelName:
+      fallback.preferFallbackModelName && fallback.modelName
+        ? fallback.modelName
+        : (metadata.modelName ?? fallback.modelName ?? "unknown"),
     promptVersion: metadata.promptVersion ?? fallback.promptVersion ?? "unknown"
   };
+}
+
+function getProviderModelName(provider: AiProvider) {
+  return provider.modelName?.trim() || provider.name;
 }
 
 function getAiGenerationMetadata(

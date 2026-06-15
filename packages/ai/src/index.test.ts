@@ -59,6 +59,7 @@ describe("job analysis generation", () => {
         promptVersion: "rule-based-job-analysis@0.1.0"
       },
       provider: {
+        modelName: "env-configured-model",
         name: "test-provider",
         async generateJson<T>() {
           return {
@@ -71,7 +72,7 @@ describe("job analysis generation", () => {
             matchedExperienceIds: ["exp-1", "missing-exp"],
             riskFlags: [],
             resumeStrategy: "Prioritize the AI resume tailoring workspace and React delivery.",
-            modelName: "test-model",
+            modelName: "self-reported-model",
             promptVersion: "test-analysis"
           } as T;
         }
@@ -82,7 +83,7 @@ describe("job analysis generation", () => {
     expect(analysis.matchScore).toBe(91);
     expect(analysis.recommendation).toBe("prioritize");
     expect(analysis.matchedExperienceIds).toEqual(["exp-1"]);
-    expect(analysis.modelName).toBe("test-model");
+    expect(analysis.modelName).toBe("env-configured-model");
   });
 });
 
@@ -108,6 +109,7 @@ describe("resume version generation", () => {
         matchedExperienceIds: ["exp-1"],
         riskFlags: [],
         resumeStrategy: "Lead with AI frontend delivery.",
+        generationStatus: "rule_based" as const,
         modelName: "test-model",
         promptVersion: "test-analysis",
         createdAt: "2026-01-01T00:00:00.000Z"
@@ -135,6 +137,7 @@ describe("resume version generation", () => {
         changeSummary: "Rule based change summary."
       },
       provider: {
+        modelName: "env-configured-model",
         name: "test-provider",
         async generateJson<T>() {
           return {
@@ -179,6 +182,7 @@ describe("greeting draft generation", () => {
         matchedExperienceIds: ["exp-1"],
         riskFlags: [],
         resumeStrategy: "Lead with AI frontend work.",
+        generationStatus: "rule_based" as const,
         modelName: "rule-based",
         promptVersion: "rule-based-job-analysis@0.1.0",
         createdAt: "2026-01-01T00:00:00.000Z"
@@ -228,6 +232,7 @@ describe("greeting draft generation", () => {
         matchedExperienceIds: ["exp-1"],
         riskFlags: [],
         resumeStrategy: "Lead with AI frontend work.",
+        generationStatus: "rule_based" as const,
         modelName: "rule-based",
         promptVersion: "rule-based-job-analysis@0.1.0",
         createdAt: "2026-01-01T00:00:00.000Z"
@@ -279,6 +284,7 @@ describe("greeting draft generation", () => {
         matchedExperienceIds: ["exp-1"],
         riskFlags: [],
         resumeStrategy: "Lead with AI frontend work.",
+        generationStatus: "rule_based" as const,
         modelName: "rule-based",
         promptVersion: "rule-based-job-analysis@0.1.0",
         createdAt: "2026-01-01T00:00:00.000Z"
@@ -299,6 +305,7 @@ describe("greeting draft generation", () => {
         }
       ],
       provider: {
+        modelName: "env-configured-model",
         name: "test-provider",
         async generateJson<T>() {
           return {
@@ -307,7 +314,7 @@ describe("greeting draft generation", () => {
             variant: "polite",
             selectedExperienceIds: ["exp-1"],
             highlights: ["React", "TypeScript"],
-            modelName: "test-model",
+            modelName: "self-reported-model",
             promptVersion: "test-greeting"
           } as T;
         }
@@ -316,7 +323,7 @@ describe("greeting draft generation", () => {
 
     expect(draft.message).toContain("AI resume tailoring workspace");
     expect(draft.variant).toBe("evidence");
-    expect(draft.modelName).toBe("test-model");
+    expect(draft.modelName).toBe("env-configured-model");
     expect(draft.selectedExperienceIds).toEqual(["exp-1"]);
   });
 });
@@ -377,6 +384,7 @@ describe("application review strategy recap", () => {
         attributionSignals: []
       },
       provider: {
+        modelName: "env-configured-model",
         name: "test-provider",
         async generateJson<T>() {
           return {
@@ -384,14 +392,14 @@ describe("application review strategy recap", () => {
             focus: ["记录下一次跟进时间。"],
             experiments: ["对比两版打招呼语。"],
             risks: ["样本量偏少。"],
-            modelName: "test-model",
+            modelName: "self-reported-model",
             promptVersion: "test-prompt"
           } as T;
         }
       }
     });
 
-    expect(recap.modelName).toBe("test-model");
+    expect(recap.modelName).toBe("env-configured-model");
     expect(recap.focus).toEqual(["记录下一次跟进时间。"]);
   });
 });

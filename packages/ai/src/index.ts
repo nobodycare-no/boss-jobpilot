@@ -191,6 +191,10 @@ export function createAiProviderFromEnv(env: Record<string, string | undefined>)
   });
 }
 
+function getProviderModelName(provider: AiProvider) {
+  return provider.modelName?.trim() || provider.name;
+}
+
 function firstNonEmptyEnv(...values: Array<string | undefined>) {
   for (const value of values) {
     const trimmed = value?.trim();
@@ -370,7 +374,7 @@ export async function generateJobAnalysisWithProvider({
       generated.matchedExperienceIds ?? fallbackAnalysis.matchedExperienceIds ?? [],
       experiences
     ),
-    modelName: generated.modelName || provider.name,
+    modelName: getProviderModelName(provider),
     promptVersion: generated.promptVersion || promptVersions.jobAnalyzer
   });
 }
@@ -514,7 +518,7 @@ export async function generateGreetingDraftWithProvider({
   return GreetingDraftSchema.parse({
     ...generated,
     variant,
-    modelName: generated.modelName || provider.name,
+    modelName: getProviderModelName(provider),
     promptVersion: generated.promptVersion || promptVersions.greetingWriter
   });
 }
@@ -661,7 +665,7 @@ export async function generateApplicationReviewStrategyRecapWithProvider({
 
   return ApplicationReviewStrategyRecapSchema.parse({
     ...generated,
-    modelName: generated.modelName || provider.name,
+    modelName: getProviderModelName(provider),
     promptVersion: generated.promptVersion || promptVersions.applicationReviewStrategist
   });
 }

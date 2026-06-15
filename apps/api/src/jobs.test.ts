@@ -11,6 +11,7 @@ const providerDb = openJobpilotDatabase(":memory:");
 const providerServer = buildServer({
   database: providerDb,
   aiProvider: {
+    modelName: "env-configured-model",
     name: "test-provider",
     async generateJson<T>(request: AiJsonRequest) {
       const promptText = request.messages.map((message) => message.content).join("\n");
@@ -33,7 +34,7 @@ const providerServer = buildServer({
           matchedExperienceIds: ["exp-provider"],
           riskFlags: [],
           resumeStrategy: "Use the provider backed React workflow as the lead experience.",
-          modelName: "test-analysis-model",
+          modelName: "self-reported-analysis-model",
           promptVersion: "test-analysis"
         } as T;
       }
@@ -54,7 +55,7 @@ const providerServer = buildServer({
         variant: "polite",
         selectedExperienceIds: ["exp-provider"],
         highlights: ["React"],
-        modelName: "test-provider-model",
+        modelName: "self-reported-greeting-model",
         promptVersion: "test-greeting"
       } as T;
     }
@@ -454,7 +455,7 @@ describe("job routes", () => {
     expect(analysisResponse.json().analysis.generationStatus).toBe("provider_success");
     expect(analysisResponse.json().analysis.providerName).toBe("test-provider");
     expect(analysisResponse.json().analysis.matchScore).toBe(93);
-    expect(analysisResponse.json().analysis.modelName).toBe("test-analysis-model");
+    expect(analysisResponse.json().analysis.modelName).toBe("env-configured-model");
 
     const resumeResponse = await providerServer.inject({
       method: "POST",
@@ -464,6 +465,7 @@ describe("job routes", () => {
     expect(resumeResponse.statusCode).toBe(201);
     expect(resumeResponse.json().item.markdownContent).toContain("Provider generated resume");
     expect(resumeResponse.json().item.generationStatus).toBe("provider_success");
+    expect(resumeResponse.json().item.modelName).toBe("env-configured-model");
     expect(resumeResponse.json().item.providerName).toBe("test-provider");
     expect(resumeResponse.json().item.selectedExperienceIds).toEqual(["exp-provider"]);
     expect(resumeResponse.json().item.variant).toBe("formal");
@@ -480,12 +482,13 @@ describe("job routes", () => {
     expect(greetingResponse.json().item.resumeVersionId).toBe(resumeResponse.json().item.id);
     expect(greetingResponse.json().item.greetingVariant).toBe("direct");
     expect(greetingResponse.json().item.generationStatus).toBe("provider_success");
+    expect(greetingResponse.json().item.modelName).toBe("env-configured-model");
     expect(greetingResponse.json().item.providerName).toBe("test-provider");
     expect(greetingResponse.json().greeting.variant).toBe("direct");
     expect(greetingResponse.json().item.greetingMessage).toBe(
       "您好，我基于真实项目经历匹配这个岗位，想进一步沟通。"
     );
-    expect(greetingResponse.json().greeting.modelName).toBe("test-provider-model");
+    expect(greetingResponse.json().greeting.modelName).toBe("env-configured-model");
 
     const generationRunsResponse = await providerServer.inject({
       method: "GET",
@@ -498,18 +501,21 @@ describe("job routes", () => {
       expect.arrayContaining([
         expect.objectContaining({
           feature: "job-analysis",
+          modelName: "env-configured-model",
           providerName: "test-provider",
           relatedJobId: created.id,
           status: "provider_success"
         }),
         expect.objectContaining({
           feature: "resume-generation",
+          modelName: "env-configured-model",
           providerName: "test-provider",
           relatedJobId: created.id,
           status: "provider_success"
         }),
         expect.objectContaining({
           feature: "greeting-generation",
+          modelName: "env-configured-model",
           providerName: "test-provider",
           relatedJobId: created.id,
           status: "provider_success"
