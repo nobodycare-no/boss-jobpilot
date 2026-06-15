@@ -45,6 +45,25 @@ if not exist "%ROOT%node_modules" (
   echo Dependencies already installed.
 )
 
+echo.
+echo Building browser extension...
+if not exist "%ROOT%.tmp" mkdir "%ROOT%.tmp"
+set "CI=1"
+set "NO_UPDATE_NOTIFIER=1"
+call corepack pnpm --filter @boss-jobpilot/extension build > "%ROOT%.tmp\extension-build.log" 2>&1
+if errorlevel 1 (
+  echo.
+  echo Browser extension build failed.
+  echo Build log:
+  type "%ROOT%.tmp\extension-build.log"
+  echo.
+  echo Check the error above, then run start.bat again.
+  echo.
+  pause
+  exit /b 1
+)
+echo Browser extension build completed.
+
 if "%~1"=="--check" (
   echo Startup script check passed.
   exit /b 0
@@ -66,5 +85,9 @@ echo.
 echo Startup commands have been launched.
 echo Keep the API and Web terminal windows open while using the app.
 echo Close those windows to stop the project.
+echo.
+echo Browser extension has been built at:
+echo %ROOT%apps\extension\build\chrome-mv3-prod
+echo Load this folder manually in Chrome or Edge extension settings.
 echo.
 pause
